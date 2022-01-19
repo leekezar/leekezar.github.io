@@ -97,7 +97,7 @@
     /* color-1(#24A89B)
      * color-2(#eddea4)
      */
-    --color-1                      : hsla(174, 65%, 40%, 1);
+    --color-1                      : hsla(183, 100%, 75%, 1);
     --color-2                      : hsla(48, 67%, 79%, 1);
 
     /* theme color variations
@@ -3202,13 +3202,13 @@ img.u-pull-left {
 }
 
 .s-intro__bg {
-    background-image    : url(../images/intro-bg.jpg);
+    background-image    : url(../images/intro-bg.png);
     background-repeat   : no-repeat;
     background-position : center;
     background-size     : cover;
     width               : 100%;
     position            : absolute;
-    top                 : calc(1.5 * var(--text-huge-line-height) * var(--text-huge) * var(--text-huge-multiplier));
+    top                 : calc(-1.7 * var(--text-huge-line-height) * var(--text-huge) * var(--text-huge-multiplier));
     right               : 0;
     bottom              : 0;
     left                : 0;
@@ -3262,7 +3262,7 @@ img.u-pull-left {
     transform-origin : right bottom;
     position         : absolute;
     bottom           : 0;
-    right            : -4rem;
+    right            : -0.1rem;
 }
 
 .s-intro__scroll-down svg {
@@ -3323,15 +3323,18 @@ img.u-pull-left {
  * ## intro stats
  * -------------------------------------------------------------------- */
 .stats__item h5 {
-    margin-top : var(--vspace-0_75);
+    margin-top      : 0;
+    margin-bottom   : calc(var(--text-size) * 0.5);
+    display         : inline;
 }
 
 .stats__count {
     font-family : var(--font-1);
     font-weight : 500;
-    font-size   : calc(var(--text-size) * 5.1111);
+    font-size   : calc(var(--text-size) * 3);
     line-height : 1;
     color       : var(--color-1);
+    display:  inline;
 }
 
 /* ------------------------------------------------------------------- 
@@ -3571,6 +3574,10 @@ img.u-pull-left {
     background-position : center;
     background-size     : contain;
     opacity             : 1;
+}
+
+.service-icon--asl {
+    background-image : url(../images/icons/services/sign-language.png)
 }
 
 .service-icon--product-design {
