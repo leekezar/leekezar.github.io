@@ -1570,7 +1570,7 @@ hr {
     border       : solid var(--color-border);
     border-width : .1rem 0 0;
     clear        : both;
-    margin       : var(--vspace-2) 0 calc(var(--vspace-2) - 1px);
+    margin       : 0 /*var(--vspace-2) 0 calc(var(--vspace-2) - 1px);*/
     height       : 0;
 }
 
@@ -3579,6 +3579,19 @@ img.u-pull-left {
 .service-icon--asl {
     background-image : url(../images/icons/services/sign-language.png)
 }
+
+.service-icon--emotions {
+    background-image : url(../images/icons/services/emotions.png)
+}
+
+.service-icon--score {
+    background-image : url(../images/icons/services/search.png)
+}
+
+.service-icon--mowgli {
+    background-image : url(../images/icons/services/brain.png)
+}
+
 
 .service-icon--product-design {
     background-image : url(../images/icons/services/icon-product-design.svg);
