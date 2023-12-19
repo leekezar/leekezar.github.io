@@ -48,7 +48,7 @@ h4 {
     background-color: rgba(255, 255, 255, 0.5);
     position: sticky; 
     top: 0; 
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(20px);
     width: calc(100% + 40px); /* Adjust for body's padding */
     margin-left: -20px; /* Adjust for body's padding */
     /* z-index: 100; */
@@ -95,7 +95,7 @@ a[target="_blank"]::after {
 
 section {
     margin-left: 30px;
-    /* margin-top: 20px; */
+    margin-top: 20px;
 }
 
 section > section {
@@ -105,12 +105,12 @@ section > section {
 .expansion {
     display: none;
     padding: 10px 10px 0 10px;
-    background-color: #f7f7f7;
+    background-color: #f2f2f2;
     border-radius: 7px;
 }
 
 .highlight {
-    background: rgb(227, 227, 227);
+    background: #ccc;
     color: rgb(0, 0, 0);
     padding:5px;
     white-space: nowrap;
@@ -188,6 +188,10 @@ background-color: #ccc;
 
     section {
         margin-left: 0px;
+    }
+
+    body, p {
+        line-height: 2.1;
     }
 }
 
