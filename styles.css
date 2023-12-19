@@ -51,7 +51,10 @@ h4 {
     backdrop-filter: blur(20px);
     width: calc(100% + 40px); /* Adjust for body's padding */
     margin-left: -20px; /* Adjust for body's padding */
-    /* z-index: 100; */
+}
+
+#collapse {
+    margin-right:20px;
 }
 
 .line {
@@ -76,6 +79,7 @@ p {
     margin: 0px;
     padding: 10px;
     line-height: 2;
+    text-align: justify;
 }
 
 a {
@@ -94,17 +98,18 @@ a[target="_blank"]::after {
 }
 
 section {
-    margin-left: 30px;
-    margin-top: 20px;
+    margin-bottom: 20px;
 }
 
 section > section {
+    margin-bottom: 0;
+    margin-left: 30px;
     margin-top: 0;
 }
 
 .expansion {
     display: none;
-    padding: 10px 10px 0 10px;
+    padding: 10px;
     background-color: #f2f2f2;
     border-radius: 7px;
 }
