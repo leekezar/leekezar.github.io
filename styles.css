@@ -197,6 +197,7 @@ background-color: #ccc;
 
     body, p {
         line-height: 2.3;
+        text-align: left;
     }
 }
 
