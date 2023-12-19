@@ -33,14 +33,15 @@ h4 {
     padding: 0px;
 }
 
-h2.left-align .right-align {
+.left-align > h2 {
     flex-grow: 1;
-    padding: 10px;
+    padding-left: 20px;
 }
 
 .container {
     display: flex;
     align-items: center;
+    width: 100%;
 }
 
 .container.banner {
@@ -48,6 +49,8 @@ h2.left-align .right-align {
     position: sticky; 
     top: 0; 
     backdrop-filter: blur(10px);
+    width: calc(100% + 40px); /* Adjust for body's padding */
+    margin-left: -20px; /* Adjust for body's padding */
     /* z-index: 100; */
 }
 
@@ -92,7 +95,7 @@ a[target="_blank"]::after {
 
 section {
     margin-left: 30px;
-    margin-top: 20px;
+    /* margin-top: 20px; */
 }
 
 section > section {
@@ -167,8 +170,16 @@ background-color: #ccc;
         display: none;
     }
 
+    h1 {
+        font-size: 2em;
+    }
+
     h2 {
-        font-size: 1.5em;
+        font-size: 1.2em;
+    }
+
+    h3 {
+        font-size: 1.2em;
     }
 
     header > .container > .line {
@@ -182,7 +193,7 @@ background-color: #ccc;
 
 @media (min-width: 1000px) {
     body {
-        padding-left: 5%;
-        padding-right: 5%;
+        margin-left: 5%;
+        margin-right: 5%;
     }
 }
