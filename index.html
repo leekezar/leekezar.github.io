@@ -1,448 +1,156 @@
 <!DOCTYPE html>
-<html lang="en" class="no-js" >
+<html lang="en">
 <head>
-
-    <!--- basic page needs
-    ================================================== -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lee Kezar</title>
-
-    <script>
-        document.documentElement.classList.remove('no-js');
-        document.documentElement.classList.add('js');
-    </script>
-
-    <!-- CSS
-    ================================================== -->
-    <link rel="stylesheet" href="css/vendor.css">
-    <link rel="stylesheet" href="css/styles.css">
-
-    <!-- favicons
-    ================================================== -->
-    <link rel="apple-touch-icon" sizes="180x180" href="favicon_180x180.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon_32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon_16x16.png">
-    <link rel="manifest" href="site.webmanifest">
-
+    <link rel="stylesheet" type="text/css" href="./styles.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <script src="app.js"></script>
 </head>
+<body>
 
-<body id="top">
+    <header>
+        <div class="container">
+            <span class="left-align">
+                <h1>Hi, I'm <span class="highlight-noexpand" style="padding-left:8px; padding-right:8px;">Lee Kezar</span></h1>
+                <h3>PhD Candidate, University of Southern California</h3>
 
+                I'm a Graduate Research Assistant in the <span class="highlight"><a href="http://glamor.rocks/" target="_blank">GLAMOR Lab</a></span> Lab under 
+                <span class="highlight"><a href="https://jessethomason.com/" target="_blank">Dr. Jesse Thomason</a></span>.<br>
 
-    <!-- preloader
-    ================================================== -->
-    <div id="preloader">
-        <div id="loader">
+                I'm also a Visiting Scholar in the <span class="highlight"><a href="https://sites.bu.edu/lexlab/" target="_blank">LexLab</a></span> under 
+                <span class="highlight"><a href="http://www.naomicaselli.com/" target="_blank">Dr. Naomi Caselli</a></span> at Boston University's 
+                <span class="highlight"><a href="https://sites.bu.edu/deafcenter/" target="_blank">Deaf Center</a></span>.
+            </span>
+            <div class="line"></div>
+            <span class="right-align">
+                <img src="selfie.jpeg" class="selfie">
+            </span>
         </div>
-    </div>
+        <br>
+        <div id="progressbar"><div class="progress-label"></div></div>
+        <p>✨ I'm looking for industry-based internships (for May 2024) and full-time roles (starting January 2025)!</p>
+    </header>
 
+    <main>
+        <div>
+            <header class="container banner">
+                <span class="left-align"><h2>My Research</h2></span><div class="line"></div><span class="right-align"><span class="expandable highlight" id="expand">Expand All</span> <span class="expandable highlight" id="collapse">Collapse All</span></span>
+            </header>
 
-    <!-- page wrap
-    ================================================== -->
-    <div class="s-pagewrap">
-
-
-
-        <!-- # site header 
-        ================================================== -->
-        <header class="s-header">
-
-            <div class="s-header__block">
-                <div class="s-header__logo">
-                    <a class="logo" href="index.html">
-                        <img src="images/logo.png" alt="Homepage">
-                    </a>
-                </div>
-
-                <a class="s-header__menu-toggle" href="#0"><span>Menu</span></a>
-            </div> <!-- end s-header__block -->
-
-            <div class="row s-header__nav-wrap">
-                <nav class="s-header__nav">
-                    <ul>
-                        <li class="current"><a href="#intro" class="smoothscroll">précis</a></li>
-                        <li><a href="#projects" class="smoothscroll">Projects</a></li>
-                        <li><a href="#resume" class="smoothscroll">Résumé</a></li>
-                        <li><a href="#contact" class="smoothscroll">Contact</a></li>
-                    </ul>
-                </nav>
-
-                <ul class="s-header__social">
-                    <li>
-                        <a href="http://github.com/leekezar">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-labelledby="title"
-                                aria-describedby="desc" role="img" xmlns:xlink="http://www.w3.org/1999/xlink">
-                                  <title>Github</title>
-                                  <path data-name="layer2"
-                                  d="M32 0a32.021 32.021 0 0 0-10.1 62.4c1.6.3 2.2-.7 2.2-1.5v-6c-8.9 1.9-10.8-3.8-10.8-3.8-1.5-3.7-3.6-4.7-3.6-4.7-2.9-2 .2-1.9.2-1.9 3.2.2 4.9 3.3 4.9 3.3 2.9 4.9 7.5 3.5 9.3 2.7a6.93 6.93 0 0 1 2-4.3c-7.1-.8-14.6-3.6-14.6-15.8a12.27 12.27 0 0 1 3.3-8.6 11.965 11.965 0 0 1 .3-8.5s2.7-.9 8.8 3.3a30.873 30.873 0 0 1 8-1.1 30.292 30.292 0 0 1 8 1.1c6.1-4.1 8.8-3.3 8.8-3.3a11.965 11.965 0 0 1 .3 8.5 12.1 12.1 0 0 1 3.3 8.6c0 12.3-7.5 15-14.6 15.8a7.746 7.746 0 0 1 2.2 5.9v8.8c0 .9.6 1.8 2.2 1.5A32.021 32.021 0 0 0 32 0z"
-                                  fill="#202020"></path>
-                                  <path data-name="layer1" d="M12.1 45.9c-.1.2-.3.2-.5.1s-.4-.3-.3-.5.3-.2.6-.1c.2.2.3.4.2.5zm1.3 1.5a.589.589 0 0 1-.8-.8.631.631 0 0 1 .7.1.494.494 0 0 1 .1.7zm1.3 1.8a.585.585 0 0 1-.7-.3.6.6 0 0 1 0-.8.585.585 0 0 1 .7.3c.2.3.2.7 0 .8zm1.7 1.8c-.2.2-.5.1-.8-.1-.3-.3-.4-.6-.2-.8a.619.619 0 0 1 .8.1.554.554 0 0 1 .2.8zm2.4 1c-.1.3-.4.4-.8.3s-.6-.4-.5-.7.4-.4.8-.3c.3.2.6.5.5.7zm2.6.2c0 .3-.3.5-.7.5s-.7-.2-.7-.5.3-.5.7-.5c.4.1.7.3.7.5zm2.4-.4q0 .45-.6.6a.691.691 0 0 1-.8-.3q0-.45.6-.6c.5-.1.8.1.8.3z"
-                                  fill="#202020"></path>
-                                </svg>
-                            <span class="screen-reader-text">Github</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="https://scholar.google.com/citations?user=B1zEgSkAAAAJ&hl=en&authuser=1">
-                        <svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 25">
-                            <title>Google Scholar</title>
-                            <path d="M10.93 2.045c-.547.366-3.22 2.14-5.938 3.945C2.272 7.794.05 9.286.05 9.304c0 .019.136.11.305.2.167.096 2.85 1.583 5.965 3.31l5.656 3.143.144-.074c.082-.04 2.169-1.232 4.642-2.642l4.493-2.568.027 7.947h2.668V9.319l-3.46-2.32c-4.664-3.124-8.392-5.586-8.484-5.606-.045-.008-.527.287-1.076.652M5.355 16.633l.014 2.005 3.31 1.987 3.31 1.982 3.337-2 3.332-2.005V16.62c0-1.092-.013-1.983-.027-1.983s-1.318.782-2.9 1.741l-3.306 1.996-.431.256-1.32-.791a604.12 604.12 0 0 1-3.286-1.979l-2.005-1.21c-.024-.008-.032.883-.027 1.983" />
-                        </svg>
-                          <span class="screen-reader-text">Google Scholar</span>
-
-                        </a>
-                    </li>
-                    <li>
-                        <a href="https://www.linkedin.com/in/lee-kezar-b73388139/">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-labelledby="title" aria-describedby="desc" role="img" xmlns:xlink="http://www.w3.org/1999/xlink">
-                              <title>LinkedIn</title>
-                              <path data-name="layer1"
-                              fill="#0077b7" d="M1.15 21.7h13V61h-13zm46.55-1.3c-5.7 0-9.1 2.1-12.7 6.7v-5.4H22V61h13.1V39.7c0-4.5 2.3-8.9 7.5-8.9s8.3 4.4 8.3 8.8V61H64V38.7c0-15.5-10.5-18.3-16.3-18.3zM7.7 2.6C3.4 2.6 0 5.7 0 9.5s3.4 6.9 7.7 6.9 7.7-3.1 7.7-6.9S12 2.6 7.7 2.6z"></path>
-                            </svg>
-                            <span class="screen-reader-text">LinkedIn</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="http://twitter.com/leekezar">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="fill:rgba(0, 0, 0, 1);transform:;-ms-filter:">
-                                <title>Twitter</title>
-                                <path d="M19.633,7.997c0.013,0.175,0.013,0.349,0.013,0.523c0,5.325-4.053,11.461-11.46,11.461c-2.282,0-4.402-0.661-6.186-1.809 c0.324,0.037,0.636,0.05,0.973,0.05c1.883,0,3.616-0.636,5.001-1.721c-1.771-0.037-3.255-1.197-3.767-2.793 c0.249,0.037,0.499,0.062,0.761,0.062c0.361,0,0.724-0.05,1.061-0.137c-1.847-0.374-3.23-1.995-3.23-3.953v-0.05 c0.537,0.299,1.16,0.486,1.82,0.511C3.534,9.419,2.823,8.184,2.823,6.787c0-0.748,0.199-1.434,0.548-2.032 c1.983,2.443,4.964,4.04,8.306,4.215c-0.062-0.3-0.1-0.611-0.1-0.923c0-2.22,1.796-4.028,4.028-4.028 c1.16,0,2.207,0.486,2.943,1.272c0.91-0.175,1.782-0.512,2.556-0.973c-0.299,0.935-0.936,1.721-1.771,2.22 c0.811-0.088,1.597-0.312,2.319-0.624C21.104,6.712,20.419,7.423,19.633,7.997z"></path></svg>
-                            <span class="screen-reader-text">Twitter</span>
-                        </a>
-                    </li>
-                </ul>
-            </div> <!-- end s-header__nav-wrap -->
-
-        </header> <!-- end s-header -->
-
-
-        <!-- # intro 
-        ================================================== -->
-        <section id="intro" class="s-intro target-section">
-
-            <div class="row">
-                <div class="column">
-                    <div class="s-intro__top-block">
-                        <span class="s-intro__bg"></span>
-
-                        <h1 class="s-intro__text">
-                            <br>welcome<br>
-                        </h1>
-
-
-                        <a href="#services" class="s-intro__scroll-down smoothscroll">
-                            <span>"Gesture Drawings" (2013) Jeffrey Mansfield</span>
-<!--                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="fill:rgba(0, 0, 0, 1);transform:rotate(180deg);-ms-filter:progid:DXImageTransform.Microsoft.BasicImage(rotation=2)"><path d="M21 11L6.414 11 11.707 5.707 10.293 4.293 2.586 12 10.293 19.707 11.707 18.293 6.414 13 21 13z"></path></svg> -->
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row row-x-center s-intro__about-wrap">
-                <div class="column s-intro__about">
-                    <h2 class="s-intro__about-title">about me</h2>
-
+            <div>
+                <section>
                     <p>
-                    I am a third-year Ph.D. student at the University of Southern California under the advisement of <a href="http://jessethomason.com">Dr. Jesse Thomason</a> in the <a href="http://glamor.rocks">GLAMOR Lab</a>. My work leverages linguistic theory to learn robust sign language models.
+                        I combine <span class="expandable highlight" id="ml">machine learning</span> and <span class="expandable highlight" id="ling">linguistics</span> to train models that 
+                        <span class="expandable highlight" id="understand">understand</span> American Sign Language (ASL).
+                        My models are trained to discern the 
+                        <span class="expandable highlight" id="systematicity">systematic relationships</span>
+                         between signs' <span class="expandable highlight" id="phonology">form</span> and <span class="expandable highlight" id="morphology">meanings</span>, such as recognizing that signs near the eyes convey visual concepts, allowing them to understand signs they haven't seen before.
+                        This will be a critical piece in the pursuit of making sign language translators, since datasets are limited with regard to quality and quantity.
+                        Beyond sign language, I'm broadly interested in <span class="expandable highlight" id="neuro-symbolic">neuro-symbolic learning</span> and sociotechnical systems.
                     </p>
+                </section>
 
-                </div>
-            </div>
-
-            <div class="row about-stats stats block-lg-one-half block-md-one-half block-mob-whole" data-animate-block>
-                <div class="column stats__item" data-animate-el>
-                    <div class="stats__count" data-counter=5><span>5</span></div>
-                    <h5>publications</h5>
+                <section class="expansion" id="ml">
                     <p>
-                    I have published computer science and linguistics research in the following areas:
-                    <ul>
-                        <li>scholarly document understanding</li>
-                        <li>sign language linguistics</li>
-                        <li>affective computing</li>
-                    </ul>
+                        <span class="highlight-noexpand">Machine Learning</span><br>
+                        Machine learning models are trained to recognize patterns in data.
+                        Modeling <i>sign language</i> means understanding, translating, and generating sign language data in the form of video or pose estimations.
+                        My work focuses on understanding: How can models <span class="expandable highlight" id="isr">recognize signs</span>, especially ones they haven't seen before?
+                        To achieve this, I use a variety of machine learning techniques, most importantly <span class="expandable highlight" id="nlp">natural language processing</span> and <span class="expandable highlight" id="neuro-symbolic">neuro-symbolic learning</span>.
                     </p>
-                </div>
-                <div class="column stats__item" data-animate-el>
-                    <div class="stats__count" data-counter=6><span>6</span></div>
-                    <h5>years teaching</h5>
-                    <p>
-                    I have taught Computer Science—from elementary to graduate—since 2016. Topics include:
-                    <ul>
-                        <li>website and app development</li>
-                        <li>programming fundamentals</li>
-                        <li>computer architecture</li>
-                    </ul>
-                    </p>
-                </div>
-                <div class="column stats__item" data-animate-el>
-                    <div class="stats__count" data-counter=7><span>7</span></div>
-                    <h5>research talks</h5>
-                    <p>
-                    Outside of teaching, I enjoy sharing my research to peers in forums such as:
-                    <ul>
-                        <li>Association for Computational Linguistics</li>
-                        <li>Information Sciences Institute</li>
-                        <li>USC Viterbi School of Engineering</li>
-                        <li>Rhodes College Symposium</li>
-                    </ul>
-                    </p>
-                </div>
-                <div class="column stats__item" data-animate-el>
-                    <div class="stats__count" data-counter=9><span>9</span></div>
-                    <h5>projects</h5> 
-                    <p style="margin-bottom:0">Understanding Knowledge and Intent</p>
-                    <ul style="padding-top:0">
-                        <li>evaluating machine common-sense in language models</li>
-                        <li>predicting research reproducibility</li>
-                        <li>finding pragmatic differences between disciplines</li>
-                    </ul>
-                    <p style="margin-bottom:0">Understanding Face and Gesture</p>
-                    <ul>
-                        <li>self-supervised ASL morpheme identification</li>
-                        <li>understanding the grammar of facial expressions</li>
-                        <li>causes and effects of ASL/English mixing</li>
-                    </ul>
-                    <p style="margin-bottom:0">Understanding Emotion</p>
-                    <ul>
-                        <li>emulating microskills in psychotherapy</li>
-                        <li>emulating emotion-focused therapy</li>
-                        <li>natural text generation with mixed emotion</li>
-                    </ul>
-                    </p>
-                </div>
-    
-            </div> <!-- end about-stats -->
-
-        </section> <!-- end s-intro -->
-
-
-        <!-- # services
-        ================================================== -->
-        <section id="projects" class="s-services target-section">
-
-            <div class="row section-header has-bottom-sep">
-                <div class="column lg-12">
-                    <h3 class="text-pretitle">selected projects</h3>
-                </div>
-            </div> <!-- end section-header -->
-    
-            <div class="row services-list block-lg-one-half block-tab-whole" data-animate-block>
-    
-                <div class="column service-item" data-animate-el>
-                    <div class="service-icon-block">
-                        <span class="service-icon service-icon--asl"></span>
-                    </div>
-                    <div class="service-text">
-                        <h3 class="h4">Identifying Sign Language Morphemes</h3>
-                        <p>I use state-of-the-art pose estimation and facial expression recognition to produce linguistically-informed representations of American Sign Language phonemes such as handshape and movement. I then use semi- and self-supervised learning techniques to approximate the meaning of phoneme combinations.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="column service-item" data-animate-el>
-                    <div class="service-icon-block">
-                        <span class="service-icon service-icon--score"></span>
-                    </div>
-                    <div class="service-text">
-                        <h3 class="h4">Predicting Research Reproducibility</h3>
+                    <section class="expansion" id="nlp">
                         <p>
-                        Many research papers social and behavioral science do not reproduce, constituting a crisis for the field. This NSF-funded project seeks to model and predict paper reproducibility. My contributions increase pipeline performance by leveraging psycholinguistic features such as emotionality and coherency, as well as pragmatic features like document structure.
+                            <span class="highlight-noexpand">Natural Language Processing</span><br>
+                            NLP uses artificial intelligence techniques to understand language. While it commonly focuses on speech or text modality, new large-scale datasets and advanced computer vision techniques have recently enabled NLP for sign language modeling. This sub-field of NLP is tasked with understanding, translating, and generating sign language.
                         </p>
-                    </div>
-                </div>
-
-                <div class="column service-item" data-animate-el>
-                    <div class="service-icon-block">
-                        <span class="service-icon service-icon--mowgli"></span>
-                    </div>
-                    <div class="service-text">
-                        <h3 class="h4">Evaluating Machine Common Sense</h3>
+                    </section>
+            
+                    <section class="expansion" id="neuro-symbolic">
                         <p>
-                        Pretrained language models like RoBERTa claim state-of-the-art performance on comprehension, inference, and generation. But do they have the most basic level of common sense? This work operationalizes common sense via cloze testing, and measures how disparate a language model's answers are. For example, "Leopards have ___ on their bodies." is supplied with "scars" and "tattoos" before "spots", indicating significant confusion as to what leopards look like.
-                    </div>
-                </div>
-    
-            </div> <!-- end services-list -->
+                            <span class="highlight-noexpand">Neuro-Symbolic Learning</span><br>
+                            In contrast to end-to-end modeling, neuro-symbolic learning provides the model with explicit knowledge and logical reasoning, such as linguistic rules 
+                        </p>
+                    </section>
+                </section>
 
-        </section> <!-- end s-services -->
-
-
-        <!-- ## works
-        ================================================== -->
-        <section id="resume" class="s-works target-section">
-
-            <div class="row section-header section-header--dark has-bottom-sep">
-                <div class="column lg-12 text-left">
-                    <h2 class="text-pretitle text-center">résumé</h3>
+                <section class="expansion" id="ling">
                     <p>
-                        <h3 class="text-pretitle text-left">Education</h3>
-                        <ul>
-                            <li>University of Southern California, Los Angeles, CA Ph.D. Student (3rd year), Computer Science (3.51/4.00 GPA)</li>
-                            <li>Rhodes College, Memphis, TN Bachelor of Science, Computer Science (3.55/4.00 GPA)</li>
-                        </ul>
-                        <hr>
-                        <h3 class="text-pretitle text-left">Work Experience</h3>
-                        <div class="row text-center">
-                            <div class="column">Research Assistant</div>
-                            <div class="column"><a href="https://isi.edu">Information Sciences Inst.</a></div>
-                            <div class="column">Fall 2019 – Present</div>
-                        </div>
-                        
-                        <ul>
-                            <li>Developed novel methods for (a) quantifying language model knowledge gaps and (b) abstract reasoning with knowledge graphs.</li>
-
-                            <li>Developed a pipeline to predict research quality based on textual features. Entailed extracting and interpreting pragmatic and psycholinguistic features.</li>
-
-                            <li>Established a novel research group to study American Sign Language morphology and how it can be used for translating unseen signs and complex grammatical constructions.</li>
-
-                            <li>Student representative for diversity, equity, and inclusion policy</li>
-                        </ul>
-
-                        <div class="row text-center">
-                            <div class="column">Teaching Assistant</div>
-                            <div class="column"><a href="https://usc.edu">Univ. Southern California</a></div>
-                            <div class="column">Spring 2020 – Present</div>
-                        </div>
-                                <ul>
-                                    <li>Lead a lab and hold office hours for CSCI102 “Fundamentals of Programming” and CSCI104 “Data Structures and Object Oriented Design”.</li>
-
-                                    <li>Manage the suite of automatic tests for compiling and grading each assignment</li>
-                                </ul>
-
-                        <div class="row text-center">
-                            <div class="column">Teaching Assistant</div>
-                            <div class="column"><a href="https://rhodes.edu">Rhodes College</a></div>
-                            <div class="column">Fall 2016 – Spring 2019</div>
-                        </div>
-
-                        <ul>
-                            <li>Tutor students in COMP231 “Introduction to Systems Programming”</li>
-                        </ul>
-
-                        <div class="row text-center">
-                            <div class="column">Instructor</div>
-                            <div class="column"><a href="https://www.code-crew.org/">Code Crew</a></div>
-                            <div class="column">Fall 2016 – Fall 2019</div>
-                        </div>
-
-                        <ul>
-                            <li>Teach the fundamentals of programming, website development, and app development to 5th-12th grade students across 7 schools.</li>
-                        </ul>
-
-                        <hr>
-                        <h3 class="text-pretitle text-left">Skills</h3>
-                        <ul>
-                            <li>data & extraction: MySQL, JSON, Scrapy</li>
-                            <li>programming: Python, C/C++, C#, Java, Jupyter</li>
-                            <li>ai & ml: PyTorch, HuggingFace, SciKit Learn, TensorFlow, reinforcement learning</li>
-                            <li>nlp: RegEx, spaCy, NLTK, WordNet, LIWC, GloVe, transformers, LSTMs</li>
-                            <li>analysis: cluster analysis, probabilistic soft logic, factor analysis</li>
-                            <li>prototyping: HTML/CSS, Javascript, Visual Studio</li>
-                            <li>other & non-technical: psycholinguistics, computer vision, multimodal interaction</li>
-                        </ul>
+                        <span class="highlight-noexpand">Sign Language Linguistics</span><br>
+                        Sign languages are like spoken languages in almost every way.
+                        Each sign language has its own vocabulary and grammar, and they are independent of any spoken language used in their region.
+                        They have a complex structure at all levels, such as <span class="expandable highlight" id="phonology">phonology</span> and <span class="expandable highlight" id="morphology">semantics</span>.
+                        My work leverages the relationship between phonology and semantics, also known as <span class="expandable highlight" id="systematicity">systematicity</span>, to help machine learning models understand signs they haven't seen before.
                     </p>
 
-                </div>
-            </div> <!-- end section-header -->
+                    <section class="expansion" id="phonology">
+                        <p>
+                            <span class="highlight-noexpand">Phonemes</span><br>
+                            Phonemes are the smallest units of language.
+                            In sign languages, they are the handshapes, movements, and locations that make up signs.
+                            My paper "Exploring Strategies for Modeling Sign Language Phonology" describes a model which recognizes phonemes in isolated signs with 75–90% accuracy.  <span class="highlight"><a href="https://arxiv.org/abs/2310.00195" target="_blank">Read the paper</a></span>
+            
+                        </p>
+                    </section> 
 
-    
-        </section> <!-- end s-works -->
+                    <section class="expansion" id="morphology">
+                        <p>
+                            <span class="highlight-noexpand">Morphemes</span><br>
+                            Morphemes are the smallest meaningful units of language.
+                        </p>
+                    </section> 
 
+                    <section class="expansion" id="systematicity">
+                        <p>
+                            <span class="highlight-noexpand">Systematicity</span><br>
+                            Morphemes are the smallest meaningful units of language.
+                        </p>
+                    </section> 
+                </section>
 
-        <!-- ## contact
-        ================================================== -->
-        <section id="contact" class="s-contact target-section">
-
-            <div class="row section-header section-header--dark">
-                <div class="column lg-12">
-                    <h3 class="text-pretitle">Contact</h3>
-                </div>
-            </div>
-
-            <div class="row row-x-center text-center s-contact__content">
-                <div class="column lg-12">
-                    <p class="lead">
-                    I am currently looking for internship opportunities for Summer 2023. If my portfolio interests you, please email me at kezarlee[at]gmail[dot]com or click the button below.
+                <section class="expansion" id="understand">
+                    <p>
+                        <span class="highlight-noexpand">Understanding Sign Language</span><br>
+                        Understanding sign language begins with <span class="expandable highlight" id="isr">recognizing signs</span> in all of their forms.
+                        My approach focuses on recognizing <span class="expandable highlight" id="phonology">phonemes</span> and then linking them to meaning.
+                        This is a critical step because signs change according to the signer and context, just like speech, and oftentimes the model has never seen !<br>
                     </p>
-                    <div class="btn-wrap">
-                        <a href="mailto:kezarlee@gmail.com" class="btn btn--primary">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="fill:rgba(0, 0, 0, 1);transform:;-ms-filter:"><path d="M20,4H4C2.897,4,2,4.897,2,6v12c0,1.103,0.897,2,2,2h16c1.103,0,2-0.897,2-2V6C22,4.897,21.103,4,20,4z M20,6v0.511 l-8,6.223L4,6.512V6H20z M4,18V9.044l7.386,5.745C11.566,14.93,11.783,15,12,15s0.434-0.07,0.614-0.211L20,9.044L20.002,18H4z"></path></svg>
-                            Write An Email
-                        </a>
-                    </div>
-                </div>
+
+                    <section class="expansion" id="isr">
+                        <p>
+                            <span class="highlight-noexpand">Sign Recognition</span><br>
+                            Sign recognition is the task of recognizing signs in video.
+                        </p>
+                    </section>
+
+                </section>
             </div>
-
-            <footer class="s-footer">
-
-                <div class="row s-footer__bottom">
-                    <div class="column ss-copyright">
-                        <span>© Copyright Tyndale 2021</span> 
-                        <span>Design by <a href="https://www.styleshout.com/">StyleShout</a></span>
-                    </div>
-
-                    <div class="ss-go-top">
-                        <a class="smoothscroll" title="Back to Top" href="#top">
-                            <span class="ss-go-top__icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="fill:rgba(0, 0, 0, 1);transform:rotate(90deg);-ms-filter:progid:DXImageTransform.Microsoft.BasicImage(rotation=1)"><path d="M6 4H18V6H6zM11 14L11 20 13 20 13 14 18 14 12 8 6 14z"></path></svg>
-                            </span>
-                            <span class="ss-go-top__text">Back to Top</span>
-                        </a>
-                    </div>
-                </div> <!-- end s-footer__top -->
-
-            </footer>
-
-        </section> <!-- end s-contact -->
-
-    </div> <!-- end -s-pagewrap -->
-
-
-    <!-- photoswipe background
-    ================================================== -->
-    <div aria-hidden="true" class="pswp" role="dialog" tabindex="-1">
-
-        <div class="pswp__bg"></div>
-        <div class="pswp__scroll-wrap">
-
-            <div class="pswp__container">
-                <div class="pswp__item"></div>
-                <div class="pswp__item"></div>
-                <div class="pswp__item"></div>
-            </div>
-
-            <div class="pswp__ui pswp__ui--hidden">
-                <div class="pswp__top-bar">
-                    <div class="pswp__counter"></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button> <button class="pswp__button pswp__button--share" title=
-                    "Share"></button> <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button> <button class="pswp__button pswp__button--zoom" title=
-                    "Zoom in/out"></button>
-                    <div class="pswp__preloader">
-                        <div class="pswp__preloader__icn">
-                            <div class="pswp__preloader__cut">
-                                <div class="pswp__preloader__donut"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
-                    <div class="pswp__share-tooltip"></div>
-                </div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)"></button> <button class="pswp__button pswp__button--arrow--right" title=
-                "Next (arrow right)"></button>
-                <div class="pswp__caption">
-                    <div class="pswp__caption__center"></div>
-                </div>
-            </div>
-
         </div>
 
-    </div> <!-- end photoSwipe background -->
+        <div>
+            <header class="container banner">
+                <span class="left-align"><h2>Resources</h2></span>
+            </header>
+            <div>
+                <section>
+                    <h4></h4>
+                    <p>
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi iaculis nisl eu sapien ultrices, a mattis est pharetra. Phasellus eget tellus enim. Aenean varius ultrices porta. Sed sed cursus arcu. Integer ut cursus purus, non tempus diam. Aliquam laoreet lacinia justo ut vehicula. Aliquam gravida, leo nec posuere ullamcorper, ex magna scelerisque nulla, at posuere ante libero a nisi. Curabitur elit nisi, molestie vitae sem eget, aliquet posuere nibh. Cras augue lacus, accumsan pretium bibendum sit amet, pellentesque vel orci. Phasellus porta tellus vitae vulputate hendrerit. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Suspendisse imperdiet mauris in egestas ornare. Nam nulla sem, pulvinar maximus dolor sed, ullamcorper egestas arcu. Suspendisse id commodo ligula. Curabitur metus massa, tempor ut facilisis volutpat, malesuada at orci.
 
+                        Etiam viverra iaculis ligula sit amet dapibus. Duis urna dui, ornare in elit et, ultricies vestibulum ante. Aenean quis nisl nec leo euismod egestas. Etiam nec feugiat ex. In at sem ac dolor laoreet laoreet quis sit amet enim. Integer ornare malesuada vulputate. Donec sit amet nibh id risus finibus efficitur ut ornare enim. Donec vehicula arcu id justo suscipit blandit. Morbi varius posuere est at rhoncus. Quisque dapibus quis nibh a porta. Sed a lectus id mauris scelerisque bibendum. Nullam non nisi id massa mattis pellentesque. Aenean sit amet nisl vitae ante imperdiet tempus. Curabitur elementum purus vitae dictum elementum. Integer accumsan lacus dui. Nullam et pharetra sem.
 
-    <!-- Java Script
-    ================================================== -->
-    <script src="js/plugins.js"></script>
-    <script src="js/main.js"></script>
+                        Duis bibendum iaculis enim quis porttitor. Nullam tempus ullamcorper vehicula. Proin tristique sed leo non faucibus. Mauris scelerisque elit et neque convallis, vel pretium sapien euismod. Donec euismod justo dui, quis vulputate velit lacinia quis. Sed molestie maximus velit, in sodales tortor sodales id. Curabitur congue eu tellus ut fringilla.
+
+                        Phasellus urna odio, consequat a velit ut, laoreet vestibulum sapien. Morbi suscipit ac arcu pretium pretium. Aliquam auctor turpis sed euismod volutpat. Vivamus ac tortor vitae metus porttitor lobortis. Fusce id aliquet sapien. Fusce in porttitor magna, eget blandit mauris. Proin porta diam at nisi convallis mattis. Maecenas eleifend leo et metus ullamcorper dapibus. Mauris eget vestibulum massa.
+
+                        Nulla luctus non odio id convallis. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vivamus vestibulum sit amet justo vel viverra. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Donec eu nibh nunc. Vivamus ac lobortis justo. Sed eget tempor sapien. Sed mollis felis laoreet dictum auctor. Vivamus finibus, felis vel consectetur lobortis, risus ante posuere metus, vitae tempus dui leo vitae sapien. Praesent quis turpis congue, consequat metus vitae, sagittis lorem. Vestibulum fringilla, nisi sed aliquet ullamcorper, sem nisi efficitur mi, at ultricies tellus nisl et massa. Morbi bibendum consectetur felis. Sed in risus non nisl consequat ullamcorper nec at ante. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Sed sed faucibus erat, a dignissim nunc. Morbi nec tincidunt nibh.
+                    </p>
+                </section>
+            </div>
+        </div>
+    </main>
 
 </body>
 </html>
