@@ -49,93 +49,90 @@
                 </span>
             </header>
 
-            <div>
                 <section style="margin-top:0;">
                     <p>
-                        I combine <span class="expandable highlight" id="ml">machine learning</span> and <span class="expandable highlight" id="ling">linguistics</span> to train models that 
-                        <span class="expandable highlight" id="understand">understand</span> American Sign Language (ASL).
-                        My models are trained to discern the 
-                        <span class="expandable highlight" id="systematicity">systematic relationships</span>
-                         between signs' <span class="expandable highlight" id="phonology">form</span> and <span class="expandable highlight" id="morphology">meanings</span>, such as recognizing that signs near the eyes convey visual concepts, allowing them to understand signs they haven't seen before.
-                        This will be a critical piece in the pursuit of making sign language translators, since datasets are limited with regard to quality and quantity.
-                        Beyond sign language, I'm broadly interested in <span class="expandable highlight" id="neuro-symbolic">neuro-symbolic learning</span> and sociotechnical systems.
+                        As language technologies like ChatGPT gain popularity, deaf people who predominantly use a sign language to communicate are increasingly left behind. 
+                        To help make these technologies more accessible, I study ways to make models that can <span class="expandable highlight" id="understanding">understand sign language</span>. 
+                        My current work focuses on <span class="expandable highlight" id="semantics">lexical semantics</span>, leveraging <span class="expandable highlight" id="knowledgebase">linguistic knowledge bases</span> to improve model 
+                        <span class="expandable highlight" id="perception">perception</span>, <span class="expandable highlight" id="recognition">recognition</span>, and <span class="expandable highlight" id="comprehension">comprehension</span>.
                     </p>
                 </section>
 
-                <section class="expansion" id="ml">
-                    <p>
-                        <span class="highlight-noexpand">Machine Learning</span><br>
-                        Machine learning models are trained to recognize patterns in data.
-                        Modeling <i>sign language</i> means understanding, translating, and generating sign language data in the form of video or pose estimations.
-                        My work focuses on understanding: How can models <span class="expandable highlight" id="isr">recognize signs</span>, especially ones they haven't seen before?
-                        To achieve this, I use a variety of machine learning techniques, most importantly <span class="expandable highlight" id="nlp">natural language processing</span> and <span class="expandable highlight" id="neuro-symbolic">neuro-symbolic learning</span>.
-                    </p>
-                    <section class="expansion" id="nlp">
-                        <p>
-                            <span class="highlight-noexpand">Natural Language Processing</span><br>
-                            NLP uses artificial intelligence techniques to understand language. While it commonly focuses on speech or text modality, new large-scale datasets and advanced computer vision techniques have recently enabled NLP for sign language modeling. This sub-field of NLP is tasked with understanding, translating, and generating sign language.
-                        </p>
-                    </section>
-            
-                    <section class="expansion" id="neuro-symbolic">
-                        <p>
-                            <span class="highlight-noexpand">Neuro-Symbolic Learning</span><br>
-                            In contrast to end-to-end modeling, neuro-symbolic learning provides the model with explicit knowledge and logical reasoning, such as linguistic rules 
-                        </p>
-                    </section>
-                </section>
-
-                <section class="expansion" id="ling">
-                    <p>
-                        <span class="highlight-noexpand">Sign Language Linguistics</span><br>
-                        Sign languages are like spoken languages in almost every way.
-                        Each sign language has its own vocabulary and grammar, and they are independent of any spoken language used in their region.
-                        They have a complex structure at all levels, such as <span class="expandable highlight" id="phonology">phonology</span> and <span class="expandable highlight" id="morphology">semantics</span>.
-                        My work leverages the relationship between phonology and semantics, also known as <span class="expandable highlight" id="systematicity">systematicity</span>, to help machine learning models understand signs they haven't seen before.
-                    </p>
-
-                    <section class="expansion" id="phonology">
-                        <p>
-                            <span class="highlight-noexpand">Phonemes</span><br>
-                            Phonemes are the smallest units of language.
-                            In sign languages, they are the handshapes, movements, and locations that make up signs.
-                            My paper "Exploring Strategies for Modeling Sign Language Phonology" describes a model which recognizes phonemes in isolated signs with 75–90% accuracy.  <span class="highlight"><a href="https://arxiv.org/abs/2310.00195" target="_blank">Read the paper</a></span>
-            
-                        </p>
-                    </section> 
-
-                    <section class="expansion" id="morphology">
-                        <p>
-                            <span class="highlight-noexpand">Morphemes</span><br>
-                            Morphemes are the smallest meaningful units of language.
-                        </p>
-                    </section> 
-
-                    <section class="expansion" id="systematicity">
-                        <p>
-                            <span class="highlight-noexpand">Systematicity</span><br>
-                            Morphemes are the smallest meaningful units of language.
-                        </p>
-                    </section> 
-                </section>
-
-                <section class="expansion" id="understand">
+                <section class="expansion" id="understanding">
                     <p>
                         <span class="highlight-noexpand">Understanding Sign Language</span><br>
-                        Understanding sign language begins with <span class="expandable highlight" id="isr">recognizing signs</span> in all of their forms.
-                        My approach focuses on recognizing <span class="expandable highlight" id="phonology">phonemes</span> and then linking them to meaning.
-                        This is a critical step because signs change according to the signer and context, just like speech, and oftentimes the model has never seen !<br>
+                        Understanding any sign language requires <span class="expandable highlight" id="perception">perceiving</span> visual features like the location and configuration of the hands, <span class="expandable highlight" id="recognition">recognizing</span> what those features signify, and 
+                        <span class="expandable highlight" id="comprehension">comprehending</span> the intended meaning through inference. 
+                        To satisfy these requirements, I adopt a <span class="expandable highlight" id="ling">linguistic</span> approach. 
+                        My work presents the argument that a model which can recognize phonological features not only recognizes isolated signs more accurately, but also enables it to approximate the meaning of signs it has never seen before!
                     </p>
-
-                    <section class="expansion" id="isr">
+                    <section class="expansion" id="perception">
                         <p>
-                            <span class="highlight-noexpand">Sign Recognition</span><br>
-                            Sign recognition is the task of recognizing signs in video.
+                            <span class="highlight-noexpand">Perception</span><br>
+                            Understanding sign language begins with perceiving many subtle visual features called <span class="expandable highlight" id="phonemes">phonemes</span>, for example the flexion of each finger or the path that the hands move along. 
+                            Our EACL paper "Improving Sign Recognition with Phonology" <span class="highlight"><a href="https://arxiv.org/abs/2302.05759" target="_blank">Paper</a></span> shows that models miss many of these features, leading to poorer performance in higher-level tasks like recognizing signs. 
+                            To improve models' phonological perception, a follow-up work "Exploring Strategies for Modeling Sign Language Phonology" <span class="highlight"><a href="https://arxiv.org/abs/2310.00195" target="_blank">Paper</a></span> provides a method which recognizes 16 types of phonological features with 75%-90% accuracy using a technique called curriculum learning.
                         </p>
                     </section>
+            
+                    <section class="expansion" id="recognition">
+                        <p>
+                            <span class="highlight-noexpand">Recognition</span><br>
+                            Recognizing which sign(s) are present in a video is a critical step towards automatic sign language translation and requires distinguishing many visually-similar signs. 
+                            This is a difficult task for rare and modified signs, which are unlikely to have been seen in training.
+                            Our paper, "Improving Sign Recognition with Phonology" <span class="highlight"><a href="https://arxiv.org/abs/2302.05759" target="_blank">Paper</a></span> showed that models are better at distinguishing signs when they can also recognize the pieces of those signs, i.e. <span class="expandable highlight" id="phonemes">phonemes</span>. 
+                            This result was replicated in "The Sem-Lex Benchmark: Modeling ASL Signs and Their Phonemes" <span class="highlight"><a href="https://arxiv.org/abs/2302.05759" target="_blank">Paper</a></span>, adding that rare signs benefit the most from phoneme recognition.                       
+                         </p>
+                    </section>
 
+                    <section class="expansion" id="comprehension">
+                        <p>
+                            <span class="highlight-noexpand">Comprehension</span><br>
+                            One powerful benefit of modeling sign language <span class="expandable highlight" id="phonemes">phonology</span> is the ability to apply inference to the phonemes after they are recognized. 
+                            Specifically, by leveraging systematic relationships between form and meaning, we may be able to infer the meaning of a sign even if the model has never seen it before! 
+                            Ongoing work explores this possibility, which we intend to publish in 2024.
+                        </p>
                 </section>
-            </div>
+            </section>
+
+            <section class="expansion" id="ling">
+                <p>
+                    <span class="highlight-noexpand">Sign Language Linguistics</span><br>
+                    Sign languages are like spoken languages in almost every way. 
+                    Each sign language has its own vocabulary and grammar, and they are independent of any spoken language used in their region. 
+                    They have a complex structure at all levels, such as <span class="expandable highlight" id="phonemes">phonology</span> and <span class="expandable highlight" id="phonemes">semantics</span>. 
+                    My work leverages the relationship between phonology and semantics, also known as systematicity, to help machine learning models understand signs they haven't seen before.
+                </p>
+
+                <section class="expansion" id="phonology">
+                    <p>
+                        <span class="highlight-noexpand">Phonemes</span><br>
+                        Phonemes are the smallest units of language. 
+                        In sign languages, phonemes fall into one of several categories, such as hand configuration, movement, and location. 
+                        My work loosely falls under Brentari's Prosodic Model, which emphasizes the simultaneity and interdependency of phonemes.
+                    </p>
+                </section> 
+
+                <section class="expansion" id="semantics">
+                    <p>
+                        <span class="highlight-noexpand">Lexical Semantics</span><br>
+                        Many times, the meaning of a sign has a direct relationship to its form. 
+                        This relationship, called systematicity, provides valuable scaffolding to learn signs more efficiently and can enable understanding even when the sign has never been seen before. 
+                        Currently, my team is working on a large knowledge graph of ASL signs' form and meaning, which we will be releasing in Fall 2024. 
+                        We hope this resource will be used in creative ways to computationally model ASL systematicity.                       
+                    </p>
+                </section> 
+
+                <section class="expansion" id="knowledgebase">
+                    <p>
+                        <span class="highlight-noexpand">Linguistic Knowledge Bases</span><br>
+                        Structured, accurate knowledge about the structure of signs can be a powerful addition to current models for sign language. 
+                        For example, training models to simultaneously recognize phonological features alongside sign identifiers improves their accuracy at both tasks. 
+                        My work relies on knowledge bases like <span class="highlight"><a href="https://asl-lex.org/" target="_blank">ASL-LEX 2.0</a></span>, a dataset of linguistic and cognitive facts related to signs, and <span class="highlight"><a href="https://hci.stanford.edu/publications/2016/ethan/empath-chi-2016.pdf" target="_blank">Empath</a></span>, a dataset of semantic categories for many English words. 
+                        We've also released a dataset of our own, the Sem-Lex Benchmark <span class="highlight"><a href="https://arxiv.org/abs/2302.05759" target="_blank">Paper</a></span>, containing over 91,000 isolated sign videos representing a vocabulary of 3,100 signs (the largest of its kind!).                        
+                    </p>
+                </section> 
+            </section>
         </div>
 
         <div>
