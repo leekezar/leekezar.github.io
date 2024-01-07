@@ -17,20 +17,31 @@ $(document).ready(function(){
     var progress = ((currentDate - startDate) / (endDate - startDate)) * 100;
     $("#progressbar").progressbar({ value: progress });
     $(".progress-label").text("Loading PhD... (" + progress.toFixed(0) + "%)");
+
+    // Script for expanding concepts and papers
     $(".expandable").click(function(){
         var clickedId = $(this).attr('id');
         var objToExpand = $(".expansion#" + clickedId)
         var parentToExpand = objToExpand.parent(".expansion");
         var parentId = parentToExpand.attr("id");
 
-        if (clickedId === "collapse") {
-            $(".expansion").slideUp("slow");
-            $(".expandable").removeClass("expanded_highlight");
+        if (clickedId === "collapse_concepts"){
+            $(".expansion.concept").slideUp("slow");
+            $(".expandable.concept").removeClass("expanded_highlight");
 
-        } else if (clickedId === "expand") {
-            $(".expansion").slideDown("slow");
-            $(".expandable:not(#collapse,#expand)").addClass("expanded_highlight");
-            $(".expandable#collapse .expandable#expand").removeClass("expanded_highlight");
+        } else if (clickedId === "expand_concepts") {
+            $(".expansion.concept").slideDown("slow");
+            $(".expandable.concept:not(#collapse,#expand)").addClass("expanded_highlight");
+            $(".expandable.concept#collapse .expandable#expand").removeClass("expanded_highlight");
+
+        } else if (clickedId === "collapse_papers"){
+            $(".expansion.paper").slideUp("slow");
+            $(".expandable.paper").removeClass("expanded_highlight");
+
+        } else if (clickedId === "expand_papers") {
+            $(".expansion.paper").slideDown("slow");
+            $(".expandable.paper:not(#collapse,#expand)").addClass("expanded_highlight");
+            $(".expandable.paper#collapse .expandable#expand").removeClass("expanded_highlight");
 
         } else if (!$(".expandable#" + clickedId).hasClass("expanded_highlight")) { // Item is not shown; show it.
             // Highlight the clicked button
@@ -83,7 +94,7 @@ $(document).ready(function(){
 
         } else { // Item is shown, hide it and its children, and remove expanded_highlight class
             $(".expandable#" + clickedId).removeClass("expanded_highlight");
-            $(".expansion#" + clickedId).find(".expanded_highlight").each(function() {
+            $(".expansion.super#" + clickedId).find(".expanded_highlight:not(.super,.paper)").each(function() {
                 var id = $(this).attr('id');
                 $(".expandable#" + id).removeClass("expanded_highlight");
                 $(".expansion#" + id).slideUp("slow");
