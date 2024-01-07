@@ -171,7 +171,7 @@ background-color: #ccc;
 
 
 @media (max-width: 600px) {
-    img.selfie {
+    img.selfie  {
         display: none;
     }
 
@@ -198,6 +198,20 @@ background-color: #ccc;
     body, p {
         line-height: 2.3;
         text-align: left;
+    }
+
+    .container {
+       display: flex;
+       flex-wrap: wrap;
+    }
+    .left-align, .right-align {
+        float: none; /* Remove float for stacking on smaller screens */
+        width: 100%; /* Full width on smaller screens */
+        margin-right: 0; /* No margin on smaller screens */
+    }
+
+    .highlight, .highlight-noexpand {
+        white-space: normal;
     }
 }
 
