@@ -49,7 +49,7 @@ h4 {
     position: sticky; 
     top: 0; 
     backdrop-filter: blur(20px);
-    width: calc(100% + 80px); /* Adjust for body's padding */
+    width: calc(100% + 10px); /* Adjust for body's padding */
     margin-left: -20px; /* Adjust for body's padding */
 }
 
@@ -70,6 +70,8 @@ main .line {
 img.selfie {
     width: 125px;
     height: auto;
+    margin-left: auto;
+    margin-right: auto;
     border-radius: 50%;
     border: 2px solid black;
     display: block;
