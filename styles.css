@@ -208,12 +208,16 @@ background-color: #ccc;
     }
     .left-align, .right-align {
         float: none; /* Remove float for stacking on smaller screens */
-        width: 100%; /* Full width on smaller screens */
         margin-right: 0; /* No margin on smaller screens */
     }
 
     .highlight, .highlight-noexpand {
         white-space: normal;
+    }
+
+    .line {
+        margin:0;
+        margin-right:5px;
     }
 }
 
