@@ -219,6 +219,10 @@ background-color: #ccc;
         margin:0;
         margin-right:5px;
     }
+
+    div > .container {
+        flex-grow: 0;
+    }
 }
 
 @media (min-width: 1000px) {
