@@ -133,7 +133,7 @@
     
 
         
-        <header class="container banner">
+        <!-- <header class="container banner">
             <span class="left-align"><h2>Publications</h2></span>
             <div class="line"></div>
             <span class="right-align">
@@ -219,7 +219,7 @@
                     <!-- &nbsp; -->
                     <!-- <span class="highlight">
                         <a href="https://docs.google.com/forms/d/e/1FAIpQLSeFjIcbJcr2kWibgrEdFyLhNADo1ErnVGuQHtGeiDiqe4iteQ/viewform?usp=sf_link" target="_blank">Download Sem-Lex</a>
-                    </span> -->
+                    </span>
                 </span>
             </div>
         </section>
@@ -262,10 +262,10 @@
                     <span class="highlight">
                         <a href="./bibtex/EACL.bib" download="Kezar2023EACL.bib">Download BibTeX</a>
                     </span>
-                    <!-- &nbsp; -->
+                    <!-- &nbsp;
                     <!-- <span class="highlight">
                         <a href="https://docs.google.com/forms/d/e/1FAIpQLSeFjIcbJcr2kWibgrEdFyLhNADo1ErnVGuQHtGeiDiqe4iteQ/viewform?usp=sf_link" target="_blank">Download Sem-Lex</a>
-                    </span> -->
+                    </span> 
                 </span>
             </div>
         </section>
@@ -302,14 +302,29 @@
                     <span class="highlight">
                         <a href="./bibtex/SDP.bib" download="Kezar2021ACL.bib">Download BibTeX</a>
                     </span>
-                    <!-- &nbsp; -->
+                    <!-- &nbsp;
                     <!-- <span class="highlight">
                         <a href="https://docs.google.com/forms/d/e/1FAIpQLSeFjIcbJcr2kWibgrEdFyLhNADo1ErnVGuQHtGeiDiqe4iteQ/viewform?usp=sf_link" target="_blank">Download Sem-Lex</a>
-                    </span> -->
+                    </span>
                 </span>
             </div>
-        </section>
+        </section> -->
+
+        <header class="container banner">
+          <span class="left-align"><h2>Publications</h2></span>
+          <div class="line"></div>
+          <span class="right-align">
+            <span class="expandable highlight" id="expand_papers">Expand All</span>
+            <span class="expandable highlight" id="collapse_papers">Collapse All</span>
+          </span>
+        </header>
         
+        <!-- Dynamic publications start -->
+        <div id="publications-container"></div>
+        <noscript><p><em>Enable JavaScript to view dynamically generated publications.</em></p></noscript>
+        <script src="generatePubs.js"></script>
+        <!-- Dynamic publications end -->
+
     </main>
 
 </body>
