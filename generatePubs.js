@@ -2,10 +2,7 @@
   const container = document.getElementById('publications-container');
   const bibFiles = ['ASSETS.bib', 'ESANN.bib', 'EACL.bib', 'SDP.bib'];
 
-  const parserURL = 'https://cdn.jsdelivr.net/npm/bibtex-parse-js@2.0.0/bibtexParse.min.js';
-  const module = await import(parserURL);
-  const bibtexParse = module.default || module;
-
+  // ✅ bibtexParse is now loaded globally from index.html
   for (const file of bibFiles) {
     try {
       const res = await fetch(`./bibtex/${file}`);
