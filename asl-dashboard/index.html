@@ -1,0 +1,4141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ASL Annotation Dashboard</title>
+  <style>
+    :root {
+      --bg: #f4efe5;
+      --panel: rgba(255,255,255,0.88);
+      --panel-strong: #fffaf2;
+      --text: #1d2421;
+      --muted: #5e655f;
+      --accent: #1f6f5f;
+      --accent-soft: #cbe7dd;
+      --danger: #8f3b2e;
+      --danger-soft: #f7d6cf;
+      --ok: #2f6e3f;
+      --ok-soft: #d8eddc;
+      --border: rgba(29,36,33,0.12);
+      --shadow: 0 24px 60px rgba(31,37,34,0.12);
+    }
+    * { box-sizing: border-box; }
+    a { color: inherit; text-decoration-color: rgba(31,111,95,0.45); }
+    a:hover { text-decoration-color: currentColor; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans","Avenir Next",sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 0% 0%, rgba(31,111,95,0.18), transparent 24%),
+        radial-gradient(circle at 100% 0%, rgba(191,126,74,0.18), transparent 22%),
+        linear-gradient(180deg, #f9f5ee 0%, var(--bg) 100%);
+    }
+    .page { max-width: 1720px; margin: 0 auto; padding: 20px; display: grid; gap: 18px; }
+    .toolbar,.grid,.retrieval,.embedding-space,.feedback-panel,.motion-panel,.detail-tabs {
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+    }
+    .toolbar {
+      padding: 16px 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .toolbar .left,.toolbar .right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .app-title {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .section-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .badge {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--panel-strong);
+      border: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .badge.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-color: rgba(31,111,95,0.35);
+    }
+    button,.toggle,select {
+      appearance: none;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      background: var(--panel-strong);
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+    }
+    button:hover { border-color: rgba(31,111,95,0.35); }
+    button.progress-button {
+      background:
+        linear-gradient(90deg, var(--accent-soft) 0%, var(--accent-soft) var(--btn-progress, 0%), var(--panel-strong) var(--btn-progress, 0%), var(--panel-strong) 100%);
+    }
+    button.primary {
+      background: linear-gradient(135deg, #245e53, var(--accent));
+      color: #fff;
+    }
+    .grid {
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+      grid-template-columns: minmax(380px, 0.5fr) minmax(700px, 1fr);
+      align-items: start;
+    }
+    .grid > section { min-width: 0; }
+    .video-panel { min-width: 0; }
+    .detail-tabs { min-width: 0; align-self: start; }
+    .video-shell {
+      position: relative;
+      border-radius: 18px;
+      overflow: hidden;
+      background: #101513;
+      aspect-ratio: 16 / 9;
+    }
+    video,#poseOverlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    #poseOverlay { pointer-events: none; }
+    .video-meta { display: grid; gap: 10px; margin-top: 14px; min-width: 0; }
+    .local-timeline-panel {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 12px;
+      background: var(--panel-strong);
+      display: grid;
+      gap: 10px;
+      min-width: 0;
+    }
+    .timeline-main {
+      display: grid;
+      grid-template-columns: 44px minmax(0,1fr) 44px;
+      gap: 10px;
+      align-items: stretch;
+    }
+    .timeline-nav {
+      border-radius: 16px;
+      padding: 0;
+      min-height: 84px;
+      font-size: 22px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .timeline-window {
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      border-radius: 16px;
+      background: rgba(29,36,33,0.06);
+      border: 1px solid var(--border);
+    }
+    .timeline-stack {
+      position: relative;
+      width: 100%;
+      min-width: 0;
+    }
+    .timeline-marker {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 2px;
+      transform: translateX(-1px);
+      background: rgba(29,36,33,0.5);
+      pointer-events: none;
+    }
+    .current-card {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px;
+      background: var(--panel-strong);
+      display: grid;
+      gap: 12px;
+    }
+    .seg-nav {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .seg-center { text-align: center; min-width: 0; }
+    .seg-clock,.seg-frames { color: var(--muted); font-size: 15px; font-variant-numeric: tabular-nums; }
+    .seg-meta { color: var(--muted); font-size: 13px; min-height: 18px; }
+    .time-edit-row {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+      gap: 12px;
+      align-items: center;
+    }
+    .control-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+    }
+    .boundary-group {
+      display: grid;
+      grid-template-columns: auto auto minmax(68px, 1fr) auto auto;
+      gap: 4px;
+      align-items: center;
+      min-width: 0;
+    }
+    .boundary-group button {
+      min-width: 30px;
+      padding: 6px 8px;
+      border-radius: 10px;
+    }
+    .boundary-value {
+      min-width: 68px;
+      text-align: center;
+      display: grid;
+      gap: 2px;
+    }
+    .timeline-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .timeline-tools {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .motion-controls {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px 12px;
+      align-items: start;
+      justify-content: stretch;
+      min-width: 0;
+      max-width: 100%;
+    }
+    .motion-control {
+      display: grid;
+      grid-template-columns: auto auto minmax(0,1fr) auto auto;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+    .motion-control.buttons {
+      display: flex;
+      flex-wrap: wrap;
+      grid-template-columns: none;
+    }
+    .motion-control .value {
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      min-width: 52px;
+    }
+    .motion-control .step {
+      padding: 6px 8px;
+      min-width: 32px;
+    }
+    .timeline-bottom {
+      display: grid;
+      gap: 10px;
+    }
+    .timeline-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .timeline-sep {
+      color: var(--muted);
+      font-size: 20px;
+      font-weight: 700;
+      align-self: stretch;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .progress-wrap { display: none; }
+    .section-title { margin: 0 0 10px; font-size: 18px; font-weight: 700; }
+    .phono-panel .section-title,.sign-panel .section-title { text-align: center; font-size: 22px; }
+    .subtle { color: var(--muted); font-size: 13px; }
+    .scroll { max-height: 780px; overflow: auto; padding-right: 6px; }
+    .feature-row,.model-card,.retrieval-card {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 12px;
+      background: var(--panel-strong);
+      margin-bottom: 12px;
+    }
+    .retrieval-card { cursor: pointer; }
+    .feature-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .card-head-main {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+    .feature-row h4,.model-card h4 { margin: 0; font-size: 15px; }
+    .feature-row,.model-card { cursor: pointer; }
+    .collapse-toggle {
+      padding: 4px 8px;
+      font-size: 12px;
+      line-height: 1;
+    }
+    .feature-row.collapsed .feature-scroll,
+    .model-card.collapsed .pred-scroll { display: none; }
+    .feature-row .summary-row,
+    .model-card .summary-row { margin-bottom: 0; }
+    .feature-row:not(.collapsed) .summary-row,
+    .model-card:not(.collapsed) .summary-row { margin-bottom: 8px; }
+    .selected-gloss-row .card-head { margin-bottom: 0; }
+    .selected-gloss-row { padding-bottom: 10px; }
+    .pred-list { display: grid; gap: 8px; }
+    .feature-scroll { max-height: 220px; overflow: auto; padding-right: 4px; }
+    .pred-scroll { max-height: 176px; overflow: auto; padding-right: 4px; }
+    .pred-item {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: linear-gradient(90deg, var(--fill-color, rgba(31,111,95,0.16)) 0%, var(--fill-color, rgba(31,111,95,0.16)) var(--prob-fill, 0%), rgba(29,36,33,0.04) var(--prob-fill, 0%), rgba(29,36,33,0.04) 100%);
+    }
+    .pred-item.term-added {
+      box-shadow: inset 0 0 0 2px rgba(47,110,63,0.42);
+      background:
+        linear-gradient(90deg, rgba(47,110,63,0.22) 0%, rgba(47,110,63,0.22) 100%);
+    }
+    .prob {
+      min-width: 60px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .actions { display: inline-flex; gap: 6px; }
+    .mini { padding: 6px 9px; font-size: 12px; }
+    .mini.accept.active { background: var(--ok-soft); color: var(--ok); border-color: rgba(47,110,63,0.25); }
+    .mini.reject.active { background: var(--danger-soft); color: var(--danger); border-color: rgba(143,59,46,0.25); }
+    .retrieve { background: var(--accent-soft); color: var(--accent); }
+    .retrieval,.embedding-space,.feedback-panel,.motion-panel,.detail-tabs { padding: 18px; }
+    .detail-tabs {
+      display: grid;
+      gap: 16px;
+    }
+    .tab-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .tab-button {
+      border-radius: 999px;
+      padding: 9px 14px;
+      background: var(--panel-strong);
+    }
+    .tab-button.active {
+      background: var(--accent-soft);
+      border-color: rgba(31,111,95,0.35);
+      color: var(--accent);
+    }
+    .tab-page {
+      display: none;
+      min-width: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .tab-page.active {
+      display: block;
+    }
+    .tab-page.loading {
+      pointer-events: none;
+    }
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+      background: rgba(245,248,246,0.82);
+      backdrop-filter: blur(2px);
+      z-index: 20;
+      border-radius: 18px;
+    }
+    .tab-page.loading .loading-overlay {
+      display: flex;
+    }
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: 3px solid rgba(31,111,95,0.16);
+      border-top-color: var(--accent);
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .predictions-layout {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: minmax(340px,0.9fr) minmax(380px,1fr);
+    }
+    .predictions-layout > section { min-width: 0; }
+    #phonoRows {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      align-items: start;
+    }
+    .pred-toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .pred-toolbar .left,
+    .pred-toolbar .right {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .pred-toolbar .right { flex: 1; justify-content: flex-end; }
+    .search-box {
+      min-width: 240px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--panel-strong);
+      font: inherit;
+      color: var(--text);
+    }
+    .motion-panel {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+    .motion-stack {
+      position: relative;
+      width: 100%;
+      min-width: 0;
+      display: grid;
+      gap: 10px;
+    }
+    .motion-window {
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      contain: layout paint;
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.85), rgba(214,221,216,0.42)),
+        linear-gradient(90deg, rgba(31,111,95,0.04), rgba(191,126,74,0.04));
+      border: 1px solid var(--border);
+    }
+    .motion-marker {
+      position: absolute;
+      top: 10px;
+      bottom: 10px;
+      left: 50%;
+      width: 2px;
+      transform: translateX(-1px);
+      background: rgba(29,36,33,0.58);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.35);
+      pointer-events: none;
+    }
+    .motion-marker::before {
+      content: "";
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-top: 10px solid rgba(29,36,33,0.58);
+    }
+    #motionCanvas {
+      display: block;
+      height: 360px;
+      max-width: none;
+    }
+    .timeline {
+      position: relative;
+      height: 84px;
+    }
+    .segment-chip {
+      position: absolute;
+      top: 16px;
+      height: 36px;
+      border-radius: 12px;
+      cursor: pointer;
+      opacity: 0.9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
+    }
+    .segment-chip span {
+      width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: center;
+      display: block;
+      pointer-events: none;
+    }
+    .segment-chip.known { background: rgba(31,111,95,0.75); }
+    .segment-chip.unknown { background: rgba(143,59,46,0.75); }
+    .retrieval-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fill,minmax(200px,1fr));
+    }
+    .retrieval-toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .rename-actions {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .slider-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    input[type="range"] { width: 160px; }
+    .seg-nav { align-items: center; }
+    .boundary-group {
+      display: grid;
+      grid-template-columns: auto auto minmax(88px, 1fr) auto auto;
+      gap: 6px;
+      align-items: center;
+      min-width: 0;
+    }
+    .boundary-value {
+      min-width: 88px;
+      text-align: center;
+      display: grid;
+      gap: 2px;
+    }
+    .boundary-time,
+    .boundary-frame {
+      font-size: 15px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .checkbox-row.hidden {
+      display: none;
+    }
+    .segment-list {
+      display: grid;
+      gap: 8px;
+      max-height: 340px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .segment-list-item {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.72);
+      cursor: pointer;
+      display: grid;
+      gap: 4px;
+    }
+    .segment-list-item.active {
+      border-color: rgba(31,111,95,0.5);
+      background: rgba(203,231,221,0.55);
+    }
+    .theme-picker {
+      min-width: 180px;
+    }
+    .thumb {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      border-radius: 12px;
+      background: #d6ddd8;
+    }
+    .thumb-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #d6ddd8;
+    }
+    .thumb-wrap.loading::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(255,255,255,0), rgba(31,111,95,0.18), rgba(255,255,255,0));
+      animation: shimmer 1.1s linear infinite;
+    }
+    .thumb-wrap .thumb {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .thumb-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+      background: #101513;
+      z-index: 1;
+    }
+    @keyframes shimmer {
+      from { transform: translateX(-100%); }
+      to { transform: translateX(100%); }
+    }
+    .pending { opacity: 0.55; }
+    .embedding-space { display: none !important; }
+    .embedding-wrap {
+      border-radius: 18px;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(29,36,33,0.04), rgba(29,36,33,0.08));
+      border: 1px solid var(--border);
+      min-height: 440px;
+    }
+    #embeddingCanvas {
+      width: 100%;
+      height: 440px;
+      display: block;
+    }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px; }
+    textarea {
+      width: 100%;
+      min-height: 72px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      font: inherit;
+      resize: vertical;
+      background: var(--panel-strong);
+    }
+    .pill {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(29,36,33,0.08);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    progress {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    progress::-webkit-progress-bar { background: rgba(29,36,33,0.08); }
+    progress::-webkit-progress-value { background: linear-gradient(135deg, #245e53, var(--accent)); }
+    .section-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .select-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .select-wrap::after {
+      content: "▾";
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+      font-size: 12px;
+    }
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      padding-right: 32px;
+      min-width: 220px;
+    }
+    @media (max-width: 1280px) {
+      .grid { grid-template-columns: 1fr; }
+      .predictions-layout { grid-template-columns: 1fr; }
+      .scroll { max-height: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="toolbar">
+      <div class="left">
+        <h1 class="app-title">ASL Annotation Dashboard</h1>
+      </div>
+      <div class="right">
+        <select id="themeSelect" class="theme-picker">
+          <option value="tron">Tron</option>
+          <option value="cherry">Cherry Blossom</option>
+          <option value="pastel">Pastel</option>
+          <option value="gemstone">Gemstone</option>
+          <option value="forest">Forest</option>
+        </select>
+        <button id="exportFeedback">Export feedback</button>
+        <button id="clearFeedback">Clear feedback</button>
+        <span class="badge" id="feedbackCount">0 feedback items</span>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="video-panel">
+        <div class="section-head">
+          <div class="section-controls">
+            <label class="select-wrap">
+              <span class="subtle">Source</span>
+              <select id="videoSelect"></select>
+            </label>
+            <label class="toggle"><input type="checkbox" id="poseToggle" /> Pose</label>
+            <label class="toggle"><input type="checkbox" id="replayToggle" /> Repeat</label>
+          </div>
+        </div>
+        <div class="video-shell">
+          <video id="video" controls preload="metadata"></video>
+          <canvas id="poseOverlay"></canvas>
+        </div>
+        <div class="video-meta">
+          <div class="local-timeline-panel">
+            <div class="timeline-head">
+              <div class="subtle" id="timelineMeta"></div>
+            </div>
+            <div class="timeline-main">
+              <button id="prevSeg" class="timeline-nav" aria-label="Previous segment">&#10094;</button>
+              <div class="timeline-stack">
+                <div class="timeline-window" id="timelineWindow">
+                  <div class="timeline" id="timeline"></div>
+                </div>
+                <div class="timeline-marker"></div>
+              </div>
+              <button id="nextSeg" class="timeline-nav" aria-label="Next segment">&#10095;</button>
+            </div>
+            <div class="timeline-bottom">
+              <div class="time-edit-row">
+                <div class="boundary-group">
+                  <button class="mini" id="startMinus5">&lt;&lt;</button>
+                  <button class="mini" id="startMinus">&lt;</button>
+                  <div class="boundary-value">
+                    <div id="currentStartTime" class="seg-clock">00:00</div>
+                    <div id="currentStartFrame" class="seg-frames">0</div>
+                  </div>
+                  <button class="mini" id="startPlus">&gt;</button>
+                  <button class="mini" id="startPlus5">&gt;&gt;</button>
+                </div>
+                <div class="timeline-sep">–</div>
+                <div class="boundary-group">
+                  <button class="mini" id="endMinus5">&lt;&lt;</button>
+                  <button class="mini" id="endMinus">&lt;</button>
+                  <div class="boundary-value">
+                    <div id="currentEndTime" class="seg-clock">00:00</div>
+                    <div id="currentEndFrame" class="seg-frames">0</div>
+                  </div>
+                  <button class="mini" id="endPlus">&gt;</button>
+                  <button class="mini" id="endPlus5">&gt;&gt;</button>
+                </div>
+              </div>
+              <div class="timeline-controls">
+                <button id="addSegment">Add</button>
+                <button id="splitSegment">Split</button>
+                <button id="mergeSegment">Merge</button>
+                <button id="deleteSegment">Delete</button>
+                <button id="relabelSegment">Relabel</button>
+                <button id="approveSegment">✓</button>
+                <button id="rejectSegment">✕</button>
+                <button class="mini" id="timelineZoomOut">-</button>
+                <button class="mini" id="timelineZoomIn">+</button>
+              </div>
+            </div>
+          </div>
+          <div class="current-card">
+            <div class="seg-nav">
+              <div></div>
+              <div class="timeline-tools">
+                <label class="subtle" for="segmentSort">Sort</label>
+                <select id="segmentSort">
+                  <option value="desc">Most uncertain</option>
+                  <option value="asc">Least uncertain</option>
+                </select>
+              </div>
+            </div>
+            <div class="segment-list" id="segmentList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="detail-tabs">
+      <div class="tab-bar">
+        <button class="tab-button active" data-tab="predictions">Predictions</button>
+        <button class="tab-button" data-tab="search">Search Results</button>
+        <button class="tab-button" data-tab="motion">Move-Hold Analysis</button>
+      </div>
+
+      <div class="tab-page active" data-tab-page="predictions">
+        <div class="loading-overlay"><div class="spinner"></div><div class="subtle">Updating predictions…</div></div>
+        <div class="pred-toolbar">
+          <div class="left">
+            <label class="subtle" for="confusionSort">Sort</label>
+            <select id="confusionSort">
+              <option value="desc">Most uncertain first</option>
+              <option value="asc">Least uncertain first</option>
+            </select>
+          </div>
+          <div class="right">
+            <input id="vocabSearch" class="search-box" type="search" placeholder="Search signs…" />
+          </div>
+        </div>
+        <div class="predictions-layout">
+          <section class="phono-panel">
+            <h2 class="section-title">Phonology Predictions</h2>
+            <div class="scroll" id="phonoRows"></div>
+          </section>
+
+          <section class="sign-panel">
+            <h2 class="section-title">Sign Predictions</h2>
+            <div class="scroll" id="signModels"></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="tab-page" data-tab-page="search">
+        <div class="loading-overlay"><div class="spinner"></div><div class="subtle">Loading search results…</div></div>
+        <section class="retrieval">
+          <div style="display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap;">
+            <div>
+              <h2 class="section-title" style="margin-bottom:4px;">Retrieved matches</h2>
+              <div class="subtle" id="retrievalSubtitle"></div>
+            </div>
+            <div class="retrieval-toolbar">
+              <label class="slider-wrap">
+                <span class="subtle">Threshold</span>
+                <input type="range" id="retrievalThreshold" min="0" max="1" step="0.1" value="0.8" />
+                <span class="subtle" id="retrievalThresholdValue">0.8</span>
+              </label>
+              <div class="rename-actions">
+                <button id="renameModeToggle">Rename</button>
+                <button id="renameSelectAll" class="checkbox-row hidden">Select All</button>
+                <button id="renameSelectNone" class="checkbox-row hidden">Select None</button>
+                <button id="applyRename" class="checkbox-row hidden">Apply</button>
+              </div>
+              <div class="subtle" id="retrievalSummary"></div>
+            </div>
+          </div>
+          <div class="retrieval-grid" id="retrievalGrid"></div>
+        </section>
+      </div>
+
+      <div class="tab-page" data-tab-page="motion">
+        <div class="loading-overlay"><div class="spinner"></div><div class="subtle">Loading move-hold analysis…</div></div>
+        <section class="motion-panel">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:end;flex-wrap:wrap;">
+            <div>
+              <h2 class="section-title" style="margin-bottom:4px;">Move-Hold Analysis</h2>
+            </div>
+            <div class="motion-controls">
+              <div class="motion-control subtle"><span>Threshold</span><button class="step" id="segThresholdMultDown">-</button><span class="value" id="segThresholdMultValue">0.56</span><button class="step" id="segThresholdMultUp">+</button></div>
+              <div class="motion-control subtle"><span>Before</span><button class="step" id="segWindowBeforeDown">-</button><span class="value" id="segWindowBeforeValue">0.5s</span><button class="step" id="segWindowBeforeUp">+</button></div>
+              <div class="motion-control subtle"><span>After</span><button class="step" id="segWindowAfterDown">-</button><span class="value" id="segWindowAfterValue">0.0s</span><button class="step" id="segWindowAfterUp">+</button></div>
+              <div class="motion-control subtle"><span>Split</span><button class="step" id="segSplitThresholdDown">-</button><span class="value" id="segSplitThresholdValue">0.48</span><button class="step" id="segSplitThresholdUp">+</button></div>
+              <div class="motion-control subtle"><span>Min Seg</span><button class="step" id="segMinFramesDown">-</button><span class="value" id="segMinFramesValue">10f</span><button class="step" id="segMinFramesUp">+</button></div>
+              <label class="motion-control subtle" for="segSmoothing"><span>Smoothing</span><span></span>
+                <select id="segSmoothing">
+                  <option value="mean">Mean</option>
+                  <option value="ema">EMA</option>
+                  <option value="median">Median</option>
+                </select>
+                <span></span><span></span>
+              </label>
+              <div class="motion-control buttons">
+                <button id="calibrateBoundaries">Calibrate</button>
+              </div>
+              <label class="toggle"><input type="checkbox" id="showUncertaintyCurve" /> Uncertainty</label>
+            </div>
+          </div>
+          <div class="subtle" id="motionMeta"></div>
+          <div class="motion-stack">
+            <div class="motion-window" id="motionWindow">
+              <canvas id="motionCanvas"></canvas>
+            </div>
+            <div class="motion-marker"></div>
+          </div>
+        </section>
+      </div>
+      </section>
+    </div>
+
+    <section class="embedding-space">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:end;flex-wrap:wrap;">
+        <div>
+          <h2 class="section-title" style="margin-bottom:4px;">Embedding space</h2>
+          <div class="subtle">Segment clusters are labeled in 2D; the current video trace moves through the ISR embedding space.</div>
+        </div>
+        <div class="subtle" id="embeddingMeta"></div>
+      </div>
+      <div class="embedding-wrap">
+        <canvas id="embeddingCanvas"></canvas>
+      </div>
+      <div class="legend" id="embeddingLegend"></div>
+    </section>
+
+    <section class="feedback-panel">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+        <div>
+          <h2 class="section-title" style="margin-bottom:4px;">Feedback notes</h2>
+          <div class="subtle">Notes are stored with video-specific feedback keys.</div>
+        </div>
+        <span class="pill" id="currentFeedbackKey">No selection</span>
+      </div>
+      <textarea id="noteBox" placeholder="Write notes about segment boundaries, pose quality, OOV status, or lexical uncertainty…"></textarea>
+    </section>
+  </div>
+
+  <script src="assets/app_data.js"></script>
+  <script src="assets/initial_feedback.js"></script>
+  <script>
+    const APP = window.__ASL_DASHBOARD_DATA__;
+    const INITIAL_FEEDBACK = window.__ASL_DASHBOARD_INITIAL_FEEDBACK__ || {};
+    const STORAGE_KEY = "asl-dashboard-feedback-v2";
+    const video = document.getElementById("video");
+    const overlay = document.getElementById("poseOverlay");
+    const ctx = overlay.getContext("2d");
+    const phonoRows = document.getElementById("phonoRows");
+    const signModels = document.getElementById("signModels");
+    const retrievalGrid = document.getElementById("retrievalGrid");
+    const retrievalSubtitle = document.getElementById("retrievalSubtitle");
+    const retrievalSummary = document.getElementById("retrievalSummary");
+    const retrievalThreshold = document.getElementById("retrievalThreshold");
+    const retrievalThresholdValue = document.getElementById("retrievalThresholdValue");
+    const renameModeToggle = document.getElementById("renameModeToggle");
+    const renameSelectAll = document.getElementById("renameSelectAll");
+    const renameSelectNone = document.getElementById("renameSelectNone");
+    const applyRename = document.getElementById("applyRename");
+    const embeddingCanvas = document.getElementById("embeddingCanvas");
+    const embeddingCtx = embeddingCanvas.getContext("2d");
+    const embeddingMeta = document.getElementById("embeddingMeta");
+    const embeddingLegend = document.getElementById("embeddingLegend");
+    const noteBox = document.getElementById("noteBox");
+    const feedbackCount = document.getElementById("feedbackCount");
+    const currentFeedbackKey = document.getElementById("currentFeedbackKey");
+    const themeSelect = document.getElementById("themeSelect");
+    const videoSelect = document.getElementById("videoSelect");
+    const poseToggle = document.getElementById("poseToggle");
+    const replayToggle = document.getElementById("replayToggle");
+    const timelineMeta = document.getElementById("timelineMeta");
+    const timelineWindow = document.getElementById("timelineWindow");
+    const segmentList = document.getElementById("segmentList");
+    const segmentSort = document.getElementById("segmentSort");
+    const motionCanvas = document.getElementById("motionCanvas");
+    const motionCtx = motionCanvas.getContext("2d");
+    const motionMeta = document.getElementById("motionMeta");
+    const motionWindow = document.getElementById("motionWindow");
+    const segThresholdMultValue = document.getElementById("segThresholdMultValue");
+    const segWindowBeforeValue = document.getElementById("segWindowBeforeValue");
+    const segWindowAfterValue = document.getElementById("segWindowAfterValue");
+    const segSplitThresholdValue = document.getElementById("segSplitThresholdValue");
+    const segMinFramesValue = document.getElementById("segMinFramesValue");
+    const segSmoothing = document.getElementById("segSmoothing");
+    const showUncertaintyCurve = document.getElementById("showUncertaintyCurve");
+    const tabButtons = Array.from(document.querySelectorAll(".tab-button"));
+    const tabPages = Array.from(document.querySelectorAll(".tab-page"));
+    const confusionSort = document.getElementById("confusionSort");
+    const vocabSearch = document.getElementById("vocabSearch");
+    const feedback = Object.assign({}, INITIAL_FEEDBACK, JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"));
+    const labelColors = new Map();
+    const decodedCache = new Map();
+    const motionCache = new Map();
+    const motionRenderCache = new Map();
+    const generatedMotionLayouts = new Map();
+    const patchImageCache = new Map();
+    const exactSearchCache = new Map();
+    const SHOW_EMBEDDING = false;
+    const labelToIndex = new Map(APP.shared.labelNames.map((label, idx) => [label, idx]));
+    const aslLexLabelSet = new Set((APP.shared.aslLexLabels || []).map((label) => label.toLowerCase()));
+    const retrievalSelection = new Set();
+    const generatedBaseSegments = new Map();
+    let lastRetrievalRequest = null;
+    let currentVideoId = APP.videoOrder[0];
+    let selectedSegmentId = 0;
+    let selectedFeedbackKey = "";
+    let activeDetailTab = "predictions";
+    let confusionSortMode = "desc";
+    let segmentSortMode = "desc";
+    let vocabSearchQuery = "";
+    let renameMode = false;
+    let timelineZoom = 1;
+    let loopGuard = false;
+    let lastPoseFrame = -1;
+    let lastEmbeddingRedraw = -1;
+    let lastMotionCenter = -1;
+    let suppressTimelineScroll = false;
+    let suppressMotionScroll = false;
+    let timelineUserScrubUntil = 0;
+    let motionUserScrubUntil = 0;
+    let regenDebounce = null;
+    let resolvedSegmentsCache = null;
+    let visibleSegmentsCache = null;
+    let segmentByIdCache = new Map();
+    let predictionRenderToken = 0;
+    let motionRenderToken = 0;
+    let motionRefreshTimer = null;
+    let motionConfigDebounce = null;
+    let pendingRegenSegmentId = null;
+    let hoverMotionFrame = null;
+    let hoverRemoveFrame = null;
+    const THEME_PRESETS = {
+      tron: {"--bg":"#090d14","--panel":"rgba(246,249,252,0.94)","--panel-strong":"#ffffff","--text":"#17212b","--muted":"#5f6c7b","--accent":"#1ec9ff","--accent-soft":"rgba(30,201,255,0.14)","--danger":"#ff8c3a","--danger-soft":"rgba(255,140,58,0.16)","--ok":"#1dbf73","--ok-soft":"rgba(29,191,115,0.14)","--border":"rgba(23,33,43,0.12)"},
+      cherry: {"--bg":"#11161a","--panel":"rgba(250,246,248,0.95)","--panel-strong":"#fffdfd","--text":"#25312b","--muted":"#6f7a75","--accent":"#e88db1","--accent-soft":"rgba(232,141,177,0.16)","--danger":"#c46b8a","--danger-soft":"rgba(196,107,138,0.14)","--ok":"#7caf8f","--ok-soft":"rgba(124,175,143,0.14)","--border":"rgba(37,49,43,0.12)"},
+      pastel: {"--bg":"#121417","--panel":"rgba(248,246,255,0.95)","--panel-strong":"#ffffff","--text":"#2d3042","--muted":"#777b93","--accent":"#8ea7ff","--accent-soft":"rgba(142,167,255,0.18)","--danger":"#f29ab1","--danger-soft":"rgba(242,154,177,0.16)","--ok":"#77c7b6","--ok-soft":"rgba(119,199,182,0.16)","--border":"rgba(45,48,66,0.12)"},
+      gemstone: {"--bg":"#0d1015","--panel":"rgba(246,248,251,0.95)","--panel-strong":"#ffffff","--text":"#1b2432","--muted":"#667289","--accent":"#5d7cff","--accent-soft":"rgba(93,124,255,0.16)","--danger":"#cc5b7b","--danger-soft":"rgba(204,91,123,0.15)","--ok":"#179f8a","--ok-soft":"rgba(23,159,138,0.14)","--border":"rgba(27,36,50,0.12)"},
+      forest: {"--bg":"#0d1410","--panel":"rgba(248,249,244,0.95)","--panel-strong":"#ffffff","--text":"#233126","--muted":"#69756d","--accent":"#2f8f63","--accent-soft":"rgba(47,143,99,0.16)","--danger":"#b96b4f","--danger-soft":"rgba(185,107,79,0.14)","--ok":"#1e7a55","--ok-soft":"rgba(30,122,85,0.14)","--border":"rgba(35,49,38,0.12)"}
+    };
+    const segmentationConfigByVideo = new Map();
+    const useVideoFrameCallback = typeof video.requestVideoFrameCallback === "function";
+    let videoFrameCallbackPending = false;
+    const HAND_PATCH_EDGES = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20]];
+    const captureCanvas = document.createElement("canvas");
+    const thumbCaptureVideo = document.createElement("video");
+    thumbCaptureVideo.muted = true;
+    thumbCaptureVideo.playsInline = true;
+    thumbCaptureVideo.preload = "auto";
+    const thumbCaptureCanvas = document.createElement("canvas");
+    const generatedThumbnailCache = new Map();
+    let thumbnailQueue = Promise.resolve();
+
+    function currentVideo() { return APP.videos[currentVideoId]; }
+    function segmentationConfig(videoId = currentVideoId) {
+      if (!segmentationConfigByVideo.has(videoId)) {
+        segmentationConfigByVideo.set(videoId, {
+          thresholdMult: 0.56,
+          emaBeforeSec: 0.5,
+          emaAfterSec: 0.0,
+          splitThreshold: 0.48,
+          minSegFrames: 10,
+          smoothing: "mean",
+          minHoldFrames: 3,
+          bufferFrames: 2,
+          showUncertainty: false,
+        });
+      }
+      return segmentationConfigByVideo.get(videoId);
+    }
+    function applyTheme(name) {
+      const preset = THEME_PRESETS[name] || THEME_PRESETS.tron;
+      Object.entries(preset).forEach(([key, value]) => document.documentElement.style.setProperty(key, value));
+      themeSelect.value = name in THEME_PRESETS ? name : "tron";
+    }
+    function baseSegments() {
+      return generatedBaseSegments.get(currentVideoId) || currentVideo().segments;
+    }
+    function customSegments() {
+      return Object.values(feedback)
+        .filter((entry) => entry && entry.videoId === currentVideoId && entry.kind === "custom-segment")
+        .map((entry) => JSON.parse(JSON.stringify(entry)));
+    }
+    function allSegments() {
+      return [...baseSegments(), ...customSegments()].sort((a, b) => a.startFrame - b.startFrame || a.endFrame - b.endFrame || a.id - b.id);
+    }
+    function tabPage(tabName) {
+      return document.querySelector(`.tab-page[data-tab-page="${tabName}"]`);
+    }
+    function setTabLoading(tabName, loading) {
+      const page = tabPage(tabName);
+      if (!page) return;
+      page.classList.toggle("loading", !!loading);
+    }
+    function renderPredictionsAsync(segId = selectedSegmentId) {
+      const token = ++predictionRenderToken;
+      setTabLoading("predictions", true);
+      requestAnimationFrame(() => {
+        if (token !== predictionRenderToken) return;
+        const seg = activeSegment(segId);
+        renderPhonology(seg);
+        renderSignModels(seg);
+        setTabLoading("predictions", false);
+      });
+    }
+    function renderMotionAsync() {
+      const token = ++motionRenderToken;
+      setTabLoading("motion", true);
+      requestAnimationFrame(() => {
+        if (token !== motionRenderToken) return;
+        renderMotionPanel();
+        setTabLoading("motion", false);
+      });
+    }
+    function setDetailTab(tabName, suppressRefresh = false) {
+      activeDetailTab = tabName;
+      tabButtons.forEach((button) => {
+        button.classList.toggle("active", button.dataset.tab === tabName);
+      });
+      tabPages.forEach((page) => {
+        page.classList.toggle("active", page.dataset.tabPage === tabName);
+      });
+      if (suppressRefresh) return;
+      if (tabName === "predictions") {
+        if (pendingRegenSegmentId === selectedSegmentId) {
+          const target = pendingRegenSegmentId;
+          pendingRegenSegmentId = null;
+          scheduleAutoRegenerate();
+          return;
+        }
+        renderPredictionsAsync(selectedSegmentId);
+      } else if (tabName === "motion") {
+        renderMotionAsync();
+      } else if (tabName === "search") {
+        retrieveNearestSegments(selectedSegmentId, "Current segment");
+      }
+    }
+    function segmentFrameSpan(segId) {
+      const base = allSegments().find((seg) => seg.id === segId);
+      if (!base) return 0;
+      const override = segmentOverride(segId);
+      const startFrame = override ? override.startFrame : base.startFrame;
+      const endFrame = override ? override.endFrame : base.endFrame;
+      return Math.max(0, endFrame - startFrame);
+    }
+    function isDeleted(segId) { return !!feedback[scopedKey("deleted", String(segId))]?.deleted || segmentFrameSpan(segId) < 10; }
+    function visibleSegmentIds() {
+      ensureResolvedSegments();
+      return visibleSegmentsCache.map((seg) => seg.id);
+    }
+    function visibleSegments() {
+      ensureResolvedSegments();
+      return visibleSegmentsCache;
+    }
+
+    function segmentHasManualFeedback(segId) {
+      return Object.values(feedback).some((entry) => entry && entry.videoId === currentVideoId && entry.segmentId === segId && (
+        entry.kind === "sign" ||
+        entry.kind === "phonology" ||
+        entry.kind === "segment-note" ||
+        entry.kind === "custom-segment" ||
+        entry.label ||
+        Object.prototype.hasOwnProperty.call(entry, "startFrame") ||
+        entry.deleted
+      ));
+    }
+
+    function renderSegmentList() {
+      segmentList.innerHTML = "";
+      const segments = [...visibleSegments()].sort((a, b) => {
+        const diff = isrUncertainty(b) - isrUncertainty(a);
+        return segmentSortMode === "desc" ? diff : -diff;
+      });
+      segments.forEach((seg) => {
+        const item = document.createElement("div");
+        item.className = `segment-list-item ${seg.id === selectedSegmentId ? "active" : ""}`;
+        item.onclick = () => {
+          clearSearchBox();
+          loopGuard = false;
+          setSegment(seg.id, true);
+        };
+        const title = document.createElement("div");
+        title.style.fontWeight = "700";
+        title.innerHTML = glossHtml(seg.displayLabel);
+        const meta = document.createElement("div");
+        meta.className = "subtle";
+        meta.textContent = `${formatClock(seg.startSec)} - ${formatClock(seg.endSec)}`;
+        item.append(title, meta);
+        segmentList.appendChild(item);
+      });
+    }
+
+    function formatClock(sec) {
+      const total = Math.max(0, Math.floor(sec));
+      const mm = String(Math.floor(total / 60)).padStart(2, "0");
+      const ss = String(total % 60).padStart(2, "0");
+      return `${mm}:${ss}`;
+    }
+
+    function aslLexUrl(label) {
+      return `http://asl-lex.org/visualization/?sign=${encodeURIComponent(label)}`;
+    }
+
+    function glossHtml(label) {
+      return `<a href="${aslLexUrl(label)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    }
+
+    function colorForLabel(label) {
+      if (!labelColors.has(label)) {
+        let hash = 0;
+        for (let i = 0; i < label.length; i++) hash = ((hash << 5) - hash + label.charCodeAt(i)) | 0;
+        const hue = Math.abs(hash) % 360;
+        const sat = label.startsWith("unk_") ? 78 : 58;
+        const light = label.startsWith("unk_") ? 40 : 48;
+        labelColors.set(label, `hsl(${hue} ${sat}% ${light}%)`);
+      }
+      return labelColors.get(label);
+    }
+
+    function halfToFloat(h) {
+      const s = (h & 0x8000) >> 15;
+      const e = (h & 0x7C00) >> 10;
+      const f = h & 0x03FF;
+      if (e === 0) return (s ? -1 : 1) * Math.pow(2, -14) * (f / 1024);
+      if (e === 31) return f ? NaN : ((s ? -1 : 1) * Infinity);
+      return (s ? -1 : 1) * Math.pow(2, e - 15) * (1 + f / 1024);
+    }
+
+    function unpackArray(spec) {
+      const bytes = Uint8Array.from(atob(spec.base64), (ch) => ch.charCodeAt(0));
+      if (spec.dtype === "int16") return new Int16Array(bytes.buffer);
+      if (spec.dtype === "int32") return new Int32Array(bytes.buffer);
+      if (spec.dtype === "float32") return new Float32Array(bytes.buffer);
+      if (spec.dtype === "float16") {
+        const src = new Uint16Array(bytes.buffer);
+        const out = new Float32Array(src.length);
+        for (let i = 0; i < src.length; i++) out[i] = halfToFloat(src[i]);
+        return out;
+      }
+      throw new Error(`Unsupported dtype ${spec.dtype}`);
+    }
+
+    function imageForDataUri(uri) {
+      if (!uri) return null;
+      if (patchImageCache.has(uri)) return patchImageCache.get(uri);
+      const img = new Image();
+      img.decoding = "async";
+      img.src = uri;
+      patchImageCache.set(uri, img);
+      return img;
+    }
+
+    function ensureDecoded(videoId) {
+      if (decodedCache.has(videoId)) return decodedCache.get(videoId);
+      const payload = APP.videos[videoId];
+      const decoded = {
+        pose: unpackArray(payload.pose),
+        signTopIdx: unpackArray(payload.windowData.signTopIdx),
+        signTopProb: unpackArray(payload.windowData.signTopProb),
+        embeddings: unpackArray(payload.windowData.embeddings),
+        knownScore: unpackArray(payload.windowData.knownScore),
+        margin: unpackArray(payload.windowData.margin),
+        prototypes: unpackArray(APP.shared.prototypes),
+        lexiconByFeature: {},
+        phonology: {},
+      };
+      Object.entries(APP.shared.lexiconByFeature).forEach(([column, spec]) => {
+        decoded.lexiconByFeature[column] = unpackArray(spec);
+      });
+      Object.entries(payload.windowData.phonology).forEach(([column, spec]) => {
+        decoded.phonology[column] = unpackArray(spec);
+      });
+      decodedCache.set(videoId, decoded);
+      return decoded;
+    }
+
+    function invalidateSegmentCache() {
+      resolvedSegmentsCache = null;
+      visibleSegmentsCache = null;
+      segmentByIdCache = new Map();
+    }
+
+    function saveFeedback() {
+      invalidateSegmentCache();
+      motionRenderCache.clear();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(feedback));
+      feedbackCount.textContent = `${Object.keys(feedback).length} feedback items`;
+    }
+
+    function scopedKey(kind, suffix) {
+      return `${currentVideoId}::${kind}::${suffix}`;
+    }
+
+    function segmentOverride(segId) {
+      return feedback[scopedKey("override", String(segId))] || null;
+    }
+
+    function segmentRegen(segId) {
+      return feedback[scopedKey("regen", String(segId))] || null;
+    }
+
+    function segmentRelabel(segId) {
+      return feedback[scopedKey("relabel", String(segId))] || null;
+    }
+
+    function segmentLabelOverride(segId) {
+      return feedback[scopedKey("segment-label", String(segId))]?.label || null;
+    }
+
+    function motionBoundaryEdits() {
+      return feedback[scopedKey("motion-boundaries", "manual")] || {videoId: currentVideoId, kind: "motion-boundaries", addFrames: [], removeFrames: []};
+    }
+
+    function saveMotionBoundaryEdits(edits) {
+      feedback[scopedKey("motion-boundaries", "manual")] = {
+        videoId: currentVideoId,
+        kind: "motion-boundaries",
+        addFrames: Array.from(new Set((edits.addFrames || []).map((v) => Math.max(0, Math.round(v))))).sort((a, b) => a - b),
+        removeFrames: Array.from(new Set((edits.removeFrames || []).map((v) => Math.max(0, Math.round(v))))).sort((a, b) => a - b),
+      };
+    }
+
+    function resolveSegment(base) {
+      const seg = JSON.parse(JSON.stringify(base));
+      const segId = seg.id;
+      const override = segmentOverride(segId);
+      if (override) {
+        seg.startFrame = override.startFrame;
+        seg.endFrame = override.endFrame;
+        seg.startSec = override.startFrame / currentVideo().videoInfo.fps;
+        seg.endSec = override.endFrame / currentVideo().videoInfo.fps;
+      }
+      const labelOverride = segmentLabelOverride(segId);
+      if (labelOverride) {
+        seg.label = labelOverride;
+        seg.displayLabel = labelOverride;
+      }
+      const regen = segmentRegen(segId);
+      if (regen) {
+        seg.knownScore = regen.knownScore;
+        seg.windowMargin = regen.windowMargin;
+        seg.windowCount = regen.windowCount;
+        seg.signModels = regen.signModels;
+        seg.phonology = regen.phonology;
+        seg.embeddingVec = regen.embeddingVec;
+      }
+      const relabel = segmentRelabel(segId);
+      if (relabel?.phonologyPredictions) {
+        seg.signModels = seg.signModels.map((model) => model.kind === "phonology"
+          ? {...model, predictions: relabel.phonologyPredictions}
+          : model);
+      }
+      return seg;
+    }
+
+    function ensureResolvedSegments() {
+      if (resolvedSegmentsCache && visibleSegmentsCache && segmentByIdCache.size) return;
+      const rawSegments = allSegments();
+      resolvedSegmentsCache = rawSegments.map((base) => resolveSegment(base));
+      visibleSegmentsCache = resolvedSegmentsCache.filter((seg) => !isDeleted(seg.id));
+      segmentByIdCache = new Map(resolvedSegmentsCache.map((seg) => [seg.id, seg]));
+    }
+
+    function activeSegment(segId = selectedSegmentId) {
+      ensureResolvedSegments();
+      return segmentByIdCache.get(segId) || visibleSegmentsCache[0] || resolvedSegmentsCache[0];
+    }
+
+    function applySegmentLabel(segId, label) {
+      feedback[scopedKey("segment-label", String(segId))] = {videoId: currentVideoId, segmentId: segId, label};
+    }
+
+    function syncPhonologyToGloss(segId, gloss) {
+      if (!gloss) return;
+      const glossIdx = labelToIndex.get(gloss);
+      if (glossIdx === undefined) return;
+      const packed = ensureDecoded(currentVideoId);
+      Object.entries(currentVideo().taskLabels).forEach(([feature, labels]) => {
+        const lex = packed.lexiconByFeature[feature];
+        const featIdx = lex[glossIdx];
+        if (featIdx === undefined || featIdx < 0) return;
+        labels.forEach((label, idx) => {
+          const key = makeFeedbackKey({id: segId}, "phonology", feature, label);
+          const meta = {videoId: currentVideoId, segmentId: segId, kind: "phonology", model: feature, label, group: `${currentVideoId}::${segId}::phonology::${feature}`};
+          setFeedbackState(key, meta, idx === featIdx ? "accept" : "reject");
+        });
+      });
+      refreshPhonemeToSignFromLabels(segId);
+    }
+
+    function clearSegmentLabel(segId) {
+      delete feedback[scopedKey("segment-label", String(segId))];
+    }
+
+    function clearSignAnnotations(segId) {
+      Object.keys(feedback).forEach((key) => {
+        const entry = feedback[key];
+        if (!entry || entry.videoId !== currentVideoId || entry.segmentId !== segId) return;
+        if (entry.kind === "sign") delete feedback[key];
+      });
+      clearSegmentLabel(segId);
+    }
+
+    function clearPhonologyCategory(segId, feature) {
+      Object.keys(feedback).forEach((key) => {
+        const entry = feedback[key];
+        if (!entry || entry.videoId !== currentVideoId || entry.segmentId !== segId) return;
+        if (entry.kind === "phonology" && entry.model === feature) delete feedback[key];
+      });
+      refreshPhonemeToSignFromLabels(segId);
+    }
+
+    function segmentAt(time) {
+      const segments = visibleSegments();
+      if (!segments.length) return activeSegment(0);
+      const current = activeSegment(selectedSegmentId);
+      if (timeWithinSegment(time, current)) return current;
+      const containing = segments.filter((seg) => timeWithinSegment(time, seg));
+      if (containing.length) {
+        return containing.reduce((best, seg) => {
+          const bestDist = Math.abs(time - (best.startSec + best.endSec) * 0.5);
+          const segDist = Math.abs(time - (seg.startSec + seg.endSec) * 0.5);
+          return segDist < bestDist ? seg : best;
+        });
+      }
+      return segments.reduce((best, seg) => {
+        const bestDist = time < best.startSec ? best.startSec - time : time > best.endSec ? time - best.endSec : 0;
+        const segDist = time < seg.startSec ? seg.startSec - time : time > seg.endSec ? time - seg.endSec : 0;
+        if (segDist !== bestDist) return segDist < bestDist ? seg : best;
+        const bestCenter = Math.abs(time - (best.startSec + best.endSec) * 0.5);
+        const segCenter = Math.abs(time - (seg.startSec + seg.endSec) * 0.5);
+        return segCenter < bestCenter ? seg : best;
+      });
+    }
+
+    function timeWithinSegment(time, seg) {
+      return time >= seg.startSec && time < seg.endSec;
+    }
+
+    function timeFromScroll(windowEl, trackWidth) {
+      const duration = Math.max(1, currentVideo().videoInfo.duration_sec);
+      const centerX = windowEl.scrollLeft + windowEl.clientWidth * 0.5;
+      return Math.max(0, Math.min(duration, (centerX / Math.max(1, trackWidth)) * duration));
+    }
+
+    function markTimelineScrub(kind) {
+      const until = performance.now() + 400;
+      if (kind === "timeline") timelineUserScrubUntil = until;
+      else motionUserScrubUntil = until;
+    }
+
+    function resizeOverlay() {
+      overlay.width = video.clientWidth * devicePixelRatio;
+      overlay.height = video.clientHeight * devicePixelRatio;
+      overlay.style.width = `${video.clientWidth}px`;
+      overlay.style.height = `${video.clientHeight}px`;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      lastPoseFrame = -1;
+    }
+
+    function resizeEmbeddingCanvas() {
+      if (!SHOW_EMBEDDING) return;
+      const rect = embeddingCanvas.getBoundingClientRect();
+      const width = Math.max(320, Math.round(rect.width || 960));
+      const height = Math.max(320, Math.round(rect.height || 440));
+      embeddingCanvas.width = width * devicePixelRatio;
+      embeddingCanvas.height = height * devicePixelRatio;
+      embeddingCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    }
+
+    function motionTrackWidth() {
+      const duration = Math.max(1, currentVideo().videoInfo.duration_sec);
+      return Math.max(Math.round(duration * 88 * timelineZoom), Math.round((motionWindow.clientWidth || 960) * (1.7 + 0.5 * timelineZoom)));
+    }
+
+    function quantile(values, q) {
+      const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+      if (!sorted.length) return 0;
+      const pos = Math.max(0, Math.min(sorted.length - 1, (sorted.length - 1) * q));
+      const lo = Math.floor(pos);
+      const hi = Math.ceil(pos);
+      if (lo === hi) return sorted[lo];
+      const t = pos - lo;
+      return sorted[lo] * (1 - t) + sorted[hi] * t;
+    }
+
+    function movingAverage(source, radius) {
+      const out = new Float32Array(source.length);
+      for (let i = 0; i < source.length; i++) {
+        let total = 0;
+        let count = 0;
+        for (let j = Math.max(0, i - radius); j <= Math.min(source.length - 1, i + radius); j++) {
+          total += source[j];
+          count += 1;
+        }
+        out[i] = count ? total / count : source[i];
+      }
+      return out;
+    }
+
+    function posePointAt(decodedPose, payload, frameIdx, pointIdx, imageWidth, imageHeight) {
+      const base = frameIdx * payload.pointCount * 2 + pointIdx * 2;
+      const rawX = decodedPose[base];
+      const rawY = decodedPose[base + 1];
+      if (![rawX, rawY].every(Number.isFinite)) return null;
+      if (rawX === 0 && rawY === 0) return null;
+      return [
+        rawX / payload.scale * imageWidth,
+        rawY / payload.scale * imageHeight,
+      ];
+    }
+
+    function handBBoxAt(decodedPose, payload, frameIdx, handStart, imageWidth, imageHeight) {
+      const pts = [];
+      for (let offset = 0; offset < APP.shared.poseSpec.handKeypoints; offset++) {
+        const pt = posePointAt(decodedPose, payload, frameIdx, handStart + offset, imageWidth, imageHeight);
+        if (pt) pts.push(pt);
+      }
+      if (pts.length < 3) return null;
+      const xs = pts.map((pt) => pt[0]);
+      const ys = pts.map((pt) => pt[1]);
+      let minX = Math.min(...xs);
+      let maxX = Math.max(...xs);
+      let minY = Math.min(...ys);
+      let maxY = Math.max(...ys);
+      const padX = Math.max(8, (maxX - minX) * 0.22);
+      const padY = Math.max(8, (maxY - minY) * 0.22);
+      minX = Math.max(0, Math.floor(minX - padX));
+      minY = Math.max(0, Math.floor(minY - padY));
+      maxX = Math.min(imageWidth, Math.ceil(maxX + padX));
+      maxY = Math.min(imageHeight, Math.ceil(maxY + padY));
+      if (maxX - minX < 4 || maxY - minY < 4) return null;
+      return [minX, minY, maxX, maxY];
+    }
+
+    async function seekVideoTo(videoEl, timeSec) {
+      return new Promise((resolve) => {
+        const target = Math.max(0, timeSec);
+        if (Math.abs((videoEl.currentTime || 0) - target) < 1e-3 && videoEl.readyState >= 2) {
+          resolve();
+          return;
+        }
+        let settled = false;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          videoEl.removeEventListener("seeked", onSeeked);
+          clearTimeout(fallbackTimer);
+          resolve();
+        };
+        const onSeeked = () => {
+          if (typeof videoEl.requestVideoFrameCallback === "function") {
+            videoEl.requestVideoFrameCallback(() => finish());
+          } else {
+            requestAnimationFrame(finish);
+          }
+        };
+        videoEl.addEventListener("seeked", onSeeked, {once: true});
+        const fallbackTimer = setTimeout(finish, 900);
+        videoEl.currentTime = target;
+      });
+    }
+
+    function cropDataUrlFromVideo(videoEl, bbox, size = 140) {
+      if (!bbox) return null;
+      const [x0, y0, x1, y1] = bbox;
+      const cropW = Math.max(1, x1 - x0);
+      const cropH = Math.max(1, y1 - y0);
+      captureCanvas.width = size;
+      captureCanvas.height = size;
+      const g = captureCanvas.getContext("2d");
+      g.clearRect(0, 0, size, size);
+      g.fillStyle = "#f2eee6";
+      g.fillRect(0, 0, size, size);
+      const scale = Math.min(size / cropW, size / cropH);
+      const drawW = cropW * scale;
+      const drawH = cropH * scale;
+      const dx = (size - drawW) * 0.5;
+      const dy = (size - drawH) * 0.5;
+      g.drawImage(videoEl, x0, y0, cropW, cropH, dx, dy, drawW, drawH);
+      return captureCanvas.toDataURL("image/jpeg", 0.82);
+    }
+
+    function frameDataUrlFromVideo(videoEl, canvasEl, size = 320) {
+      const srcW = videoEl.videoWidth || 1280;
+      const srcH = videoEl.videoHeight || 720;
+      canvasEl.width = size;
+      canvasEl.height = Math.round(size * (srcH / Math.max(1, srcW)));
+      const g = canvasEl.getContext("2d");
+      g.clearRect(0, 0, canvasEl.width, canvasEl.height);
+      g.drawImage(videoEl, 0, 0, srcW, srcH, 0, 0, canvasEl.width, canvasEl.height);
+      return canvasEl.toDataURL("image/jpeg", 0.8);
+    }
+
+    function thumbnailCacheKey(seg) {
+      return `${currentVideoId}:${seg.id}:${seg.startFrame}:${seg.endFrame}`;
+    }
+
+    function ensureRetrievalThumbnail(seg, imgEl, wrapEl) {
+      const bundled = currentVideo().thumbnails[String(seg.id)] || "";
+      if (bundled) {
+        imgEl.src = bundled;
+        return;
+      }
+      const cacheKey = thumbnailCacheKey(seg);
+      const cached = generatedThumbnailCache.get(cacheKey);
+      if (cached) {
+        imgEl.src = cached;
+        return;
+      }
+      wrapEl.classList.add("loading");
+      thumbnailQueue = thumbnailQueue.then(async () => {
+        if (thumbCaptureVideo.src !== currentVideo().videoUri) {
+          thumbCaptureVideo.src = currentVideo().videoUri;
+          thumbCaptureVideo.load();
+        }
+        if (thumbCaptureVideo.readyState < 1) {
+          await new Promise((resolve) => thumbCaptureVideo.addEventListener("loadedmetadata", resolve, {once: true}));
+        }
+        await seekVideoTo(thumbCaptureVideo, seg.startFrame / currentVideo().videoInfo.fps);
+        if (thumbCaptureVideo.readyState < 2) {
+          await new Promise((resolve) => thumbCaptureVideo.addEventListener("loadeddata", resolve, {once: true}));
+        }
+        await new Promise((resolve) => requestAnimationFrame(() => resolve()));
+        const uri = frameDataUrlFromVideo(thumbCaptureVideo, thumbCaptureCanvas, 320);
+        generatedThumbnailCache.set(cacheKey, uri);
+        if (imgEl.isConnected) {
+          imgEl.src = uri;
+        }
+      }).catch(() => {
+        wrapEl.classList.remove("loading");
+      });
+    }
+
+    function extractHandSnapshot(decodedPose, payload, frameIdx, handStart, imageWidth, imageHeight) {
+      const points = [];
+      for (let offset = 0; offset < APP.shared.poseSpec.handKeypoints; offset++) {
+        const pt = posePointAt(decodedPose, payload, frameIdx, handStart + offset, imageWidth, imageHeight);
+        if (pt) points.push([offset, pt[0], pt[1]]);
+      }
+      return points;
+    }
+
+    function drawSmoothPolyline(g, points) {
+      if (!points.length) return;
+      g.beginPath();
+      g.moveTo(points[0][0], points[0][1]);
+      if (points.length === 1) {
+        g.lineTo(points[0][0] + 0.01, points[0][1] + 0.01);
+      } else {
+        for (let i = 1; i < points.length - 1; i++) {
+          const xc = (points[i][0] + points[i + 1][0]) * 0.5;
+          const yc = (points[i][1] + points[i + 1][1]) * 0.5;
+          g.quadraticCurveTo(points[i][0], points[i][1], xc, yc);
+        }
+        const last = points[points.length - 1];
+        g.quadraticCurveTo(points[points.length - 2][0], points[points.length - 2][1], last[0], last[1]);
+      }
+      g.stroke();
+    }
+
+    function drawPolyline(g, points) {
+      if (!points.length) return;
+      g.beginPath();
+      g.moveTo(points[0][0], points[0][1]);
+      for (let i = 1; i < points.length; i++) {
+        g.lineTo(points[i][0], points[i][1]);
+      }
+      g.stroke();
+    }
+
+    function drawHandPatch(g, snapshot, boxX, boxY, boxW, boxH, color, label) {
+      g.save();
+      g.fillStyle = "rgba(255,250,242,0.95)";
+      g.strokeStyle = "rgba(29,36,33,0.14)";
+      g.lineWidth = 1;
+      g.beginPath();
+      g.roundRect(boxX, boxY, boxW, boxH, 10);
+      g.fill();
+      g.stroke();
+      g.fillStyle = "rgba(29,36,33,0.58)";
+      g.font = "600 10px IBM Plex Sans, sans-serif";
+      g.fillText(label, boxX + 6, boxY + 12);
+      if (!snapshot.length) {
+        g.restore();
+        return;
+      }
+      const xs = snapshot.map(([, x]) => x);
+      const ys = snapshot.map(([, , y]) => y);
+      let minX = Math.min(...xs);
+      let maxX = Math.max(...xs);
+      let minY = Math.min(...ys);
+      let maxY = Math.max(...ys);
+      const padX = Math.max(4, (maxX - minX) * 0.18);
+      const padY = Math.max(4, (maxY - minY) * 0.18);
+      minX -= padX;
+      maxX += padX;
+      minY -= padY;
+      maxY += padY;
+      const srcW = Math.max(1e-4, maxX - minX);
+      const srcH = Math.max(1e-4, maxY - minY);
+      const scale = Math.min((boxW - 12) / srcW, (boxH - 18) / srcH);
+      const offsetX = boxX + (boxW - srcW * scale) * 0.5;
+      const offsetY = boxY + 16 + (boxH - 18 - srcH * scale) * 0.5;
+      const mapPoint = (pt) => [
+        offsetX + (pt[1] - minX) * scale,
+        offsetY + (pt[2] - minY) * scale,
+      ];
+      g.strokeStyle = color;
+      g.lineWidth = 1.4;
+      g.lineCap = "round";
+      g.lineJoin = "round";
+      g.beginPath();
+      HAND_PATCH_EDGES.forEach(([a, b]) => {
+        const pa = snapshot.find((pt) => pt[0] === a);
+        const pb = snapshot.find((pt) => pt[0] === b);
+        if (!pa || !pb) return;
+        const [x0, y0] = mapPoint(pa);
+        const [x1, y1] = mapPoint(pb);
+        g.moveTo(x0, y0);
+        g.lineTo(x1, y1);
+      });
+      g.stroke();
+      g.fillStyle = color;
+      snapshot.forEach((pt) => {
+        const [x, y] = mapPoint(pt);
+        g.beginPath();
+        g.arc(x, y, 1.7, 0, Math.PI * 2);
+        g.fill();
+      });
+      g.restore();
+    }
+
+    function buildMotionModel(videoId) {
+      const cached = motionCache.get(videoId);
+      if (cached) return cached;
+      const videoPayload = APP.videos[videoId];
+      const motionSpec = videoPayload.motion;
+      const posePayload = videoPayload.pose;
+      const frames = posePayload.frameCount;
+      const leftWrist = unpackArray(motionSpec.leftWrist);
+      const rightWrist = unpackArray(motionSpec.rightWrist);
+      const leftX = new Float32Array(frames).fill(NaN);
+      const leftY = new Float32Array(frames).fill(NaN);
+      const rightX = new Float32Array(frames).fill(NaN);
+      const rightY = new Float32Array(frames).fill(NaN);
+      const visible = new Uint8Array(frames);
+      for (let frame = 0; frame < frames; frame++) {
+        const lx = leftWrist[frame * 2];
+        const ly = leftWrist[frame * 2 + 1];
+        const rx = rightWrist[frame * 2];
+        const ry = rightWrist[frame * 2 + 1];
+        leftX[frame] = lx;
+        leftY[frame] = ly;
+        rightX[frame] = rx;
+        rightY[frame] = ry;
+        visible[frame] = (Number.isFinite(lx) && Number.isFinite(ly) ? 1 : 0) + (Number.isFinite(rx) && Number.isFinite(ry) ? 1 : 0);
+      }
+      const model = {
+        imageWidth: motionSpec.imageWidth,
+        imageHeight: motionSpec.imageHeight,
+        frames,
+        fps: videoPayload.videoInfo.fps,
+        leftSpeed: unpackArray(motionSpec.leftSpeed),
+        rightSpeed: unpackArray(motionSpec.rightSpeed),
+        visible: unpackArray(motionSpec.visible),
+        localThreshold: unpackArray(motionSpec.localThreshold),
+        leftX,
+        leftY,
+        rightX,
+        rightY,
+        visible,
+        holds: motionSpec.holds.map((hold) => ({
+          ...hold,
+          leftImage: imageForDataUri(hold.leftPatch),
+          rightImage: imageForDataUri(hold.rightPatch),
+        })),
+        intervals: motionSpec.intervals,
+        speedScale: motionSpec.speedScale,
+      };
+      motionCache.set(videoId, model);
+      return model;
+    }
+
+    function drawIntervalPaths(g, model, startFrame, endFrame, x0, x1, y0, y1) {
+      const leftPts = [];
+      const rightPts = [];
+      for (let frame = startFrame; frame <= endFrame; frame++) {
+        const lx = model.leftX[frame];
+        const ly = model.leftY[frame];
+        const rx = model.rightX[frame];
+        const ry = model.rightY[frame];
+        if (Number.isFinite(lx) && Number.isFinite(ly)) leftPts.push([lx, ly]);
+        if (Number.isFinite(rx) && Number.isFinite(ry)) rightPts.push([rx, ry]);
+      }
+      const allPts = leftPts.concat(rightPts);
+      if (allPts.length < 2 || x1 - x0 < 10) return;
+      const rawXs = allPts.map((pt) => pt[0]);
+      const rawYs = allPts.map((pt) => pt[1]);
+      let minX = Math.min(...rawXs);
+      let maxX = Math.max(...rawXs);
+      let minY = Math.min(...rawYs);
+      let maxY = Math.max(...rawYs);
+      if (maxX - minX < 1) { minX -= 0.5; maxX += 0.5; }
+      if (maxY - minY < 1) { minY -= 0.5; maxY += 0.5; }
+      const scale = Math.min((x1 - x0) / (maxX - minX), (y1 - y0) / (maxY - minY));
+      const offsetX = x0 + ((x1 - x0) - (maxX - minX) * scale) * 0.5;
+      const offsetY = y0 + ((y1 - y0) - (maxY - minY) * scale) * 0.5;
+      const mapPt = (pt) => [
+        offsetX + (pt[0] - minX) * scale,
+        offsetY + (pt[1] - minY) * scale,
+      ];
+      if (leftPts.length >= 2) {
+        g.save();
+        g.strokeStyle = "rgba(88,214,174,0.95)";
+        g.lineWidth = 1.8;
+        g.lineCap = "round";
+        g.lineJoin = "round";
+        drawSmoothPolyline(g, leftPts.map(mapPt));
+        g.restore();
+      }
+      if (rightPts.length >= 2) {
+        g.save();
+        g.strokeStyle = "rgba(249,194,91,0.95)";
+        g.lineWidth = 1.8;
+        g.lineCap = "round";
+        g.lineJoin = "round";
+        drawSmoothPolyline(g, rightPts.map(mapPt));
+        g.restore();
+      }
+    }
+
+    function motionThresholdForConfig(model, cfg) {
+      const out = new Float32Array(model.frames);
+      const baseSpeed = new Float32Array(model.frames);
+      for (let i = 0; i < model.frames; i++) {
+        baseSpeed[i] = model.rightSpeed[i];
+      }
+      const pastRadius = Math.max(1, Math.round(model.fps * cfg.emaBeforeSec));
+      const futureRadius = Math.max(0, Math.round(model.fps * cfg.emaAfterSec));
+      const speedVals = [];
+      for (let i = 0; i < model.frames; i++) if (Number.isFinite(model.rightX[i]) && Number.isFinite(model.rightY[i])) speedVals.push(baseSpeed[i]);
+      speedVals.sort((a, b) => a - b);
+      const q12 = speedVals.length ? speedVals[Math.max(0, Math.floor((speedVals.length - 1) * 0.12))] : 4.5;
+      const localFloor = Math.max(4.5, q12);
+      for (let i = 0; i < model.frames; i++) {
+        const start = Math.max(0, i - pastRadius);
+        const end = Math.min(model.frames - 1, i + futureRadius);
+        const windowVals = [];
+        let total = 0;
+        let count = 0;
+        let emaNum = 0;
+        let emaDen = 0;
+        const tau = Math.max(1, (pastRadius + futureRadius + 1) * 0.35);
+        for (let j = start; j <= end; j++) {
+          const value = baseSpeed[j];
+          windowVals.push(value);
+          total += value;
+          count += 1;
+          const dist = j <= i ? (i - j) : (j - i);
+          const weight = Math.exp(-dist / tau);
+          emaNum += value * weight;
+          emaDen += weight;
+        }
+        let smoothed = 0;
+        if (cfg.smoothing === "median") {
+          windowVals.sort((a, b) => a - b);
+          smoothed = windowVals.length ? windowVals[Math.floor(windowVals.length * 0.5)] : 0;
+        } else if (cfg.smoothing === "ema") {
+          smoothed = emaDen > 0 ? emaNum / emaDen : 0;
+        } else {
+          smoothed = count ? total / count : 0;
+        }
+        out[i] = Math.max(localFloor, Math.min(model.speedScale * 0.50, smoothed * cfg.thresholdMult));
+      }
+      return out;
+    }
+
+    function motionConfigKey(cfg) {
+      return `${cfg.thresholdMult.toFixed(2)}|${cfg.emaBeforeSec.toFixed(1)}|${cfg.emaAfterSec.toFixed(1)}|${cfg.smoothing}|${cfg.showUncertainty ? 1 : 0}`;
+    }
+
+    function segmentLayoutSignature() {
+      return visibleSegments()
+        .map((seg) => `${seg.id}:${seg.startFrame}-${seg.endFrame}:${seg.displayLabel}`)
+        .join("|");
+    }
+
+    function buildMotionLayout(model, cfg) {
+      const starts = currentVideo().windowData.starts;
+      const ends = currentVideo().windowData.ends;
+      const topUncertainty = windowTop1Uncertainty();
+      const windowCenters = starts.map((s, i) => 0.5 * (s + ends[i]));
+      const threshold = motionThresholdForConfig(model, cfg);
+
+      const holds = [];
+      let runStart = -1;
+      for (let i = 0; i < model.frames; i++) {
+        const rightVisible = Number.isFinite(model.rightX[i]) && Number.isFinite(model.rightY[i]);
+        const still = rightVisible && model.rightSpeed[i] <= threshold[i];
+        if (still && runStart < 0) runStart = i;
+        if ((!still || i === model.frames - 1) && runStart >= 0) {
+          const runEnd = (still && i === model.frames - 1) ? i : i - 1;
+          if (runEnd - runStart + 1 >= cfg.minHoldFrames) {
+            let holdFrame = runStart;
+            let best = Infinity;
+            for (let j = runStart; j <= runEnd; j++) {
+              const s = model.rightSpeed[j];
+              if (s < best) {
+                best = s;
+                holdFrame = j;
+              }
+            }
+            holds.push({startFrame: runStart, endFrame: runEnd, frame: holdFrame});
+          }
+          runStart = -1;
+        }
+      }
+
+      const boundaries = [0, ...holds.map((hold) => hold.frame), model.frames - 1]
+        .filter((frame, idx, arr) => idx === 0 || frame > arr[idx - 1]);
+      const intervals = [];
+      for (let i = 0; i < boundaries.length - 1; i++) {
+        const startFrame = boundaries[i];
+        const endFrame = boundaries[i + 1];
+        let anyVisible = false;
+        for (let f = startFrame; f <= endFrame; f++) {
+          if (model.visible[f] > 0) { anyVisible = true; break; }
+        }
+        if (anyVisible) intervals.push({startFrame, endFrame});
+      }
+      const edits = motionBoundaryEdits();
+      const removeTol = Math.max(6, Math.round(model.fps * 0.16));
+      let editedHolds = holds.slice();
+      for (const target of edits.removeFrames || []) {
+        let bestIdx = -1;
+        let bestDist = Infinity;
+        for (let i = 0; i < editedHolds.length; i++) {
+          const dist = Math.abs(editedHolds[i].frame - target);
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestIdx = i;
+          }
+        }
+        if (bestIdx >= 0 && bestDist <= removeTol) editedHolds.splice(bestIdx, 1);
+      }
+      for (const frame of edits.addFrames || []) {
+        if (frame <= 0 || frame >= model.frames - 1) continue;
+        if (editedHolds.some((hold) => Math.abs(hold.frame - frame) <= 2)) continue;
+        editedHolds.push({startFrame: Math.max(0, frame - 1), endFrame: Math.min(model.frames - 1, frame + 1), frame});
+      }
+      editedHolds.sort((a, b) => a.frame - b.frame);
+      const editedBoundaries = [0, ...editedHolds.map((hold) => hold.frame), model.frames - 1]
+        .filter((frame, idx, arr) => idx === 0 || frame > arr[idx - 1]);
+      const editedIntervals = [];
+      for (let i = 0; i < editedBoundaries.length - 1; i++) {
+        const startFrame = editedBoundaries[i];
+        const endFrame = editedBoundaries[i + 1];
+        let anyVisible = false;
+        for (let f = startFrame; f <= endFrame; f++) {
+          if (model.visible[f] > 0) { anyVisible = true; break; }
+        }
+        if (anyVisible) editedIntervals.push({startFrame, endFrame});
+      }
+      return {threshold, holds: editedHolds, intervals: editedIntervals, windowCenters, topUncertainty};
+    }
+
+    function drawPatchImage(g, image, boxX, boxY, boxW, boxH, label, borderColor) {
+      g.save();
+      g.fillStyle = "rgba(255,250,242,0.97)";
+      g.strokeStyle = borderColor;
+      g.lineWidth = 1.2;
+      g.beginPath();
+      g.roundRect(boxX, boxY, boxW, boxH, 12);
+      g.fill();
+      g.stroke();
+      if (image && image.complete && image.naturalWidth > 0) {
+        g.save();
+        g.beginPath();
+        g.roundRect(boxX + 3, boxY + 14, boxW - 6, boxH - 17, 9);
+        g.clip();
+        const innerX = boxX + 3;
+        const innerY = boxY + 14;
+        const innerW = boxW - 6;
+        const innerH = boxH - 17;
+        const scale = Math.min(innerW / image.naturalWidth, innerH / image.naturalHeight);
+        const drawW = image.naturalWidth * scale;
+        const drawH = image.naturalHeight * scale;
+        const drawX = innerX + (innerW - drawW) * 0.5;
+        const drawY = innerY + (innerH - drawH) * 0.5;
+        g.fillStyle = "#f2eee6";
+        g.fillRect(innerX, innerY, innerW, innerH);
+        g.drawImage(image, drawX, drawY, drawW, drawH);
+        g.restore();
+      }
+      g.fillStyle = "rgba(29,36,33,0.66)";
+      g.font = "700 10px IBM Plex Sans, sans-serif";
+      g.fillText(label, boxX + 6, boxY + 11);
+      g.restore();
+    }
+
+    function drawMotionStatic(g, model, trackWidth, height, cfg) {
+      const layout = generatedMotionLayouts.get(currentVideoId);
+      const thresholdCurve = layout && layout.configKey === motionConfigKey(cfg)
+        ? layout.threshold
+        : buildMotionLayout(model, cfg).threshold;
+      g.clearRect(0, 0, trackWidth, height);
+      g.fillStyle = "#fffaf2";
+      g.fillRect(0, 0, trackWidth, height);
+      const patchBandTop = 10;
+      const patchBandH = 24;
+      const chartTop = patchBandTop + patchBandH + 14;
+      const axisY = 286;
+      const chartBottom = axisY - 16;
+      const pathTop = axisY + 22;
+      const pathBottom = height - 18;
+      const duration = Math.max(1, currentVideo().videoInfo.duration_sec);
+      const frameToX = (frame) => (frame / Math.max(1, model.frames - 1)) * (trackWidth - 1);
+      const speedToY = (value) => chartBottom - (Math.min(value, model.speedScale) / Math.max(1e-6, model.speedScale)) * (chartBottom - chartTop);
+      g.strokeStyle = "rgba(29,36,33,0.28)";
+      g.lineWidth = 1.4;
+      g.beginPath();
+      g.moveTo(0, axisY);
+      g.lineTo(trackWidth, axisY);
+      g.stroke();
+
+      const motionSegments = visibleSegments();
+      motionSegments.forEach((seg, segIdx) => {
+        const left = (seg.startSec / duration) * trackWidth;
+        const rawWidth = Math.max(8, ((Math.max(0.03, seg.endSec - seg.startSec) / duration) * trackWidth));
+        const nextLeft = segIdx + 1 < motionSegments.length
+          ? (motionSegments[segIdx + 1].startSec / duration) * trackWidth
+          : trackWidth;
+        const width = Math.max(2, Math.min(rawWidth, nextLeft - left - 1));
+        const chipBandH = 22;
+        const chipBandTop = axisY - chipBandH * 0.5;
+        g.save();
+        g.fillStyle = "rgba(31,111,95,0.82)";
+        g.beginPath();
+        g.roundRect(left, chipBandTop, width, chipBandH, 9);
+        g.fill();
+        if (width > 20) {
+          g.save();
+          g.beginPath();
+          g.rect(left + 5, chipBandTop, Math.max(0, width - 10), chipBandH);
+          g.clip();
+          g.fillStyle = "rgba(255,255,255,0.96)";
+          g.font = "700 11px IBM Plex Sans, sans-serif";
+          g.textBaseline = "middle";
+          g.fillText(seg.displayLabel, left + 6, chipBandTop + chipBandH * 0.55);
+          g.restore();
+        }
+        g.restore();
+      });
+
+      const thresholdPoints = Array.from({length: model.frames}, (_, frame) => [frameToX(frame), speedToY(thresholdCurve[frame])]);
+      g.save();
+      g.setLineDash([7, 6]);
+      g.strokeStyle = "rgba(47,110,63,0.36)";
+      g.lineWidth = 1.4;
+      drawSmoothPolyline(g, thresholdPoints);
+      g.restore();
+
+      if (cfg.showUncertainty) {
+        const topUncertainty = windowTop1Uncertainty();
+        const starts = currentVideo().windowData.starts;
+        const ends = currentVideo().windowData.ends;
+        const uncertaintyPts = starts.map((start, idx) => {
+          const center = 0.5 * (start + ends[idx]);
+          return [frameToX(center), chartBottom - topUncertainty[idx] * (chartBottom - chartTop)];
+        }).sort((a, b) => a[0] - b[0]);
+        g.save();
+        g.strokeStyle = "rgba(141,79,214,0.88)";
+        g.lineWidth = 1.6;
+        drawPolyline(g, uncertaintyPts);
+        g.restore();
+      }
+
+      g.save();
+      g.strokeStyle = "rgba(88,214,174,0.95)";
+      g.lineWidth = 2.0;
+      drawSmoothPolyline(
+        g,
+        Array.from({length: model.frames}, (_, frame) => [frameToX(frame), speedToY(model.leftSpeed[frame])]),
+      );
+      g.restore();
+
+      g.save();
+      g.strokeStyle = "rgba(249,194,91,0.95)";
+      g.lineWidth = 2.0;
+      drawSmoothPolyline(
+        g,
+        Array.from({length: model.frames}, (_, frame) => [frameToX(frame), speedToY(model.rightSpeed[frame])]),
+      );
+      g.restore();
+
+      const pathIntervals = layout?.intervals || model.intervals;
+      pathIntervals.forEach((interval) => {
+        const x0 = frameToX(interval.startFrame);
+        const x1 = frameToX(interval.endFrame);
+        drawIntervalPaths(g, model, interval.startFrame, interval.endFrame, x0 + 4, x1 - 4, pathTop, pathBottom);
+      });
+
+      const holdLines = layout?.holds || model.holds;
+      holdLines.forEach((hold) => {
+        const x = frameToX(hold.frame);
+        g.save();
+        g.strokeStyle = "rgba(29,36,33,0.18)";
+        g.lineWidth = 1.1;
+        g.beginPath();
+        g.moveTo(x, patchBandTop);
+        g.lineTo(x, height);
+        g.stroke();
+        g.restore();
+      });
+
+      g.fillStyle = "rgba(29,36,33,0.62)";
+      g.font = "600 12px IBM Plex Sans, sans-serif";
+      g.fillText("left velocity", 10, chartTop - 6);
+      g.fillText("right velocity", 96, chartTop - 6);
+      g.fillText("adaptive threshold", 186, chartTop - 6);
+      if (cfg.showUncertainty) g.fillText("uncertainty", 310, chartTop - 6);
+      g.fillText("path movement", 10, pathTop + 12);
+    }
+
+    function windowTop1Uncertainty() {
+      const packed = ensureDecoded(currentVideoId);
+      const k = currentVideo().windowData.signTopIdx.shape[1];
+      const count = currentVideo().windowData.starts.length;
+      const out = new Float32Array(count);
+      for (let i = 0; i < count; i++) out[i] = 1 - packed.signTopProb[i * k];
+      return out;
+    }
+
+    function regenerateBaseSegments() {
+      const model = buildMotionModel(currentVideoId);
+      const cfg = segmentationConfig();
+      const layout = buildMotionLayout(model, cfg);
+      const {holds, intervals, windowCenters, topUncertainty, threshold} = layout;
+      generatedMotionLayouts.set(currentVideoId, {
+        configKey: motionConfigKey(cfg),
+        holds,
+        intervals,
+        threshold,
+      });
+
+      const currentBase = baseSegments();
+      const customIds = new Set(customSegments().map((seg) => seg.id));
+      const locked = visibleSegments()
+        .filter((seg) => !customIds.has(seg.id) && currentBase.some((base) => base.id === seg.id) && segmentHasManualFeedback(seg.id))
+        .map((seg) => ({
+          id: seg.id,
+          startFrame: seg.startFrame,
+          endFrame: seg.endFrame,
+        }))
+        .sort((a, b) => a.startFrame - b.startFrame);
+
+      const minGap = Math.max(8, Math.round(cfg.minSegFrames * 0.75));
+      const minSeg = Math.max(10, Math.round(cfg.minSegFrames));
+      const generated = [];
+      let nextId = Math.max(0, ...currentBase.map((seg) => seg.id)) + 1;
+      for (const interval of intervals) {
+        const overlapsLocked = locked.some((seg) => !(interval.endFrame <= seg.startFrame || interval.startFrame >= seg.endFrame));
+        if (overlapsLocked) continue;
+        if (interval.endFrame - interval.startFrame < minSeg) continue;
+        let splitFrame = null;
+        const candidate = [];
+        for (let i = 0; i < windowCenters.length; i++) {
+          if (windowCenters[i] >= interval.startFrame + minGap && windowCenters[i] <= interval.endFrame - minGap) candidate.push(i);
+        }
+        if (interval.endFrame - interval.startFrame >= Math.round(model.fps * 1.2) && candidate.length >= 5) {
+          for (let j = 1; j < candidate.length - 1; j++) {
+            const prev = topUncertainty[candidate[j - 1]];
+            const cur = topUncertainty[candidate[j]];
+            const next = topUncertainty[candidate[j + 1]];
+            if (cur >= prev && cur >= next && cur >= cfg.splitThreshold) {
+              splitFrame = Math.round(windowCenters[candidate[j]]);
+              break;
+            }
+          }
+        }
+        const ranges = splitFrame ? [[interval.startFrame, splitFrame], [splitFrame, interval.endFrame]] : [[interval.startFrame, interval.endFrame]];
+        for (const [rawStart, rawEnd] of ranges) {
+          if (rawEnd - rawStart < minSeg) continue;
+          generated.push({id: nextId++, startFrame: rawStart, endFrame: rawEnd});
+        }
+      }
+      const combined = [...locked, ...generated].sort((a, b) => a.startFrame - b.startFrame);
+      const finalSegs = [];
+      let prevEnd = 0;
+      for (let i = 0; i < combined.length; i++) {
+        let startFrame = Math.max(combined[i].startFrame, prevEnd);
+        let endFrame = combined[i].endFrame;
+        if (i + 1 < combined.length) endFrame = Math.min(endFrame, combined[i + 1].startFrame - cfg.bufferFrames);
+        if (endFrame - startFrame < minSeg) continue;
+        finalSegs.push(computeSegmentData(startFrame, endFrame, combined[i].id));
+        prevEnd = endFrame + cfg.bufferFrames;
+      }
+      if (!finalSegs.length) return;
+      generatedBaseSegments.set(currentVideoId, finalSegs);
+      motionRenderCache.clear();
+      invalidateSegmentCache();
+    }
+
+    function drawSelectedMotionSegment(trackWidth, height) {
+      const duration = Math.max(1, currentVideo().videoInfo.duration_sec);
+      const seg = activeSegment();
+      if (!seg) return;
+      const left = (seg.startSec / duration) * trackWidth;
+      const width = Math.max(2, ((Math.max(0.03, seg.endSec - seg.startSec) / duration) * trackWidth));
+      const chipBandH = 22;
+      const axisY = 286;
+      const chipBandTop = axisY - chipBandH * 0.5;
+      motionCtx.save();
+      motionCtx.lineWidth = 2;
+      motionCtx.strokeStyle = "rgba(29,36,33,0.58)";
+      motionCtx.beginPath();
+      motionCtx.roundRect(left, chipBandTop, width, chipBandH, 9);
+      motionCtx.stroke();
+      motionCtx.restore();
+    }
+
+    function renderMotionPanel() {
+      const model = buildMotionModel(currentVideoId);
+      const cfg = segmentationConfig();
+      const trackWidth = motionTrackWidth();
+      const height = 484;
+      motionCanvas.width = trackWidth;
+      motionCanvas.height = height;
+      motionCanvas.style.width = `${trackWidth}px`;
+      motionCanvas.style.height = `${height}px`;
+      motionCanvas.dataset.trackWidth = String(trackWidth);
+      const cacheKey = `${currentVideoId}::${trackWidth}x${height}::${motionConfigKey(cfg)}::${segmentLayoutSignature()}`;
+      let cached = motionRenderCache.get(cacheKey);
+      if (!cached) {
+        cached = document.createElement("canvas");
+        cached.width = trackWidth;
+        cached.height = height;
+        drawMotionStatic(cached.getContext("2d"), model, trackWidth, height, cfg);
+        motionRenderCache.set(cacheKey, cached);
+      }
+      motionCtx.clearRect(0, 0, trackWidth, height);
+      motionCtx.drawImage(cached, 0, 0);
+      drawSelectedMotionSegment(trackWidth, height);
+      drawMotionHoverOverlay(trackWidth, height);
+      motionMeta.textContent = "";
+      centerMotion(video.currentTime || activeSegment().startSec);
+    }
+
+    function drawMotionHoverOverlay(trackWidth, height) {
+      const duration = Math.max(1, currentVideo().videoInfo.duration_sec);
+      const frameToX = (frame) => (frame / Math.max(1, currentVideo().videoInfo.frames - 1)) * (trackWidth - 1);
+      if (hoverMotionFrame != null && hoverRemoveFrame == null) {
+        const x = frameToX(hoverMotionFrame);
+        motionCtx.save();
+        motionCtx.strokeStyle = "rgba(31,111,95,0.9)";
+        motionCtx.lineWidth = 1.6;
+        motionCtx.setLineDash([6, 6]);
+        motionCtx.beginPath();
+        motionCtx.moveTo(x, 10);
+        motionCtx.lineTo(x, height - 24);
+        motionCtx.stroke();
+        motionCtx.restore();
+      }
+      if (hoverRemoveFrame != null) {
+        const x = frameToX(hoverRemoveFrame);
+        const y = height - 14;
+        motionCtx.save();
+        motionCtx.fillStyle = "rgba(143,59,46,0.95)";
+        motionCtx.beginPath();
+        motionCtx.arc(x, y, 9, 0, Math.PI * 2);
+        motionCtx.fill();
+        motionCtx.strokeStyle = "#fff";
+        motionCtx.lineWidth = 2;
+        motionCtx.beginPath();
+        motionCtx.moveTo(x - 4, y);
+        motionCtx.lineTo(x + 4, y);
+        motionCtx.stroke();
+        motionCtx.restore();
+      }
+    }
+
+    function centerMotion(timeSec = (video.currentTime || activeSegment().startSec)) {
+      const trackWidth = Number(motionCanvas.dataset.trackWidth || 0);
+      if (!trackWidth) return;
+      const duration = Math.max(1, currentVideo().videoInfo.duration_sec);
+      const time = Math.max(0, Math.min(timeSec, duration));
+      const targetX = (time / duration) * trackWidth;
+      const nextScroll = Math.max(0, targetX - motionWindow.clientWidth * 0.5);
+      if (Math.abs(nextScroll - lastMotionCenter) > 0.5) {
+        suppressMotionScroll = true;
+        motionWindow.scrollLeft = nextScroll;
+        lastMotionCenter = nextScroll;
+        requestAnimationFrame(() => { suppressMotionScroll = false; });
+      }
+    }
+
+    function motionFrameFromPointer(event) {
+      const rect = motionCanvas.getBoundingClientRect();
+      const localX = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+      const trackWidth = Number(motionCanvas.dataset.trackWidth || 0);
+      if (!trackWidth || rect.width <= 0) return 0;
+      const xOnTrack = (localX / rect.width) * trackWidth;
+      const duration = Math.max(1, currentVideo().videoInfo.duration_sec);
+      const time = Math.max(0, Math.min(duration, (xOnTrack / trackWidth) * duration));
+      return Math.round(time * currentVideo().videoInfo.fps);
+    }
+
+    function nearestLiveBoundary(frame) {
+      const layout = generatedMotionLayouts.get(currentVideoId) || buildMotionLayout(buildMotionModel(currentVideoId), segmentationConfig());
+      const tol = Math.max(8, Math.round(currentVideo().videoInfo.fps * 0.2));
+      let best = null;
+      let bestDist = Infinity;
+      for (const hold of layout.holds || []) {
+        const dist = Math.abs(hold.frame - frame);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = hold.frame;
+        }
+      }
+      return bestDist <= tol ? best : null;
+    }
+
+    function drawPose(timeSec = (video.currentTime || 0)) {
+      if (!poseToggle.checked) {
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+        lastPoseFrame = -1;
+        return;
+      }
+      const payload = currentVideo().pose;
+      const decoded = ensureDecoded(currentVideoId).pose;
+      const frameIdx = Math.max(0, Math.min(payload.frameCount - 1, Math.round(timeSec * currentVideo().videoInfo.fps)));
+      if (frameIdx === lastPoseFrame) return;
+      lastPoseFrame = frameIdx;
+      const stride = payload.pointCount * 2;
+      const offset = frameIdx * stride;
+      ctx.clearRect(0, 0, video.clientWidth, video.clientHeight);
+      const pointXY = (idx) => {
+        const rawX = decoded[offset + idx * 2];
+        const rawY = decoded[offset + idx * 2 + 1];
+        if (![rawX, rawY].every(Number.isFinite)) return null;
+        if (rawX === 0 && rawY === 0) return null;
+        return [
+          rawX / payload.scale * video.clientWidth,
+          rawY / payload.scale * video.clientHeight,
+        ];
+      };
+      const drawEdgeList = (edgeList, color, width) => {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        edgeList.forEach(([a, b]) => {
+          const pa = pointXY(a);
+          const pb = pointXY(b);
+          if (!pa || !pb) return;
+          ctx.moveTo(pa[0], pa[1]);
+          ctx.lineTo(pb[0], pb[1]);
+        });
+        ctx.stroke();
+      };
+      drawEdgeList(APP.shared.edges.body, "rgba(255,255,255,0.82)", 1.6);
+      drawEdgeList(APP.shared.edges.leftHand, "rgba(88,214,174,0.88)", 1.15);
+      drawEdgeList(APP.shared.edges.rightHand, "rgba(249,194,91,0.92)", 1.15);
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      for (let idx = 0; idx < payload.pointCount; idx++) {
+        const pt = pointXY(idx);
+        if (!pt) continue;
+        ctx.beginPath();
+        ctx.arc(pt[0], pt[1], idx < 33 ? 1.55 : 1.25, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function makeFeedbackKey(seg, kind, model, label) {
+      return `${currentVideoId}::${seg.id}::${kind}::${model}::${label}`;
+    }
+
+    function setFeedbackState(key, meta, state) {
+      if (!state) {
+        if (feedback[key] && !feedback[key].note) delete feedback[key];
+        else if (feedback[key]) feedback[key].state = "";
+        return;
+      }
+      feedback[key] = feedback[key] || {};
+      feedback[key].state = state;
+      Object.assign(feedback[key], meta);
+    }
+
+    function updateGroupButtons(group) {
+      const wraps = Array.from(document.querySelectorAll(`.actions[data-feedback-group="${CSS.escape(group)}"]`));
+      wraps.forEach((wrap) => {
+        const key = wrap.dataset.feedbackKey;
+        const state = feedback[key]?.state || "";
+        wrap.querySelectorAll("button[data-action]").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.action === state);
+        });
+      });
+    }
+
+    function makeActionButtons(seg, kind, model, label, groupName) {
+      const key = makeFeedbackKey(seg, kind, model, label);
+      const group = `${currentVideoId}::${seg.id}::${kind}::${groupName}`;
+      const wrap = document.createElement("div");
+      wrap.className = "actions";
+      wrap.dataset.feedbackGroup = group;
+      wrap.dataset.feedbackKey = key;
+      wrap.dataset.videoId = currentVideoId;
+      wrap.dataset.segmentId = String(seg.id);
+      wrap.dataset.kind = kind;
+      wrap.dataset.model = model;
+      wrap.dataset.label = label;
+      wrap.dataset.group = group;
+      [["accept", "✓"], ["reject", "✕"]].forEach(([name, glyph]) => {
+        const btn = document.createElement("button");
+        const signOverride = kind === "sign" ? segmentLabelOverride(seg.id) : null;
+        const state = kind === "sign" && signOverride ? (signOverride === label ? "accept" : "reject") : (feedback[key]?.state || "");
+        btn.className = `mini ${name} ${state === name ? "active" : ""}`;
+        btn.textContent = glyph;
+        btn.dataset.action = name;
+        btn.onclick = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (kind === "sign") {
+            if (name === "accept") {
+              applySegmentLabel(seg.id, label);
+              syncPhonologyToGloss(seg.id, label);
+              document.querySelectorAll(`.actions[data-kind="sign"][data-segment-id="${seg.id}"]`).forEach((otherWrap) => {
+                const otherKey = otherWrap.dataset.feedbackKey;
+                const otherMeta = {
+                  videoId: otherWrap.dataset.videoId,
+                  segmentId: Number(otherWrap.dataset.segmentId),
+                  kind: otherWrap.dataset.kind,
+                  model: otherWrap.dataset.model,
+                  label: otherWrap.dataset.label,
+                  group: otherWrap.dataset.group,
+                };
+                setFeedbackState(otherKey, otherMeta, otherWrap.dataset.label === label ? "accept" : "reject");
+              });
+            } else {
+              if (segmentLabelOverride(seg.id) === label) clearSegmentLabel(seg.id);
+              document.querySelectorAll(`.actions[data-kind="sign"][data-segment-id="${seg.id}"][data-label="${CSS.escape(label)}"]`).forEach((otherWrap) => {
+                const otherKey = otherWrap.dataset.feedbackKey;
+                const otherMeta = {
+                  videoId: otherWrap.dataset.videoId,
+                  segmentId: Number(otherWrap.dataset.segmentId),
+                  kind: otherWrap.dataset.kind,
+                  model: otherWrap.dataset.model,
+                  label: otherWrap.dataset.label,
+                  group: otherWrap.dataset.group,
+                };
+                const nextState = feedback[otherKey]?.state === "reject" ? "" : "reject";
+                setFeedbackState(otherKey, otherMeta, nextState);
+              });
+            }
+            saveFeedback();
+            setSegment(seg.id, false, true);
+            return;
+          }
+          const meta = {
+            videoId: currentVideoId,
+            segmentId: seg.id,
+            kind,
+            model,
+            label,
+            group,
+          };
+          if (name === "accept") {
+            const wraps = Array.from(document.querySelectorAll(`.actions[data-feedback-group="${CSS.escape(group)}"]`));
+            wraps.forEach((otherWrap) => {
+              const otherKey = otherWrap.dataset.feedbackKey;
+              const otherMeta = {
+                videoId: otherWrap.dataset.videoId,
+                segmentId: Number(otherWrap.dataset.segmentId),
+                kind: otherWrap.dataset.kind,
+                model: otherWrap.dataset.model,
+                label: otherWrap.dataset.label,
+                group: otherWrap.dataset.group,
+              };
+              setFeedbackState(otherKey, otherMeta, otherKey === key ? "accept" : "reject");
+            });
+          } else {
+            const nextState = feedback[key]?.state === name ? "" : name;
+            setFeedbackState(key, meta, nextState);
+          }
+          refreshPhonemeToSignFromLabels(seg.id);
+          saveFeedback();
+          updateGroupButtons(group);
+          setSegment(seg.id, false, true);
+        };
+        wrap.appendChild(btn);
+      });
+      return wrap;
+    }
+
+    function makeCollapseButton(card, contentSelector) {
+      const btn = document.createElement("button");
+      btn.className = "mini collapse-toggle";
+      const refresh = () => {
+        const collapsed = card.classList.contains("collapsed");
+        btn.textContent = collapsed ? "Show" : "Hide";
+        btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      };
+      btn.onclick = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (card.dataset.cardKey) {
+          toggleCardExpanded(card.dataset.cardKey);
+        } else {
+          card.classList.toggle("collapsed");
+          refresh();
+        }
+      };
+      refresh();
+      return btn;
+    }
+
+    function cardExpanded(cardKey) {
+      return !!feedback[scopedKey("card-open", cardKey)]?.open;
+    }
+
+    function setCardExpanded(cardKey, open) {
+      const key = scopedKey("card-open", cardKey);
+      if (!open) delete feedback[key];
+      else feedback[key] = {videoId: currentVideoId, kind: "card-open", cardKey, open: true};
+    }
+
+    function toggleCardExpanded(cardKey) {
+      setCardExpanded(cardKey, !cardExpanded(cardKey));
+      saveFeedback();
+      setSegment(selectedSegmentId, false);
+    }
+
+    function confusionValue(prob) {
+      return Math.max(0, Math.min(1, 1 - Number(prob || 0)));
+    }
+
+    function uncertaintyColor(value) {
+      const v = Math.max(0, Math.min(1, Number(value || 0)));
+      const hue = 118 - v * 118;
+      return `hsla(${hue}, 70%, 46%, 0.22)`;
+    }
+
+    function setItemFill(el, value, colorValue = value) {
+      el.style.setProperty("--prob-fill", `${(Math.max(0, Math.min(1, Number(value || 0))) * 100).toFixed(1)}%`);
+      el.style.setProperty("--fill-color", uncertaintyColor(colorValue));
+    }
+
+    function sortByConfusion(rows, getter) {
+      const sorted = [...rows];
+      sorted.sort((a, b) => {
+        const diff = getter(b) - getter(a);
+        return confusionSortMode === "desc" ? diff : -diff;
+      });
+      return sorted;
+    }
+
+    function searchQuery() {
+      return vocabSearchQuery.trim().toLowerCase();
+    }
+
+    function canonicalVocabLabel(query) {
+      const q = (query || "").trim().toLowerCase();
+      if (!q) return null;
+      const vocabLabel = APP.shared.labelNames.find((label) => label.toLowerCase() === q);
+      if (vocabLabel) return vocabLabel;
+      const lexLabel = (APP.shared.aslLexLabels || []).find((label) => label.toLowerCase() === q);
+      return lexLabel || null;
+    }
+
+    function softmaxPredictionForLabel(seg, label) {
+      const labelIdx = labelToIndex.get(label);
+      if (labelIdx === undefined) return null;
+      const packed = ensureDecoded(currentVideoId);
+      const k = currentVideo().windowData.signTopIdx.shape[1];
+      let total = 0;
+      seg.windowIdx.forEach((windowIdx) => {
+        const base = windowIdx * k;
+        for (let j = 0; j < k; j++) {
+          if (packed.signTopIdx[base + j] === labelIdx) total += packed.signTopProb[base + j];
+        }
+      });
+      return {label, prob: total / Math.max(1, seg.windowIdx.length)};
+    }
+
+    function knnPredictionForLabel(seg, label) {
+      const labelIdx = labelToIndex.get(label);
+      if (labelIdx === undefined) return null;
+      const cacheKey = `${currentVideoId}::knn::${seg.id}::${label}`;
+      if (exactSearchCache.has(cacheKey)) return exactSearchCache.get(cacheKey);
+      const packed = ensureDecoded(currentVideoId);
+      const protoDim = APP.shared.prototypes.shape[1];
+      let maxScore = -Infinity;
+      for (let i = 0; i < APP.shared.labelNames.length; i++) {
+        let dot = 0;
+        const base = i * protoDim;
+        for (let d = 0; d < protoDim; d++) dot += packed.prototypes[base + d] * seg.embeddingVec[d];
+        if (dot > maxScore) maxScore = dot;
+      }
+      let denom = 0;
+      let target = -Infinity;
+      for (let i = 0; i < APP.shared.labelNames.length; i++) {
+        let dot = 0;
+        const base = i * protoDim;
+        for (let d = 0; d < protoDim; d++) dot += packed.prototypes[base + d] * seg.embeddingVec[d];
+        const e = Math.exp(dot - maxScore);
+        denom += e;
+        if (i === labelIdx) target = dot;
+      }
+      const result = {label, prob: Math.exp(target - maxScore) / Math.max(1e-8, denom)};
+      exactSearchCache.set(cacheKey, result);
+      return result;
+    }
+
+    function phonologyPredictionForLabel(seg, label) {
+      const labelIdx = labelToIndex.get(label);
+      if (labelIdx === undefined) return null;
+      const cacheKey = `${currentVideoId}::phono::${seg.id}::${label}`;
+      if (exactSearchCache.has(cacheKey)) return exactSearchCache.get(cacheKey);
+      const packed = ensureDecoded(currentVideoId);
+      const scores = new Float32Array(APP.shared.labelNames.length);
+      const counts = new Float32Array(APP.shared.labelNames.length);
+      seg.phonology.forEach((row) => {
+        const probs = new Map(row.predictions.map((pred) => [pred.label, pred.prob]));
+        const labels = currentVideo().taskLabels[row.feature] || [];
+        const lex = packed.lexiconByFeature[row.feature];
+        for (let i = 0; i < lex.length; i++) {
+          const featIdx = lex[i];
+          if (featIdx >= 0 && featIdx < labels.length) {
+            scores[i] += Math.log(Math.max(1e-6, probs.get(labels[featIdx]) || 0));
+            counts[i] += 1;
+          }
+        }
+      });
+      let maxScore = -Infinity;
+      for (let i = 0; i < scores.length; i++) {
+        if (counts[i] > 0) maxScore = Math.max(maxScore, scores[i] / counts[i]);
+      }
+      let denom = 0;
+      let target = -Infinity;
+      for (let i = 0; i < scores.length; i++) {
+        if (counts[i] <= 0) continue;
+        const score = scores[i] / counts[i];
+        const e = Math.exp(score - maxScore);
+        denom += e;
+        if (i === labelIdx) target = score;
+      }
+      if (!Number.isFinite(target)) return null;
+      const result = {label, prob: Math.exp(target - maxScore) / Math.max(1e-8, denom)};
+      exactSearchCache.set(cacheKey, result);
+      return result;
+    }
+
+    function predictionForExactQuery(seg, model, query) {
+      const label = canonicalVocabLabel(query);
+      if (!label) return null;
+      const existing = model.predictions.find((pred) => pred.label.toLowerCase() === label.toLowerCase());
+      if (existing) return existing;
+      if (model.kind === "softmax") return softmaxPredictionForLabel(seg, label);
+      if (model.kind === "knn") return knnPredictionForLabel(seg, label);
+      if (model.kind === "phonology") return phonologyPredictionForLabel(seg, label);
+      return null;
+    }
+
+    function filteredModelPredictions(seg, model) {
+      const query = searchQuery();
+      if (!query) return model.predictions.slice(0, 20);
+      const exact = predictionForExactQuery(seg, model, query);
+      const filtered = model.predictions.filter((pred) => pred.label.toLowerCase().includes(query));
+      const rows = [];
+      if (exact) rows.push(exact);
+      filtered.forEach((pred) => {
+        if (!rows.some((row) => row.label === pred.label)) rows.push(pred);
+      });
+      return rows.slice(0, 20);
+    }
+
+    function hasSearchMatches(seg) {
+      const query = searchQuery();
+      if (!query) return true;
+      return seg.signModels.some((model) => filteredModelPredictions(seg, model).length > 0);
+    }
+
+    function acceptedPhonologyLabels(segId) {
+      const accepted = {};
+      Object.values(feedback).forEach((entry) => {
+        if (!entry || entry.videoId !== currentVideoId) return;
+        if (entry.segmentId !== segId || entry.kind !== "phonology" || entry.state !== "accept") return;
+        accepted[entry.model] = entry.label;
+      });
+      return accepted;
+    }
+
+    function buildPhonemeToSignPredictions(segId) {
+      const seg = activeSegment(segId);
+      const packed = ensureDecoded(currentVideoId);
+      const accepted = acceptedPhonologyLabels(segId);
+      const phonoScores = new Float32Array(APP.shared.labelNames.length);
+      const phonoCounts = new Float32Array(APP.shared.labelNames.length);
+      seg.phonology.forEach((row) => {
+        const labels = currentVideo().taskLabels[row.feature];
+        if (!labels) return;
+        const mean = new Float32Array(labels.length);
+        const probByLabel = new Map(row.predictions.map((pred) => [pred.label, pred.prob]));
+        labels.forEach((label, idx) => {
+          mean[idx] = probByLabel.get(label) || 0;
+        });
+        if (accepted[row.feature]) {
+          mean.fill(0);
+          const acceptedIdx = labels.indexOf(accepted[row.feature]);
+          if (acceptedIdx >= 0) mean[acceptedIdx] = 1.0;
+        }
+        const lex = packed.lexiconByFeature[row.feature];
+        for (let i = 0; i < lex.length; i++) {
+          const featIdx = lex[i];
+          if (featIdx >= 0) {
+            phonoScores[i] += Math.log(Math.max(1e-6, mean[featIdx]));
+            phonoCounts[i] += 1;
+          }
+        }
+      });
+      const rows = [];
+      for (let i = 0; i < phonoScores.length; i++) {
+        if (phonoCounts[i] > 0) rows.push({label: APP.shared.labelNames[i], score: phonoScores[i] / phonoCounts[i]});
+      }
+      rows.sort((a, b) => b.score - a.score);
+      const top = rows.slice(0, 20);
+      const vals = top.map((row) => row.score);
+      const max = vals.length ? Math.max(...vals) : 0;
+      const exps = vals.map((v) => Math.exp(v - max));
+      const denom = exps.reduce((a, b) => a + b, 0) || 1;
+      return top.map((row, idx) => ({label: row.label, prob: exps[idx] / denom}));
+    }
+
+    function refreshPhonemeToSignFromLabels(segId) {
+      const accepted = acceptedPhonologyLabels(segId);
+      if (!Object.keys(accepted).length) {
+        delete feedback[scopedKey("relabel", String(segId))];
+        return;
+      }
+      feedback[scopedKey("relabel", String(segId))] = {
+        videoId: currentVideoId,
+        segmentId: segId,
+        phonologyPredictions: buildPhonemeToSignPredictions(segId),
+        accepted,
+      };
+    }
+
+    function renderPhonology(seg) {
+      phonoRows.innerHTML = "";
+      sortByConfusion(seg.phonology, (row) => row.entropy).forEach((row) => {
+        const open = cardExpanded(`phonology::${seg.id}::${row.feature}`);
+        const preds = [...row.predictions];
+        if (!preds.some((pred) => pred.label === "N/A")) preds.push({label: "N/A", prob: 0});
+        const topPred = preds[0];
+        const card = document.createElement("div");
+        card.className = `feature-row ${open ? "" : "collapsed"}`;
+        card.dataset.cardKey = `phonology::${seg.id}::${row.feature}`;
+        card.onclick = (event) => {
+          if (event.target.closest("button,.actions,a,input,select")) return;
+          toggleCardExpanded(`phonology::${seg.id}::${row.feature}`);
+        };
+        const head = document.createElement("div");
+        head.className = "card-head";
+        head.innerHTML = `<div class="card-head-main"><h4>${row.feature}</h4></div>`;
+        const clearBtn = document.createElement("button");
+        clearBtn.className = "mini";
+        clearBtn.textContent = "Clear";
+        clearBtn.onclick = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          clearPhonologyCategory(seg.id, row.feature);
+          saveFeedback();
+          setSegment(seg.id, false);
+        };
+        head.appendChild(clearBtn);
+        const list = document.createElement("div");
+        list.className = "pred-list feature-scroll";
+        preds.forEach((pred) => {
+          const item = document.createElement("div");
+          item.className = "pred-item";
+          setItemFill(item, pred.prob, confusionValue(pred.prob));
+          const label = document.createElement("div");
+          label.textContent = pred.label;
+          const prob = document.createElement("div");
+          prob.className = "prob";
+          prob.textContent = pred.prob.toFixed(3);
+          item.append(label, prob, makeActionButtons(seg, "phonology", row.feature, pred.label, row.feature));
+          list.appendChild(item);
+        });
+        if (!open) {
+          const summary = document.createElement("div");
+          summary.className = "pred-list summary-row";
+          const summaryItem = document.createElement("div");
+          summaryItem.className = "pred-item";
+          setItemFill(summaryItem, row.entropy, row.entropy);
+          const summaryLabel = document.createElement("div");
+          summaryLabel.textContent = topPred.label;
+          const summaryProb = document.createElement("div");
+          summaryProb.className = "prob";
+          summaryProb.textContent = topPred.prob.toFixed(3);
+          summaryItem.append(summaryLabel, summaryProb, makeActionButtons(seg, "phonology", row.feature, topPred.label, row.feature));
+          summary.appendChild(summaryItem);
+          card.append(head, summary, list);
+        } else {
+          card.append(head, list);
+        }
+        phonoRows.appendChild(card);
+      });
+    }
+
+    function renderSignModels(seg) {
+      signModels.innerHTML = "";
+      const query = searchQuery();
+      const models = sortByConfusion(seg.signModels, (model) => {
+        const top = filteredModelPredictions(seg, model)[0] || model.predictions[0] || {prob: 0};
+        return confusionValue(top.prob);
+      });
+      let matchedAny = !query;
+      models.forEach((model) => {
+        const filtered = filteredModelPredictions(seg, model);
+        if (query && filtered.length === 0) return;
+        matchedAny = true;
+        const card = document.createElement("div");
+        card.className = "model-card";
+        const head = document.createElement("div");
+        head.className = "card-head";
+        head.innerHTML = `<div class="card-head-main"><h4>${model.name}</h4></div>`;
+        const clearBtn = document.createElement("button");
+        clearBtn.className = "mini";
+        clearBtn.textContent = "Clear";
+        clearBtn.onclick = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          clearSignAnnotations(seg.id);
+          delete feedback[scopedKey("relabel", String(seg.id))];
+          saveFeedback();
+          setSegment(seg.id, false);
+        };
+        head.appendChild(clearBtn);
+        const list = document.createElement("div");
+        list.className = "pred-list pred-scroll";
+        filtered.slice(0, 10).forEach((pred) => {
+          const item = document.createElement("div");
+          item.className = "pred-item";
+          setItemFill(item, pred.prob, confusionValue(pred.prob));
+          const label = document.createElement("div");
+          label.innerHTML = `<div>${glossHtml(pred.label)}</div>`;
+          const prob = document.createElement("div");
+          prob.className = "prob";
+          prob.textContent = pred.prob.toFixed(3);
+          item.append(label, prob, makeActionButtons(seg, "sign", model.name, pred.label, model.name));
+          list.appendChild(item);
+        });
+        card.append(head, list);
+        signModels.appendChild(card);
+      });
+      if (query && !matchedAny) {
+        const exactKnownLabel = canonicalVocabLabel(query);
+        if (exactKnownLabel && aslLexLabelSet.has(exactKnownLabel.toLowerCase())) return;
+        const alreadyAdded = segmentLabelOverride(seg.id) === query;
+        const card = document.createElement("div");
+        card.className = "model-card";
+        const head = document.createElement("div");
+        head.className = "card-head";
+        head.innerHTML = `<div class="card-head-main"><h4>Add New Term</h4><div class="subtle">not found in ASL-LEX</div></div>`;
+        const addBtn = document.createElement("button");
+        addBtn.className = "mini";
+        addBtn.textContent = "Approve";
+        addBtn.disabled = alreadyAdded;
+        addBtn.onclick = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          applySegmentLabel(seg.id, query);
+          saveFeedback();
+          setSegment(seg.id, false, true);
+        };
+        head.appendChild(addBtn);
+        const summary = document.createElement("div");
+        summary.className = "pred-list summary-row";
+        const summaryItem = document.createElement("div");
+        summaryItem.className = `pred-item ${alreadyAdded ? "term-added" : ""}`;
+        setItemFill(summaryItem, 0, 1);
+        summaryItem.style.cursor = alreadyAdded ? "default" : "pointer";
+        summaryItem.onclick = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (alreadyAdded) return;
+          applySegmentLabel(seg.id, query);
+          saveFeedback();
+          setSegment(seg.id, false, true);
+        };
+        const summaryLabel = document.createElement("div");
+        summaryLabel.innerHTML = `<div>${glossHtml(query)}</div>`;
+        const summaryProb = document.createElement("div");
+        summaryProb.className = "prob";
+        summaryProb.textContent = "new";
+        const summaryControls = document.createElement("div");
+        summaryControls.style.display = "flex";
+        summaryControls.style.gap = "6px";
+        summaryItem.append(summaryLabel, summaryProb, summaryControls);
+        summary.appendChild(summaryItem);
+        card.append(head, summary);
+        signModels.appendChild(card);
+      }
+    }
+
+    function loadNoteForSegment(seg) {
+      const key = scopedKey("segment-note", String(seg.id));
+      selectedFeedbackKey = key;
+      currentFeedbackKey.textContent = key;
+      noteBox.value = feedback[key]?.note || "";
+    }
+
+    noteBox.addEventListener("change", () => {
+      const key = scopedKey("segment-note", String(selectedSegmentId));
+      feedback[key] = feedback[key] || {videoId: currentVideoId, segmentId: selectedSegmentId, kind: "segment-note"};
+      feedback[key].note = noteBox.value;
+      if (!feedback[key].note) delete feedback[key];
+      saveFeedback();
+    });
+
+    function timelineTrackWidth() {
+      const duration = Math.max(1, currentVideo().videoInfo.duration_sec);
+      const containerWidth = Math.max(720, timelineWindow.clientWidth || 0);
+      return Math.max(Math.round(duration * 80 * timelineZoom), Math.round(containerWidth * (1.6 + 0.4 * timelineZoom)));
+    }
+
+    function centerTimeline(timeSec = (video.currentTime || activeSegment().startSec)) {
+      const trackWidth = Number(document.getElementById("timeline").dataset.trackWidth || 0);
+      if (!trackWidth) return;
+      const duration = Math.max(1, currentVideo().videoInfo.duration_sec);
+      const time = Math.max(0, Math.min(timeSec, duration));
+      const targetX = (time / duration) * trackWidth;
+      const nextScroll = Math.max(0, targetX - timelineWindow.clientWidth * 0.5);
+      if (Math.abs(nextScroll - timelineWindow.scrollLeft) > 0.5) {
+        suppressTimelineScroll = true;
+        timelineWindow.scrollLeft = nextScroll;
+        requestAnimationFrame(() => { suppressTimelineScroll = false; });
+      }
+      timelineMeta.textContent = "";
+    }
+
+    function renderTimeline() {
+      const timeline = document.getElementById("timeline");
+      timeline.innerHTML = "";
+      const duration = Math.max(1, currentVideo().videoInfo.duration_sec);
+      const trackWidth = timelineTrackWidth();
+      timeline.style.width = `${trackWidth}px`;
+      timeline.dataset.trackWidth = String(trackWidth);
+      const timelineSegments = visibleSegments();
+      timelineSegments.forEach((seg, segIdx) => {
+        const chip = document.createElement("div");
+        chip.className = `segment-chip ${seg.label === "unk" ? "unknown" : "known"}`;
+        chip.dataset.segId = String(seg.id);
+        const leftPx = (seg.startSec / duration) * trackWidth;
+        const rawWidthPx = Math.max(((Math.max(0.03, seg.endSec - seg.startSec) / duration) * trackWidth), 6);
+        const nextLeftPx = segIdx + 1 < timelineSegments.length
+          ? (timelineSegments[segIdx + 1].startSec / duration) * trackWidth
+          : trackWidth;
+        const widthPx = Math.max(2, Math.min(rawWidthPx, nextLeftPx - leftPx - 1));
+        chip.style.left = `${leftPx}px`;
+        chip.style.width = `${widthPx}px`;
+        chip.title = `${seg.displayLabel} · ${formatClock(seg.startSec)}`;
+        const text = document.createElement("span");
+        text.textContent = seg.displayLabel;
+        if (widthPx < 28) text.textContent = "";
+        chip.appendChild(text);
+        chip.onclick = () => setSegment(seg.id, true);
+        timeline.appendChild(chip);
+      });
+      centerTimeline();
+      highlightTimeline(selectedSegmentId);
+    }
+
+    function highlightTimeline(segId) {
+      document.querySelectorAll(".segment-chip").forEach((chip) => {
+        chip.style.outline = Number(chip.dataset.segId) === segId ? "2px solid rgba(29,36,33,0.55)" : "none";
+      });
+    }
+
+    function setSegment(segId, seek = false, rerenderTimeline = false) {
+      if (isDeleted(segId)) {
+        const ids = visibleSegmentIds();
+        if (!ids.length) return;
+        segId = ids[0];
+      }
+      selectedSegmentId = segId;
+      const seg = activeSegment(segId);
+      if (seek) {
+        video.currentTime = seg.startSec + 0.01;
+        centerTimeline(seg.startSec + 0.01);
+        centerMotion(seg.startSec + 0.01);
+      }
+      document.getElementById("currentStartTime").textContent = formatClock(seg.startSec);
+      document.getElementById("currentEndTime").textContent = formatClock(seg.endSec);
+      document.getElementById("currentStartFrame").textContent = String(seg.startFrame);
+      document.getElementById("currentEndFrame").textContent = String(seg.endFrame);
+      if (activeDetailTab === "predictions") {
+        renderPredictionsAsync(seg.id);
+      }
+      if (activeDetailTab === "search") {
+        retrieveNearestSegments(seg.id, "Current segment");
+      }
+      loadNoteForSegment(seg);
+      if (rerenderTimeline) renderTimeline();
+      highlightTimeline(seg.id);
+      renderSegmentList();
+      if (activeDetailTab === "motion") renderMotionAsync();
+      drawEmbeddingSpace();
+      lastEmbeddingRedraw = video.currentTime || seg.startSec;
+    }
+
+    function retrievalThresholdValueNum() {
+      return Number(retrievalThreshold.value || 0);
+    }
+
+    function clearSearchBox() {
+      vocabSearchQuery = "";
+      vocabSearch.value = "";
+    }
+
+    function isrUncertainty(seg) {
+      const isr = seg.signModels.filter((model) => model.kind !== "phonology");
+      if (!isr.length) return 1;
+      return isr.reduce((acc, model) => acc + confusionValue((model.predictions[0] || {prob: 0}).prob), 0) / isr.length;
+    }
+
+    function uncertaintyRankedSegments() {
+      return [...visibleSegments()].sort((a, b) => isrUncertainty(b) - isrUncertainty(a) || a.startFrame - b.startFrame);
+    }
+
+    function updateRenameModeUI() {
+      renameModeToggle.classList.toggle("primary", renameMode);
+      renameModeToggle.textContent = renameMode ? "Cancel Rename" : "Rename";
+      [renameSelectAll, renameSelectNone, applyRename].forEach((el) => el.classList.toggle("hidden", !renameMode));
+      if (!renameMode) retrievalSelection.clear();
+    }
+
+    function openHoverPreview(videoEl, startSec, endSec) {
+      videoEl.style.display = "block";
+      videoEl.currentTime = Math.max(0, startSec);
+      videoEl.play().catch(() => {});
+      const onTimeUpdate = () => {
+        if (videoEl.currentTime >= Math.max(startSec + 0.02, endSec - 0.03)) {
+          videoEl.currentTime = Math.max(0, startSec);
+        }
+      };
+      videoEl._loopFn = onTimeUpdate;
+      videoEl.addEventListener("timeupdate", onTimeUpdate);
+    }
+
+    function closeHoverPreview(videoEl) {
+      if (videoEl._loopFn) videoEl.removeEventListener("timeupdate", videoEl._loopFn);
+      videoEl._loopFn = null;
+      videoEl.pause();
+      videoEl.style.display = "none";
+    }
+
+    function renderRetrievalCards(matches, currentSegId) {
+      retrievalGrid.innerHTML = "";
+      const threshold = retrievalThresholdValueNum();
+      const filtered = matches.filter((item) => item.score >= threshold);
+      retrievalSummary.textContent = `${filtered.length} retrieved segments`;
+      for (const {seg, score} of filtered) {
+        const card = document.createElement("div");
+        card.className = "retrieval-card";
+        card.onclick = (event) => {
+          if (event.target.closest("input,a,label")) return;
+          loopGuard = false;
+          setSegment(seg.id, true);
+        };
+        const select = document.createElement("label");
+        select.className = `subtle checkbox-row ${renameMode ? "" : "hidden"}`;
+        select.onclick = (event) => event.stopPropagation();
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.dataset.segId = String(seg.id);
+        checkbox.onclick = (event) => event.stopPropagation();
+        checkbox.checked = retrievalSelection.has(seg.id);
+        checkbox.onchange = () => {
+          if (checkbox.checked) retrievalSelection.add(seg.id);
+          else retrievalSelection.delete(seg.id);
+        };
+        select.append(checkbox, document.createTextNode(" rename"));
+        const preview = document.createElement("div");
+        preview.className = "thumb-wrap";
+        const thumb = document.createElement("img");
+        thumb.className = "thumb";
+        thumb.alt = `thumbnail at ${seg.startSec.toFixed(2)}s`;
+        thumb.loading = "lazy";
+        thumb.decoding = "async";
+        thumb.onload = () => {
+          preview.classList.remove("loading");
+        };
+        thumb.onerror = () => {
+          preview.classList.remove("loading");
+        };
+        thumb.src = "";
+        ensureRetrievalThumbnail(seg, thumb, preview);
+        const hover = document.createElement("video");
+        hover.className = "thumb-video";
+        hover.src = currentVideo().videoUri;
+        hover.muted = true;
+        hover.playsInline = true;
+        hover.preload = "metadata";
+        preview.onmouseenter = () => openHoverPreview(hover, seg.startSec, seg.endSec);
+        preview.onmouseleave = () => closeHoverPreview(hover);
+        preview.append(thumb, hover);
+        const title = document.createElement("div");
+        title.style.fontWeight = "700";
+        title.style.marginTop = "10px";
+        title.innerHTML = glossHtml(seg.displayLabel);
+        const meta = document.createElement("div");
+        meta.className = "subtle";
+        meta.textContent = `${formatClock(seg.startSec)} - ${formatClock(seg.endSec)} · sim ${score.toFixed(3)}`;
+        card.append(select, preview, title, meta);
+        retrievalGrid.appendChild(card);
+      }
+    }
+
+    async function retrieveMatches(label, sourceName, currentSegId, exactOnly = false) {
+      if (activeDetailTab !== "search") setDetailTab("search", true);
+      retrievalSubtitle.textContent = "";
+      const currentSeg = activeSegment(currentSegId);
+      let matches = visibleSegments()
+        .filter((seg) => seg.id !== currentSegId)
+        .filter((seg) => exactOnly ? seg.displayLabel === label : (label.startsWith("unk_") ? seg.displayLabel === label : true))
+        .map((seg) => {
+          let dot = 0;
+          let na = 0;
+          let nb = 0;
+          for (let i = 0; i < currentSeg.embeddingVec.length; i++) {
+            dot += currentSeg.embeddingVec[i] * seg.embeddingVec[i];
+            na += currentSeg.embeddingVec[i] * currentSeg.embeddingVec[i];
+            nb += seg.embeddingVec[i] * seg.embeddingVec[i];
+          }
+          const sim = dot / Math.max(1e-8, Math.sqrt(na * nb));
+          const predProb = Math.max(0, ...seg.signModels.flatMap((model) => model.predictions.filter((pred) => pred.label === label).map((pred) => pred.prob)));
+          const exact = seg.displayLabel === label ? 1 : 0;
+          return {seg, score: sim + predProb + exact};
+        })
+        .sort((a, b) => b.score - a.score);
+      const maxScore = matches.length ? matches[0].score : 1;
+      const minScore = matches.length ? matches[matches.length - 1].score : 0;
+      matches = matches
+        .map((item) => ({
+          ...item,
+          score: maxScore > minScore ? (item.score - minScore) / (maxScore - minScore) : 1.0,
+        }))
+        .slice(0, exactOnly || label.startsWith("unk_") ? 24 : 16);
+      retrievalSelection.clear();
+      lastRetrievalRequest = {type: "matches", label, sourceName, currentSegId, exactOnly};
+      renderRetrievalCards(matches, currentSegId);
+    }
+
+    async function retrieveNearestSegments(currentSegId, sourceName) {
+      if (activeDetailTab !== "search") setDetailTab("search", true);
+      retrievalSubtitle.textContent = "";
+      const currentSeg = activeSegment(currentSegId);
+      let matches = visibleSegments()
+        .filter((seg) => seg.id !== currentSegId)
+        .map((seg) => {
+          let dot = 0;
+          let na = 0;
+          let nb = 0;
+          for (let i = 0; i < currentSeg.embeddingVec.length; i++) {
+            dot += currentSeg.embeddingVec[i] * seg.embeddingVec[i];
+            na += currentSeg.embeddingVec[i] * currentSeg.embeddingVec[i];
+            nb += seg.embeddingVec[i] * seg.embeddingVec[i];
+          }
+          const sim = dot / Math.max(1e-8, Math.sqrt(na * nb));
+          return {seg, score: sim};
+        })
+        .sort((a, b) => b.score - a.score);
+      const maxScore = matches.length ? matches[0].score : 1;
+      const minScore = matches.length ? matches[matches.length - 1].score : 0;
+      matches = matches
+        .map((item) => ({
+          ...item,
+          score: maxScore > minScore ? (item.score - minScore) / (maxScore - minScore) : 1.0,
+        }))
+        .slice(0, 24);
+      retrievalSelection.clear();
+      lastRetrievalRequest = {type: "nearest", currentSegId, sourceName};
+      renderRetrievalCards(matches, currentSegId);
+    }
+
+    function rerunLastRetrieval() {
+      if (activeDetailTab !== "search") return;
+      if (!lastRetrievalRequest) return;
+      if (lastRetrievalRequest.type === "matches") {
+        retrieveMatches(lastRetrievalRequest.label, lastRetrievalRequest.sourceName, lastRetrievalRequest.currentSegId, lastRetrievalRequest.exactOnly);
+      } else if (lastRetrievalRequest.type === "nearest") {
+        retrieveNearestSegments(lastRetrievalRequest.currentSegId, lastRetrievalRequest.sourceName);
+      }
+    }
+
+    function embeddingBounds() {
+      if (!SHOW_EMBEDDING) return {minX: 0, maxX: 1, minY: 0, maxY: 1};
+      const pts = visibleSegments().map((seg) => seg.embeddingXY).concat(currentVideo().embeddingView.windowXY);
+      const xs = pts.map((pt) => pt[0]);
+      const ys = pts.map((pt) => pt[1]);
+      let minX = Math.min(...xs);
+      let maxX = Math.max(...xs);
+      let minY = Math.min(...ys);
+      let maxY = Math.max(...ys);
+      if (maxX - minX < 1e-4) { minX -= 1; maxX += 1; }
+      if (maxY - minY < 1e-4) { minY -= 1; maxY += 1; }
+      const padX = (maxX - minX) * 0.08;
+      const padY = (maxY - minY) * 0.08;
+      return { minX: minX - padX, maxX: maxX + padX, minY: minY - padY, maxY: maxY + padY };
+    }
+
+    function toCanvasPoint(xy, bounds) {
+      const width = embeddingCanvas.width / devicePixelRatio;
+      const height = embeddingCanvas.height / devicePixelRatio;
+      const x = ((xy[0] - bounds.minX) / (bounds.maxX - bounds.minX)) * width;
+      const y = height - ((xy[1] - bounds.minY) / (bounds.maxY - bounds.minY)) * height;
+      return [x, y];
+    }
+
+    function traceIndices(timeSec) {
+      const starts = currentVideo().embeddingView.windowStarts;
+      const ends = currentVideo().embeddingView.windowEnds;
+      const fps = currentVideo().videoInfo.fps;
+      const idx = [];
+      for (let i = 0; i < starts.length; i++) {
+        if (starts[i] / fps <= timeSec && ends[i] / fps >= timeSec - 2.5) idx.push(i);
+      }
+      return idx.slice(-18);
+    }
+
+    function renderEmbeddingLegend() {
+      if (!SHOW_EMBEDDING) return;
+      const counts = new Map();
+      visibleSegments().forEach((seg) => counts.set(seg.displayLabel, (counts.get(seg.displayLabel) || 0) + 1));
+      const items = Array.from(counts.entries())
+        .filter(([label, count]) => count >= 2 || label.startsWith("unk_") || label === activeSegment().displayLabel)
+        .sort((a, b) => ((b[0].startsWith("unk_") ? 1 : 0) - (a[0].startsWith("unk_") ? 1 : 0)) || (b[1] - a[1]))
+        .slice(0, 16);
+      embeddingLegend.innerHTML = "";
+      items.forEach(([label, count]) => {
+        const pill = document.createElement("button");
+        pill.className = "badge";
+        pill.style.display = "inline-flex";
+        pill.style.alignItems = "center";
+        pill.style.gap = "8px";
+        pill.innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${colorForLabel(label)};display:inline-block;"></span><span>${label}</span><span class="subtle">${count}</span>`;
+        pill.onclick = () => retrieveMatches(label, "Embedding Space", selectedSegmentId, true);
+        embeddingLegend.appendChild(pill);
+      });
+    }
+
+    function drawEmbeddingSpace() {
+      if (!SHOW_EMBEDDING) return;
+      const width = embeddingCanvas.width / devicePixelRatio;
+      const height = embeddingCanvas.height / devicePixelRatio;
+      embeddingCtx.clearRect(0, 0, width, height);
+      const bounds = embeddingBounds();
+      embeddingCtx.fillStyle = "rgba(29,36,33,0.04)";
+      for (let x = 0; x < width; x += 80) embeddingCtx.fillRect(x, 0, 1, height);
+      for (let y = 0; y < height; y += 80) embeddingCtx.fillRect(0, y, width, 1);
+      const currentSeg = activeSegment();
+      const trace = traceIndices(video.currentTime || currentSeg.startSec);
+      if (trace.length > 1) {
+        const smooth = trace.map((_, i) => {
+          let sx = 0;
+          let sy = 0;
+          let count = 0;
+          for (let j = Math.max(0, i - 2); j <= Math.min(trace.length - 1, i + 2); j++) {
+            const pt = currentVideo().embeddingView.windowXY[trace[j]];
+            sx += pt[0];
+            sy += pt[1];
+            count += 1;
+          }
+          return [sx / count, sy / count];
+        });
+        embeddingCtx.beginPath();
+        smooth.forEach((xy, i) => {
+          const [x, y] = toCanvasPoint(xy, bounds);
+          if (i === 0) embeddingCtx.moveTo(x, y);
+          else embeddingCtx.lineTo(x, y);
+        });
+        embeddingCtx.strokeStyle = "rgba(31,111,95,0.75)";
+        embeddingCtx.lineWidth = 3;
+        embeddingCtx.stroke();
+      }
+      visibleSegments().forEach((seg) => {
+        const [x, y] = toCanvasPoint(seg.embeddingXY, bounds);
+        const prominent = seg.embeddingProminent || seg.displayLabel === currentSeg.displayLabel;
+        embeddingCtx.beginPath();
+        embeddingCtx.arc(x, y, prominent ? 6 : 3.5, 0, Math.PI * 2);
+        embeddingCtx.globalAlpha = prominent ? 0.92 : 0.35;
+        embeddingCtx.fillStyle = colorForLabel(seg.displayLabel);
+        embeddingCtx.fill();
+        if (seg.id === currentSeg.id) {
+          embeddingCtx.globalAlpha = 1;
+          embeddingCtx.lineWidth = 2.5;
+          embeddingCtx.strokeStyle = "#111";
+          embeddingCtx.stroke();
+        }
+      });
+      embeddingCtx.globalAlpha = 1;
+      const groups = new Map();
+      visibleSegments().forEach((seg) => {
+        if (!groups.has(seg.displayLabel)) groups.set(seg.displayLabel, []);
+        groups.get(seg.displayLabel).push(seg.embeddingXY);
+      });
+      Array.from(groups.entries())
+        .filter(([label, pts]) => pts.length >= 2 || label.startsWith("unk_") || label === currentSeg.displayLabel)
+        .forEach(([label, pts]) => {
+          const mean = [
+            pts.reduce((acc, pt) => acc + pt[0], 0) / pts.length,
+            pts.reduce((acc, pt) => acc + pt[1], 0) / pts.length,
+          ];
+          const [x, y] = toCanvasPoint(mean, bounds);
+          embeddingCtx.fillStyle = label.startsWith("unk_") ? "#7c2418" : "#1d2421";
+          embeddingCtx.font = label.startsWith("unk_") ? "700 14px IBM Plex Sans, sans-serif" : "600 12px IBM Plex Sans, sans-serif";
+          embeddingCtx.fillText(label, x + 8, y - 8);
+        });
+      if (trace.length > 0) {
+        const [x, y] = toCanvasPoint(currentVideo().embeddingView.windowXY[trace[trace.length - 1]], bounds);
+        embeddingCtx.beginPath();
+        embeddingCtx.arc(x, y, 7, 0, Math.PI * 2);
+        embeddingCtx.fillStyle = "#f1b343";
+        embeddingCtx.fill();
+        embeddingCtx.lineWidth = 2;
+        embeddingCtx.strokeStyle = "#3b2a08";
+        embeddingCtx.stroke();
+      }
+      const unkCount = visibleSegments().filter((seg) => seg.displayLabel.startsWith("unk_")).length;
+      embeddingMeta.textContent = `${visibleSegments().length} labeled segments · ${currentVideo().embeddingView.windowXY.length} window points · ${unkCount} clustered unknown tokens`;
+      renderEmbeddingLegend();
+    }
+
+    if (SHOW_EMBEDDING) {
+      embeddingCanvas.addEventListener("click", (event) => {
+        const rect = embeddingCanvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const bounds = embeddingBounds();
+        let best = null;
+        visibleSegments().forEach((seg) => {
+          const [sx, sy] = toCanvasPoint(seg.embeddingXY, bounds);
+          const dist2 = (sx - x) ** 2 + (sy - y) ** 2;
+          if (!best || dist2 < best.dist2) best = {seg, dist2};
+        });
+        if (best && best.dist2 <= 18 ** 2) setSegment(best.seg.id, true);
+      });
+    }
+
+    function overlappingWindowIndices(startFrame, endFrame) {
+      const starts = currentVideo().windowData.starts;
+      const ends = currentVideo().windowData.ends;
+      const idx = [];
+      for (let i = 0; i < starts.length; i++) {
+        const ratio = (() => {
+          const inter = Math.max(0, Math.min(endFrame, ends[i]) - Math.max(startFrame, starts[i]));
+          if (inter <= 0) return 0;
+          return inter / Math.max(1, Math.min(endFrame - startFrame, ends[i] - starts[i]));
+        })();
+        if (ratio >= 0.40) idx.push(i);
+      }
+      if (idx.length) return idx;
+      const center = 0.5 * (startFrame + endFrame);
+      let best = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < starts.length; i++) {
+        const d = Math.abs(0.5 * (starts[i] + ends[i]) - center);
+        if (d < bestDist) { best = i; bestDist = d; }
+      }
+      return [best];
+    }
+
+    function normalizeRows(rows, key) {
+      if (!rows.length) return [];
+      const vals = rows.map((row) => row[key]);
+      const max = Math.max(...vals);
+      const exps = vals.map((v) => Math.exp(v - max));
+      const denom = exps.reduce((a, b) => a + b, 0) || 1;
+      return rows.map((row, idx) => ({...row, prob: exps[idx] / denom}));
+    }
+
+    function computeSegmentData(startFrame, endFrame, segId = selectedSegmentId) {
+      const packed = ensureDecoded(currentVideoId);
+      const overlaps = overlappingWindowIndices(startFrame, endFrame);
+      const k = currentVideo().windowData.signTopIdx.shape[1];
+      const embDim = currentVideo().windowData.embeddings.shape[1];
+      const signTotals = new Map();
+      overlaps.forEach((windowIdx) => {
+        const base = windowIdx * k;
+        for (let j = 0; j < k; j++) {
+          const labelIdx = packed.signTopIdx[base + j];
+          const prob = packed.signTopProb[base + j];
+          signTotals.set(labelIdx, (signTotals.get(labelIdx) || 0) + prob);
+        }
+      });
+      const signPreds = Array.from(signTotals.entries())
+        .map(([labelIdx, score]) => ({label: APP.shared.labelNames[labelIdx], prob: score / overlaps.length}))
+        .sort((a, b) => b.prob - a.prob)
+        .slice(0, 20);
+
+      const embeddingVec = new Array(embDim).fill(0);
+      let totalWeight = 0;
+      overlaps.forEach((windowIdx) => {
+        const weight = Math.max(0.05, packed.knownScore[windowIdx] * packed.signTopProb[windowIdx * k]);
+        const base = windowIdx * embDim;
+        for (let d = 0; d < embDim; d++) embeddingVec[d] += packed.embeddings[base + d] * weight;
+        totalWeight += weight;
+      });
+      for (let d = 0; d < embDim; d++) embeddingVec[d] /= Math.max(1e-8, totalWeight);
+      let norm = Math.sqrt(embeddingVec.reduce((acc, x) => acc + x * x, 0));
+      norm = Math.max(norm, 1e-8);
+      for (let d = 0; d < embDim; d++) embeddingVec[d] /= norm;
+
+      const protoDim = APP.shared.prototypes.shape[1];
+      const knnScores = [];
+      for (let i = 0; i < APP.shared.labelNames.length; i++) {
+        let dot = 0;
+        const base = i * protoDim;
+        for (let d = 0; d < protoDim; d++) dot += packed.prototypes[base + d] * embeddingVec[d];
+        knnScores.push({label: APP.shared.labelNames[i], score: dot, count: APP.shared.trainCounts[i]});
+      }
+      knnScores.sort((a, b) => b.score - a.score);
+
+      const phonoRows = [];
+      const phonoScores = new Float32Array(APP.shared.labelNames.length);
+      const phonoCounts = new Float32Array(APP.shared.labelNames.length);
+      Object.entries(currentVideo().taskLabels).forEach(([column, labels]) => {
+        const probsArray = packed.phonology[column];
+        const numClasses = labels.length;
+        const mean = new Float32Array(numClasses);
+        overlaps.forEach((windowIdx) => {
+          const base = windowIdx * numClasses;
+          for (let c = 0; c < numClasses; c++) mean[c] += probsArray[base + c];
+        });
+        for (let c = 0; c < numClasses; c++) mean[c] /= overlaps.length;
+        const order = Array.from(mean).map((prob, idx) => ({idx, prob})).sort((a, b) => b.prob - a.prob);
+        const entropy = -Array.from(mean).reduce((acc, p) => acc + (p > 1e-8 ? p * Math.log(p) : 0), 0) / Math.log(Math.max(2, numClasses));
+        phonoRows.push({
+          feature: column,
+          entropy,
+          predictions: order.map((item) => ({label: labels[item.idx], prob: item.prob})),
+        });
+        const lex = packed.lexiconByFeature[column];
+        for (let i = 0; i < lex.length; i++) {
+          const featIdx = lex[i];
+          if (featIdx >= 0) {
+            phonoScores[i] += Math.log(Math.max(1e-6, mean[featIdx]));
+            phonoCounts[i] += 1;
+          }
+        }
+      });
+      phonoRows.sort((a, b) => a.feature.localeCompare(b.feature));
+
+      const phonemeToSign = [];
+      for (let i = 0; i < phonoScores.length; i++) {
+        if (phonoCounts[i] > 0) phonemeToSign.push({label: APP.shared.labelNames[i], score: phonoScores[i] / phonoCounts[i]});
+      }
+      phonemeToSign.sort((a, b) => b.score - a.score);
+      const knowns = overlaps.map((idx) => packed.knownScore[idx]).sort((a, b) => a - b);
+      const margins = overlaps.map((idx) => packed.margin[idx]).sort((a, b) => a - b);
+      const q = (arr, pct) => arr[Math.min(arr.length - 1, Math.max(0, Math.floor((arr.length - 1) * pct)))];
+      const knownScore = knowns.length ? q(knowns, 0.75) : 0;
+      const windowMargin = margins.length ? q(margins, 0.75) : 0;
+      const topPred = signPreds[0] || {label: "unk", prob: 0};
+      const predLabel = topPred.label;
+      return {
+        id: segId,
+        label: predLabel,
+        displayLabel: predLabel,
+        startSec: startFrame / currentVideo().videoInfo.fps,
+        endSec: endFrame / currentVideo().videoInfo.fps,
+        startFrame,
+        endFrame,
+        knownScore,
+        windowMargin,
+        windowCount: overlaps.length,
+        windowIdx: overlaps,
+        embeddingVec,
+        phonology: phonoRows,
+        signModels: [
+          {name: "Sign Recognition Model", kind: "softmax", predictions: signPreds},
+          {name: "Sign Recognition Model (encoder only)", kind: "knn", predictions: normalizeRows(knnScores.slice(0, 20), "score")},
+          {name: "Phoneme-to-Sign Model", kind: "phonology", predictions: normalizeRows(phonemeToSign.slice(0, 20), "score")},
+        ],
+      };
+    }
+
+    async function regenerateCurrentWindow() {
+      const seg = activeSegment();
+      setRegenButtonState(8, "Collecting…");
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      setRegenButtonState(36, "Aggregating…");
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      setRegenButtonState(60, "Retrieving…");
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      setRegenButtonState(84, "Scoring…");
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      const derived = computeSegmentData(seg.startFrame, seg.endFrame, selectedSegmentId);
+      feedback[scopedKey("regen", String(selectedSegmentId))] = {
+        videoId: currentVideoId,
+        segmentId: selectedSegmentId,
+        knownScore: derived.knownScore,
+        windowMargin: derived.windowMargin,
+        windowCount: derived.windowCount,
+        embeddingVec: derived.embeddingVec,
+        phonology: derived.phonology,
+        signModels: derived.signModels,
+      };
+      saveFeedback();
+      setRegenButtonState(100, "Updated");
+      setSegment(selectedSegmentId, false);
+    }
+
+    function scheduleAutoRegenerate() {
+      if (regenDebounce) clearTimeout(regenDebounce);
+      setRegenButtonState(18, "Queued…");
+      const targetSegId = selectedSegmentId;
+      if (activeDetailTab !== "predictions") {
+        pendingRegenSegmentId = targetSegId;
+        setRegenButtonState(18, "Pending tab");
+        return;
+      }
+      pendingRegenSegmentId = null;
+      regenDebounce = setTimeout(() => {
+        regenDebounce = null;
+        if (selectedSegmentId !== targetSegId) return;
+        regenerateCurrentWindow();
+      }, 4000);
+    }
+
+    function tweakBoundary(field, delta) {
+      const seg = activeSegment();
+      const key = scopedKey("override", String(selectedSegmentId));
+      const override = feedback[key] || {videoId: currentVideoId, segmentId: selectedSegmentId, startFrame: seg.startFrame, endFrame: seg.endFrame};
+      override[field] += delta;
+      override.startFrame = Math.max(0, override.startFrame);
+      override.endFrame = Math.max(override.startFrame + 10, override.endFrame);
+      feedback[key] = override;
+      delete feedback[scopedKey("regen", String(selectedSegmentId))];
+      saveFeedback();
+      setSegment(selectedSegmentId, false, true);
+      const updated = activeSegment();
+      if (!timeWithinSegment(video.currentTime || 0, updated)) {
+        video.currentTime = Math.min(Math.max(updated.startSec + 0.01, 0), Math.max(updated.startSec + 0.01, updated.endSec - 0.01));
+      }
+      scheduleAutoRegenerate();
+    }
+
+    function nextCustomSegmentId() {
+      const ids = allSegments().map((seg) => seg.id);
+      return (ids.length ? Math.max(...ids) : 0) + 1;
+    }
+
+    function addSegmentAtCurrentTime() {
+      const seg = activeSegment();
+      const fps = currentVideo().videoInfo.fps;
+      const splitFrame = Math.round((video.currentTime || seg.startSec) * fps);
+      if (splitFrame - seg.startFrame < 10 || seg.endFrame - splitFrame < 10) {
+        setRegenButtonState(0, "Need 10f");
+        return;
+      }
+      const newId = nextCustomSegmentId();
+      const right = computeSegmentData(splitFrame, seg.endFrame, newId);
+      feedback[scopedKey("custom-segment", String(newId))] = {
+        ...right,
+        kind: "custom-segment",
+        videoId: currentVideoId,
+      };
+      feedback[scopedKey("override", String(seg.id))] = {
+        videoId: currentVideoId,
+        segmentId: seg.id,
+        startFrame: seg.startFrame,
+        endFrame: splitFrame,
+      };
+      feedback[scopedKey("regen", String(seg.id))] = {
+        videoId: currentVideoId,
+        segmentId: seg.id,
+        ...computeSegmentData(seg.startFrame, splitFrame, seg.id),
+      };
+      saveFeedback();
+      renderTimeline();
+      setSegment(newId, true);
+    }
+
+    function insertSegmentAtCurrentTime() {
+      const fps = currentVideo().videoInfo.fps;
+      const centerFrame = Math.round((video.currentTime || 0) * fps);
+      const half = 5;
+      const startFrame = Math.max(0, centerFrame - half);
+      const endFrame = Math.min(currentVideo().videoInfo.frames - 1, startFrame + 10);
+      const newId = nextCustomSegmentId();
+      const derived = computeSegmentData(startFrame, endFrame, newId);
+      feedback[scopedKey("custom-segment", String(newId))] = {
+        ...derived,
+        kind: "custom-segment",
+        videoId: currentVideoId,
+      };
+      saveFeedback();
+      renderTimeline();
+      setSegment(newId, true);
+    }
+
+    function approveCurrentSegment() {
+      const seg = activeSegment();
+      const fallback = seg.signModels.find((model) => model.kind === "softmax")?.predictions?.[0]?.label;
+      const label = seg.displayLabel || fallback;
+      if (!label) {
+        setRegenButtonState(0, "No label");
+        return;
+      }
+      applySegmentLabel(seg.id, label);
+      syncPhonologyToGloss(seg.id, label);
+      saveFeedback();
+      setSegment(seg.id, false, true);
+    }
+
+    function rejectCurrentSegment() {
+      const seg = activeSegment();
+      clearSignAnnotations(seg.id);
+      clearSegmentLabel(seg.id);
+      saveFeedback();
+      setSegment(seg.id, false, true);
+    }
+
+    function updateSegmentationControls() {
+      const cfg = segmentationConfig();
+      segThresholdMultValue.textContent = cfg.thresholdMult.toFixed(2);
+      segWindowBeforeValue.textContent = `${cfg.emaBeforeSec.toFixed(1)}s`;
+      segWindowAfterValue.textContent = `${cfg.emaAfterSec.toFixed(1)}s`;
+      segSplitThresholdValue.textContent = cfg.splitThreshold.toFixed(2);
+      segMinFramesValue.textContent = `${Math.round(cfg.minSegFrames)}f`;
+      segSmoothing.value = cfg.smoothing;
+      showUncertaintyCurve.checked = !!cfg.showUncertainty;
+    }
+
+    function adjustSegmentationParam(key, delta, min, max, digits = 2) {
+      const cfg = segmentationConfig();
+      const next = Math.max(min, Math.min(max, cfg[key] + delta));
+      cfg[key] = digits === 0 ? Math.round(next) : Number(next.toFixed(digits));
+      updateSegmentationControls();
+      scheduleMotionRegeneration(350);
+    }
+
+    function setRegenButtonState(value, label) {
+      return;
+    }
+
+    async function regenerateSegmentsFromControls() {
+      const targetSegId = selectedSegmentId;
+      motionMeta.textContent = "Rebuilding…";
+      setTabLoading("motion", true);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      regenerateBaseSegments();
+      motionMeta.textContent = "Refreshing…";
+      renderTimeline();
+      const ids = visibleSegmentIds();
+      const nextSeg = ids.includes(targetSegId) ? targetSegId : (segmentAt(video.currentTime || 0)?.id ?? ids[0]);
+      if (nextSeg !== undefined) setSegment(nextSeg, false);
+      motionMeta.textContent = "";
+      if (activeDetailTab === "motion") renderMotionAsync();
+      setTabLoading("motion", false);
+    }
+
+    function scheduleMotionRegeneration(delayMs = 350) {
+      setTabLoading("motion", true);
+      motionMeta.textContent = "Pending…";
+      if (motionConfigDebounce) clearTimeout(motionConfigDebounce);
+      motionConfigDebounce = setTimeout(() => {
+        motionConfigDebounce = null;
+        regenerateSegmentsFromControls();
+      }, delayMs);
+    }
+
+    function addManualBoundaryAtCurrentTime() {
+      const frame = hoverMotionFrame != null ? hoverMotionFrame : Math.round((video.currentTime || activeSegment().startSec) * currentVideo().videoInfo.fps);
+      const edits = motionBoundaryEdits();
+      edits.addFrames = edits.addFrames || [];
+      edits.removeFrames = (edits.removeFrames || []).filter((value) => Math.abs(value - frame) > 2);
+      edits.addFrames.push(frame);
+      saveMotionBoundaryEdits(edits);
+      saveFeedback();
+      scheduleMotionRegeneration(120);
+    }
+
+    function removeNearestBoundaryAtCurrentTime() {
+      const frame = hoverRemoveFrame != null ? hoverRemoveFrame : nearestLiveBoundary(Math.round((video.currentTime || activeSegment().startSec) * currentVideo().videoInfo.fps));
+      if (frame == null) return;
+      const best = frame;
+      const edits = motionBoundaryEdits();
+      edits.addFrames = (edits.addFrames || []).filter((value) => Math.abs(value - best) > 2);
+      edits.removeFrames = edits.removeFrames || [];
+      edits.removeFrames.push(best);
+      saveMotionBoundaryEdits(edits);
+      saveFeedback();
+      scheduleMotionRegeneration(120);
+    }
+
+    function calibrationTargets() {
+      const fps = currentVideo().videoInfo.fps;
+      const manualFrames = new Set();
+      Object.values(feedback).forEach((entry) => {
+        if (!entry || entry.videoId !== currentVideoId) return;
+        if (entry.kind === "custom-segment") {
+          manualFrames.add(entry.startFrame);
+          manualFrames.add(entry.endFrame);
+        }
+        if (Object.prototype.hasOwnProperty.call(entry, "startFrame")) manualFrames.add(entry.startFrame);
+        if (Object.prototype.hasOwnProperty.call(entry, "endFrame")) manualFrames.add(entry.endFrame);
+      });
+      const edits = motionBoundaryEdits();
+      (edits.addFrames || []).forEach((frame) => manualFrames.add(frame));
+      const frames = Array.from(manualFrames)
+        .filter((frame) => frame > 0 && frame < currentVideo().videoInfo.frames - 1)
+        .sort((a, b) => a - b);
+      return {fps, frames};
+    }
+
+    function boundaryScore(targetFrames, predictedFrames, fps) {
+      if (!targetFrames.length || !predictedFrames.length) return -Infinity;
+      const tol = Math.max(6, Math.round(fps * 0.18));
+      const nearest = (src, dst) => src.map((frame) => {
+        let best = Infinity;
+        for (const other of dst) best = Math.min(best, Math.abs(frame - other));
+        return best;
+      });
+      const targetToPred = nearest(targetFrames, predictedFrames);
+      const predToTarget = nearest(predictedFrames, targetFrames);
+      const matchedTargets = targetToPred.filter((dist) => dist <= tol).length;
+      const matchedPreds = predToTarget.filter((dist) => dist <= tol).length;
+      const recall = matchedTargets / Math.max(1, targetFrames.length);
+      const precision = matchedPreds / Math.max(1, predictedFrames.length);
+      const f1 = (precision + recall) > 0 ? (2 * precision * recall) / (precision + recall) : 0;
+      const meanErr = targetToPred.reduce((acc, value) => acc + value, 0) / Math.max(1, targetToPred.length);
+      return f1 - meanErr / (fps * 4.0);
+    }
+
+    async function calibrateSegmentationToAnnotations() {
+      const {fps, frames: targets} = calibrationTargets();
+      if (!targets.length) return;
+      setTabLoading("motion", true);
+      motionMeta.textContent = "Calibrating…";
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      const base = segmentationConfig();
+      const model = buildMotionModel(currentVideoId);
+      const thresholdVals = [base.thresholdMult - 0.05, base.thresholdMult - 0.02, base.thresholdMult, base.thresholdMult + 0.02, base.thresholdMult + 0.05]
+        .map((v) => Math.max(0.45, Math.min(0.70, Math.round(v * 100) / 100)));
+      const beforeVals = [base.emaBeforeSec - 0.2, base.emaBeforeSec - 0.1, base.emaBeforeSec, base.emaBeforeSec + 0.1, base.emaBeforeSec + 0.2]
+        .map((v) => Math.max(0.1, Math.min(1.2, Math.round(v * 10) / 10)));
+      const afterVals = [Math.max(0, base.emaAfterSec - 0.1), base.emaAfterSec, Math.min(0.8, base.emaAfterSec + 0.1)]
+        .map((v) => Math.round(v * 10) / 10);
+      const splitVals = [base.splitThreshold - 0.08, base.splitThreshold - 0.04, base.splitThreshold, base.splitThreshold + 0.04]
+        .map((v) => Math.max(0.30, Math.min(0.70, Math.round(v * 100) / 100)));
+      const minSegVals = [Math.max(10, base.minSegFrames - 4), Math.max(10, base.minSegFrames - 2), base.minSegFrames, Math.min(30, base.minSegFrames + 2)]
+        .map((v) => Math.round(v));
+      let bestCfg = {...base};
+      let bestScore = -Infinity;
+      for (const thresholdMult of Array.from(new Set(thresholdVals))) {
+        for (const emaBeforeSec of Array.from(new Set(beforeVals))) {
+          for (const emaAfterSec of Array.from(new Set(afterVals))) {
+            for (const smoothing of ["mean", "ema", "median"]) {
+              for (const splitThreshold of Array.from(new Set(splitVals))) {
+                for (const minSegFrames of Array.from(new Set(minSegVals))) {
+                  const candidate = {...base, thresholdMult, emaBeforeSec, emaAfterSec, smoothing, splitThreshold, minSegFrames};
+                  const layout = buildMotionLayout(model, candidate);
+                  const predicted = layout.holds.map((hold) => hold.frame);
+                  const score = boundaryScore(targets, predicted, fps);
+                  if (score > bestScore) {
+                    bestScore = score;
+                    bestCfg = candidate;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      Object.assign(base, bestCfg);
+      updateSegmentationControls();
+      regenerateBaseSegments();
+      renderTimeline();
+      if (activeDetailTab === "motion") renderMotionAsync();
+      motionMeta.textContent = "";
+      setTabLoading("motion", false);
+    }
+
+    function setVideo(videoId) {
+      currentVideoId = videoId;
+      if (motionConfigDebounce) {
+        clearTimeout(motionConfigDebounce);
+        motionConfigDebounce = null;
+      }
+      invalidateSegmentCache();
+      retrievalSelection.clear();
+      renameMode = false;
+      updateRenameModeUI();
+      clearSearchBox();
+      selectedSegmentId = visibleSegmentIds()[0] || 0;
+      lastPoseFrame = -1;
+      lastEmbeddingRedraw = -1;
+      lastMotionCenter = -1;
+      videoFrameCallbackPending = false;
+      video.src = currentVideo().videoUri;
+      video.muted = true;
+      video.volume = 0;
+      video.defaultPlaybackRate = 0.5;
+      video.playbackRate = 0.5;
+      captureVideo.src = currentVideo().videoUri;
+      video.currentTime = 0;
+      retrievalGrid.innerHTML = "";
+      retrievalSubtitle.textContent = "";
+      retrievalSummary.textContent = "";
+      replayToggle.checked = false;
+      motionMeta.textContent = "";
+      videoSelect.value = videoId;
+      updateSegmentationControls();
+      renderTimeline();
+      if (activeDetailTab === "motion") renderMotionAsync();
+      setSegment(selectedSegmentId, false);
+      drawEmbeddingSpace();
+    }
+
+    function handlePlaybackFrame(time) {
+      drawPose(time);
+      const current = activeSegment();
+      if (replayToggle.checked && !video.paused && video.currentTime >= Math.max(current.endSec - 0.03, current.startSec) && !loopGuard) {
+        loopGuard = true;
+        video.currentTime = current.startSec + 0.01;
+        centerTimeline(current.startSec + 0.01);
+        setTimeout(() => { loopGuard = false; }, 20);
+        return;
+      }
+      if (!replayToggle.checked && !timeWithinSegment(time, current)) {
+        const seg = segmentAt(time);
+        if (seg && seg.id !== selectedSegmentId) setSegment(seg.id, false);
+        else if (Math.abs(time - lastEmbeddingRedraw) >= 0.12) {
+          drawEmbeddingSpace();
+          lastEmbeddingRedraw = time;
+        }
+      } else if (Math.abs(time - lastEmbeddingRedraw) >= 0.12) {
+        drawEmbeddingSpace();
+        lastEmbeddingRedraw = time;
+      }
+      if (activeDetailTab === "motion") {
+        centerMotion(time);
+      }
+      if (!video.paused) centerTimeline(time);
+    }
+
+    function animationTick() {
+      handlePlaybackFrame(video.currentTime || 0);
+      requestAnimationFrame(animationTick);
+    }
+
+    function scheduleVideoFrame() {
+      if (!useVideoFrameCallback || videoFrameCallbackPending) return;
+      videoFrameCallbackPending = true;
+      video.requestVideoFrameCallback((_, metadata) => {
+        videoFrameCallbackPending = false;
+        handlePlaybackFrame(metadata.mediaTime || video.currentTime || 0);
+        if (!video.paused) scheduleVideoFrame();
+      });
+    }
+
+    document.getElementById("prevSeg").onclick = () => {
+      clearSearchBox();
+      const ids = visibleSegmentIds();
+      const idx = ids.indexOf(selectedSegmentId);
+      if (idx > 0) setSegment(ids[idx - 1], true);
+    };
+    document.getElementById("nextSeg").onclick = () => {
+      clearSearchBox();
+      const ids = visibleSegmentIds();
+      const idx = ids.indexOf(selectedSegmentId);
+      if (idx >= 0 && idx < ids.length - 1) setSegment(ids[idx + 1], true);
+    };
+    document.getElementById("relabelSegment").onclick = () => {
+      const seg = activeSegment();
+      const proposed = prompt("New gloss:", segmentLabelOverride(seg.id) || seg.displayLabel || "");
+      if (!proposed) return;
+      const label = proposed.trim();
+      if (!label) return;
+      applySegmentLabel(seg.id, label);
+      syncPhonologyToGloss(seg.id, label);
+      saveFeedback();
+      setSegment(seg.id, false);
+    };
+    document.getElementById("addSegment").onclick = () => insertSegmentAtCurrentTime();
+    document.getElementById("splitSegment").onclick = () => addSegmentAtCurrentTime();
+    document.getElementById("mergeSegment").onclick = () => {
+      const ids = visibleSegmentIds();
+      const idx = ids.indexOf(selectedSegmentId);
+      if (idx < 0 || idx >= ids.length - 1) return;
+      const current = activeSegment();
+      const next = activeSegment(ids[idx + 1]);
+      feedback[scopedKey("override", String(current.id))] = {
+        videoId: currentVideoId,
+        segmentId: current.id,
+        startFrame: current.startFrame,
+        endFrame: next.endFrame,
+      };
+      feedback[scopedKey("deleted", String(next.id))] = {videoId: currentVideoId, segmentId: next.id, deleted: true};
+      delete feedback[scopedKey("regen", String(current.id))];
+      saveFeedback();
+      setSegment(current.id, false, true);
+      scheduleAutoRegenerate();
+    };
+    document.getElementById("deleteSegment").onclick = () => {
+      feedback[scopedKey("deleted", String(selectedSegmentId))] = {videoId: currentVideoId, segmentId: selectedSegmentId, deleted: true};
+      saveFeedback();
+      const ids = visibleSegmentIds();
+      const nextId = ids.find((id) => id > selectedSegmentId) ?? ids[ids.length - 1];
+      renderTimeline();
+      if (nextId !== undefined) setSegment(nextId, true);
+    };
+    document.getElementById("approveSegment").onclick = () => approveCurrentSegment();
+    document.getElementById("rejectSegment").onclick = () => rejectCurrentSegment();
+    document.getElementById("startMinus5").onclick = () => tweakBoundary("startFrame", -5);
+    document.getElementById("startMinus").onclick = () => tweakBoundary("startFrame", -1);
+    document.getElementById("startPlus").onclick = () => tweakBoundary("startFrame", 1);
+    document.getElementById("startPlus5").onclick = () => tweakBoundary("startFrame", 5);
+    document.getElementById("endMinus5").onclick = () => tweakBoundary("endFrame", -5);
+    document.getElementById("endMinus").onclick = () => tweakBoundary("endFrame", -1);
+    document.getElementById("endPlus").onclick = () => tweakBoundary("endFrame", 1);
+    document.getElementById("endPlus5").onclick = () => tweakBoundary("endFrame", 5);
+    retrievalThreshold.addEventListener("input", () => {
+      retrievalThresholdValue.textContent = Number(retrievalThreshold.value).toFixed(1);
+      rerunLastRetrieval();
+    });
+    confusionSort.addEventListener("change", () => {
+      confusionSortMode = confusionSort.value || "desc";
+      if (activeDetailTab === "predictions") setSegment(selectedSegmentId, false);
+    });
+    segmentSort.addEventListener("change", () => {
+      segmentSortMode = segmentSort.value || "desc";
+      renderSegmentList();
+    });
+    themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
+    vocabSearch.addEventListener("input", () => {
+      vocabSearchQuery = vocabSearch.value || "";
+      if (activeDetailTab === "predictions") setSegment(selectedSegmentId, false);
+    });
+    tabButtons.forEach((button) => {
+      button.addEventListener("click", () => setDetailTab(button.dataset.tab));
+    });
+    renameModeToggle.onclick = () => {
+      renameMode = !renameMode;
+      updateRenameModeUI();
+      rerunLastRetrieval();
+    };
+    renameSelectAll.onclick = () => {
+      retrievalSelection.clear();
+      Array.from(retrievalGrid.querySelectorAll('input[type="checkbox"]')).forEach((input) => {
+        input.checked = true;
+        retrievalSelection.add(Number(input.dataset.segId));
+      });
+    };
+    renameSelectNone.onclick = () => {
+      retrievalSelection.clear();
+      Array.from(retrievalGrid.querySelectorAll('input[type="checkbox"]')).forEach((input) => {
+        input.checked = false;
+      });
+    };
+    applyRename.onclick = () => {
+      const proposed = prompt("New gloss:");
+      if (!proposed) return;
+      const label = proposed.trim();
+      if (!label) return;
+      applySegmentLabel(selectedSegmentId, label);
+      retrievalSelection.forEach((segId) => applySegmentLabel(segId, label));
+      syncPhonologyToGloss(selectedSegmentId, label);
+      saveFeedback();
+      renameMode = false;
+      updateRenameModeUI();
+      setSegment(selectedSegmentId, false, true);
+      rerunLastRetrieval();
+    };
+    document.getElementById("exportFeedback").onclick = () => {
+      const blob = new Blob([JSON.stringify(feedback, null, 2)], {type: "application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "asl_dashboard_feedback.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+    document.getElementById("clearFeedback").onclick = () => {
+      if (!confirm("Clear all saved feedback?")) return;
+      for (const key of Object.keys(feedback)) delete feedback[key];
+      saveFeedback();
+      setSegment(selectedSegmentId, false);
+    };
+    const onSegControlInput = () => {
+      const cfg = segmentationConfig();
+      cfg.smoothing = segSmoothing.value || cfg.smoothing;
+      cfg.showUncertainty = !!showUncertaintyCurve.checked;
+      updateSegmentationControls();
+      scheduleMotionRegeneration(350);
+    };
+    segSmoothing.addEventListener("change", onSegControlInput);
+    showUncertaintyCurve.addEventListener("change", onSegControlInput);
+    document.getElementById("segThresholdMultDown").onclick = () => adjustSegmentationParam("thresholdMult", -0.02, 0.30, 1.00, 2);
+    document.getElementById("segThresholdMultUp").onclick = () => adjustSegmentationParam("thresholdMult", 0.02, 0.30, 1.00, 2);
+    document.getElementById("segWindowBeforeDown").onclick = () => adjustSegmentationParam("emaBeforeSec", -0.1, 0.0, 2.0, 1);
+    document.getElementById("segWindowBeforeUp").onclick = () => adjustSegmentationParam("emaBeforeSec", 0.1, 0.0, 2.0, 1);
+    document.getElementById("segWindowAfterDown").onclick = () => adjustSegmentationParam("emaAfterSec", -0.1, 0.0, 1.0, 1);
+    document.getElementById("segWindowAfterUp").onclick = () => adjustSegmentationParam("emaAfterSec", 0.1, 0.0, 1.0, 1);
+    document.getElementById("segSplitThresholdDown").onclick = () => adjustSegmentationParam("splitThreshold", -0.02, 0.10, 0.90, 2);
+    document.getElementById("segSplitThresholdUp").onclick = () => adjustSegmentationParam("splitThreshold", 0.02, 0.10, 0.90, 2);
+    document.getElementById("segMinFramesDown").onclick = () => adjustSegmentationParam("minSegFrames", -2, 8, 40, 0);
+    document.getElementById("segMinFramesUp").onclick = () => adjustSegmentationParam("minSegFrames", 2, 8, 40, 0);
+    document.getElementById("calibrateBoundaries").onclick = () => calibrateSegmentationToAnnotations();
+    poseToggle.addEventListener("change", () => drawPose(video.currentTime || 0));
+    videoSelect.addEventListener("change", () => setVideo(videoSelect.value));
+    document.getElementById("timelineZoomOut").onclick = () => {
+      timelineZoom = Math.max(0.6, Math.round((timelineZoom - 0.2) * 10) / 10);
+      renderTimeline();
+      if (activeDetailTab === "motion") renderMotionAsync();
+    };
+    document.getElementById("timelineZoomIn").onclick = () => {
+      timelineZoom = Math.min(2.2, Math.round((timelineZoom + 0.2) * 10) / 10);
+      renderTimeline();
+      if (activeDetailTab === "motion") renderMotionAsync();
+    };
+    ["wheel", "pointerdown", "touchstart"].forEach((eventName) => {
+      timelineWindow.addEventListener(eventName, () => markTimelineScrub("timeline"), {passive: true});
+      motionWindow.addEventListener(eventName, () => markTimelineScrub("motion"), {passive: true});
+    });
+    timelineWindow.addEventListener("scroll", () => {
+      if (suppressTimelineScroll) return;
+      if (performance.now() > timelineUserScrubUntil) return;
+      const trackWidth = Number(document.getElementById("timeline").dataset.trackWidth || 0);
+      if (!trackWidth) return;
+      const time = timeFromScroll(timelineWindow, trackWidth);
+      const seg = segmentAt(time);
+      if (seg && seg.id !== selectedSegmentId) setSegment(seg.id, false);
+      centerMotion(time);
+      video.currentTime = time;
+      handlePlaybackFrame(time);
+    });
+    motionWindow.addEventListener("scroll", () => {
+      if (suppressMotionScroll) return;
+      if (performance.now() > motionUserScrubUntil) return;
+      const trackWidth = Number(motionCanvas.dataset.trackWidth || 0);
+      if (!trackWidth) return;
+      const time = timeFromScroll(motionWindow, trackWidth);
+      const seg = segmentAt(time);
+      if (seg && seg.id !== selectedSegmentId) setSegment(seg.id, false);
+      centerTimeline(time);
+      video.currentTime = time;
+      handlePlaybackFrame(time);
+    });
+    motionWindow.addEventListener("mousemove", (event) => {
+      const frame = motionFrameFromPointer(event);
+      const removeFrame = nearestLiveBoundary(frame);
+      hoverRemoveFrame = removeFrame;
+      hoverMotionFrame = removeFrame == null ? frame : null;
+      if (activeDetailTab === "motion") renderMotionPanel();
+    });
+    motionWindow.addEventListener("mouseleave", () => {
+      hoverMotionFrame = null;
+      hoverRemoveFrame = null;
+      if (activeDetailTab === "motion") renderMotionPanel();
+    });
+    motionWindow.addEventListener("click", (event) => {
+      if (activeDetailTab !== "motion") return;
+      if (hoverRemoveFrame != null) {
+        removeNearestBoundaryAtCurrentTime();
+        return;
+      }
+      hoverMotionFrame = motionFrameFromPointer(event);
+      addManualBoundaryAtCurrentTime();
+    });
+    window.addEventListener("resize", () => {
+      resizeOverlay();
+      resizeEmbeddingCanvas();
+      renderTimeline();
+      if (activeDetailTab === "motion") renderMotionPanel();
+      drawEmbeddingSpace();
+    });
+    video.addEventListener("loadedmetadata", () => {
+      resizeOverlay();
+      video.muted = true;
+      video.volume = 0;
+      video.defaultPlaybackRate = 0.5;
+      video.playbackRate = 0.5;
+      renderTimeline();
+      if (activeDetailTab === "motion") renderMotionAsync();
+      handlePlaybackFrame(video.currentTime || 0);
+    });
+    video.addEventListener("seeked", () => handlePlaybackFrame(video.currentTime || 0));
+    video.addEventListener("play", () => {
+      if (useVideoFrameCallback) scheduleVideoFrame();
+    });
+
+    APP.videoOrder.forEach((videoId) => {
+      const option = document.createElement("option");
+      option.value = videoId;
+      option.textContent = APP.videos[videoId].name;
+      videoSelect.appendChild(option);
+    });
+
+    resizeEmbeddingCanvas();
+    applyTheme(themeSelect.value || "tron");
+    updateSegmentationControls();
+    setRegenButtonState(0, "Regenerate Graph");
+    replayToggle.checked = false;
+    retrievalThresholdValue.textContent = Number(retrievalThreshold.value).toFixed(1);
+    confusionSort.value = confusionSortMode;
+    segmentSort.value = segmentSortMode;
+    vocabSearch.value = vocabSearchQuery;
+    updateRenameModeUI();
+    saveFeedback();
+    setDetailTab(activeDetailTab);
+    setVideo(currentVideoId);
+    if (useVideoFrameCallback) scheduleVideoFrame();
+    else requestAnimationFrame(animationTick);
+  </script>
+</body>
+</html>
