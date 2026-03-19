@@ -13,21 +13,29 @@
 
     <header>
         <div class="container">
-            <span class="left-align">
+            <div class="left-align">
+                <div class="container">
+                    <h1>
+                        Hi, I'm
+                        <span class="highlight-noexpand" style="padding-left:8px; padding-right:8px;">Dr. Lee Kezar</span>.
+                    </h1>
+                    <h2 style="margin-left:40px;">
+                        Research (English, 
+                        <span class="highlight"><a href="asl.html">ASL</a></span>
+                        ), <span class="highlight"><a href="blog.html">Blog</a></span>
+                    </h2>
+                </div>
                 <p>
-                    <h1>Hi, I'm <span class="highlight-noexpand" style="padding-left:8px; padding-right:8px;">Dr. Lee Kezar</span></h1>
-                    I develop AI language models for American Sign Language using linguistically-informed techniques. <br>
-                    <br>
-                    I'm a Postdoctoral Research Associate in the <span class="highlight"><a href="https://sites.google.com/gallaudet.edu/action-brain-lab" target="_blank">Action and Brain Lab</a></span> under 
+                    I develop AI language models for American Sign Language using linguistically-informed techniques. <br><br>
+                    My current role is Postdoctoral Research Associate in the <span class="highlight"><a href="https://sites.google.com/gallaudet.edu/action-brain-lab" target="_blank">Action and Brain Lab</a></span> under 
                     <span class="highlight"><a href="https://www.lornaquandt.com/" target="_blank">Dr. Lorna Quandt</a></span>, where I focus on building AI-powered learning tools for deaf and hard-of-hearing students in STEM classrooms.<br>
                     <br>
                     I received my Ph.D. in Computer Science from the University of Southern California in 2025, and my B.S. in Computer Science from Rhodes College in 2019. <span class="highlight"><a href="/pdfs/LeeKezarCV.pdf" target="_blank">Click here</a></span> for my curriculum vitae.
                 </p>
-            </span>
-            <div style="flex-grow:1"><img src="images/selfie.jpeg" class="selfie"></div>
-            <!-- <span class="right-align">
-                
-            </span> -->
+            </div>
+            <div style="flex-grow:1">
+                <img src="images/selfie.jpeg" class="selfie">
+            </div>
         </div>
     </header>
 
@@ -46,10 +54,21 @@
 
             <section style="margin-top:0;">
                 <p>
-                    As language technologies like ChatGPT gain popularity, users who are most comfortable communicating with a sign language are increasingly left behind. 
-                    To help make these technologies more accessible, I use <span class="super expandable concept highlight" id="ling">sign language linguistics</span> to make models that can <span class="super expandable concept highlight" id="understanding">understand sign language</span>. 
-                    My current work focuses on <span class="expandable concept highlight" id="semantics">lexical semantics</span>, leveraging <span class="expandable concept highlight" id="knowledgebase">linguistic knowledge bases</span> to improve model 
-                    <span class="expandable concept highlight" id="perception">perception</span>, <span class="expandable concept highlight" id="recognition">recognition</span>, and <span class="expandable concept highlight" id="comprehension">comprehension</span>.
+                    Today, artificial intelligence (AI) technologies are radically transforming the ways we communicate, learn, and work.
+                    As an academic, my long-term goal is to broaden who can control and benefit from this transformation.
+
+                    I am especially interested in making AI more accessible to deaf and hard-of-hearing (DHH) people.
+                    For me, that means two things:
+                    First, I invite DHH individuals to lead AI development, both as critics of today's technology and as designers of future technology.
+                    Second, I use my formal training in natural language processing to advance those perspectives in the research.
+
+                    To date, my work has focused on the basic skills associated with understanding and producing American Sign Language.
+                    I adopt a linguistic approach by training AI models to use sign language phonemes, the basic, recombinable units of signs.
+                    This allows sign language models to include a more diverse range of signing while making their behavior more explainable to users.
+
+                    
+                    
+                    <span class="super expandable concept highlight" id="semantics">lexical semantics</span>
                 </p>
             </section>
 
@@ -132,20 +151,38 @@
         </section>
     
         <header class="container banner">
-            <span class="left-align"><h2>Interactive Demos</h2></span>
+            <span class="left-align"><h2>Model Demos</h2></span>
             <div class="line"></div>
             <span class="right-align"></span>
         </header>
 
-        <section style="margin-top:0">
-            <span class="highlight-noexpand">ASL OOV Embedding MVP</span><br>
-            A full-screen interactive demo that compares how raw pose landmarks and fast learned models group the ASL signs <span class="highlight">blood</span>, <span class="highlight">promise</span>, <span class="highlight">tomato</span>, and <span class="highlight">believe</span>.
-            <br><br>
-            <span class="highlight"><a href="/oov-embedding-mvp/" target="_blank">Open the OOV embedding demo</a></span>
-            &nbsp;
-            <span class="highlight"><a href="/aslkg/" target="_blank">Open ASL knowledge graph</a></span>
-            &nbsp;
-            <span class="highlight"><a href="/asl-dashboard/" target="_blank">Open ASL dashboard</a></span>
+        <section class="demo-grid">
+            <article class="demo-card">
+                <div class="demo-kicker">Interactive Tool</div>
+                <h3>ASL Annotation Dashboard</h3>
+                <p>
+                    Explore continuous-video annotation, segment-level inspection, and embedding-based review in a browser-first dashboard.
+                </p>
+                <a class="demo-link" href="/asl-dashboard/">Open Demo</a>
+            </article>
+
+            <article class="demo-card">
+                <div class="demo-kicker">Interactive Tool</div>
+                <h3>Knowledge Graph Explorer</h3>
+                <p>
+                    Browse the American Sign Language knowledge graph with search, path analysis, filtered subgraphs, and sign-level fact inspection.
+                </p>
+                <a class="demo-link" href="/knowledge-graph/">Open Demo</a>
+            </article>
+
+            <article class="demo-card">
+                <div class="demo-kicker">Interactive Tool</div>
+                <h3>Embedding Visualization</h3>
+                <p>
+                    Inspect prototype neighborhoods for difficult signs in a shared 2D projection of learned embedding space.
+                </p>
+                <a class="demo-link" href="/embedding-viz/">Open Demo</a>
+            </article>
         </section>
 
 

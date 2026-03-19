@@ -1,0 +1,4148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The American Sign Language Knowledge Graph</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    :root {
+      --bg: #f2efe8;
+      --ink: #111111;
+      --muted: #666666;
+      --line: rgba(17, 17, 17, 0.12);
+      --soft: rgba(17, 17, 17, 0.05);
+      --panel: rgba(233, 233, 233, 0.62);
+      --panel-strong: rgba(239, 239, 239, 0.7);
+      --shadow: 0 18px 60px rgba(17, 17, 17, 0.09);
+      --radius: 20px;
+      --signal: #1450ff;
+      --sign: #111111;
+      --phonological: #2563ff;
+      --semantic: #f06d3f;
+      --syntactic: #10937d;
+      --systematicity: #bd8d08;
+      --cognitive: #7d5dff;
+      --other: #8a8a8a;
+      --danger: #c35a31;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      color: var(--ink);
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-weight: 300;
+      background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 26%),
+        linear-gradient(180deg, #f8f6f1 0%, var(--bg) 100%);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+      color: inherit;
+    }
+
+    .viewport {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #graph {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background:
+        linear-gradient(transparent 96%, rgba(17, 17, 17, 0.03) 100%),
+        linear-gradient(90deg, transparent 96%, rgba(17, 17, 17, 0.03) 100%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.5));
+      background-size: 40px 40px, 40px 40px, auto;
+    }
+
+    .panel {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      bottom: 16px;
+      width: min(420px, calc(100vw - 32px));
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    .top-card {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .panel-header {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .header-tools {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .view-box {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 11;
+      padding: 10px 12px 12px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 8px;
+      min-width: 190px;
+    }
+
+    .eyebrow,
+    .tab,
+    .chip,
+    .pill,
+    .micro,
+    .label {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .eyebrow {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .title {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1;
+      font-weight: 700;
+    }
+
+    .selection-card {
+      padding: 14px 16px 12px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 12px;
+      overflow-y: auto;
+      max-height: min(52vh, 440px);
+      flex-shrink: 0;
+      will-change: max-height, opacity, padding;
+      transition:
+        max-height 945ms cubic-bezier(0.16, 1, 0.3, 1),
+        opacity 540ms linear,
+        padding-top 945ms cubic-bezier(0.16, 1, 0.3, 1),
+        padding-bottom 945ms cubic-bezier(0.16, 1, 0.3, 1),
+        border-width 585ms cubic-bezier(0.16, 1, 0.3, 1),
+        margin-top 945ms cubic-bezier(0.16, 1, 0.3, 1);
+      transform-origin: top;
+    }
+
+    .selection-card.collapsed {
+      max-height: 0;
+      opacity: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      border-width: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .selection-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .selection-name {
+      margin: 0;
+      padding-top: 6px;
+      font-size: 26px;
+      line-height: 0.95;
+      font-weight: 700;
+    }
+
+    .selection-id {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .pill-row,
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .path-inline {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .path-inline input {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .path-arrow {
+      color: var(--muted);
+      font-size: 16px;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .path-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-height: 0;
+    }
+
+    .path-pills:empty,
+    .path-pills > div:empty {
+      display: none;
+    }
+
+    .pill,
+    .chip {
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.72);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .chip {
+      cursor: pointer;
+    }
+
+    .chip.active,
+    .pill.active {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: #ffffff;
+    }
+
+    .swatch {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .summary-card {
+      padding: 10px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.55);
+    }
+
+    .summary-card strong {
+      display: block;
+      font-size: 18px;
+      line-height: 1;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .summary-card span {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .control-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .top-card-controls {
+      padding: 10px 16px 12px;
+      border-top: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.36);
+      flex-shrink: 0;
+    }
+
+    .button,
+    .ghost {
+      padding: 9px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--ink);
+      background: var(--ink);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .ghost {
+      background: rgba(255, 255, 255, 0.62);
+      border-color: var(--line);
+      color: var(--ink);
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tab {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.62);
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .tab.active {
+      background: var(--ink);
+      color: #ffffff;
+      border-color: var(--ink);
+    }
+
+    .tab-panels {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .tab-panel {
+      position: absolute;
+      inset: 0;
+      padding: 14px 16px 18px;
+      display: none;
+      overflow: auto;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .section {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .search-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .search-row-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(110px, 1.35fr) minmax(0, 1.05fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .search-rows,
+    .path-stop-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .search-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .search-mode {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .search-row-actions,
+    .path-stop-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .remove-button,
+    .insert-button {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      padding: 0;
+    }
+
+    .insert-button {
+      width: 26px;
+      height: 26px;
+      font-size: 15px;
+      line-height: 0;
+    }
+
+    .search-row-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 2px 0;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .search-row-divider::before,
+    .search-row-divider::after {
+      content: "";
+      height: 1px;
+      flex: 1;
+      background: var(--line);
+    }
+
+    input[type="search"],
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 11px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.46);
+      outline: none;
+    }
+
+    input:focus {
+      border-color: rgba(20, 80, 255, 0.38);
+      box-shadow: 0 0 0 3px rgba(20, 80, 255, 0.1);
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .list,
+    .table-wrap,
+    .bar-wrap {
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.38);
+      overflow: auto;
+    }
+
+    .list {
+      max-height: 280px;
+    }
+
+    .list-row {
+      width: 100%;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      padding: 11px 12px;
+      text-align: left;
+      display: grid;
+      gap: 4px;
+      cursor: pointer;
+    }
+
+    .list-row:last-child {
+      border-bottom: 0;
+    }
+
+    .list-row:hover {
+      background: rgba(17, 17, 17, 0.04);
+    }
+
+    .row-title {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .row-meta {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .micro {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .clause-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .clause-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.92);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .clause-pill button {
+      border: 0;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+    }
+
+    .checkbox-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .checkbox {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .checkbox input {
+      margin: 0;
+      accent-color: var(--ink);
+    }
+
+    .bar-list {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+    }
+
+    .bar-row {
+      display: grid;
+      gap: 4px;
+    }
+
+    .bar-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .track {
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(17, 17, 17, 0.08);
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #111111 0%, #727272 100%);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: rgba(255, 255, 255, 0.98);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .range-box {
+      display: grid;
+      gap: 8px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--ink);
+    }
+
+    .range-value {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .status {
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      z-index: 8;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.44);
+      box-shadow: var(--shadow);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: calc(100vw - 32px);
+    }
+
+    .tooltip {
+      position: absolute;
+      z-index: 14;
+      pointer-events: none;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(17, 17, 17, 0.96);
+      color: #ffffff;
+      font-size: 12px;
+      line-height: 1.45;
+      opacity: 0;
+      max-width: 300px;
+    }
+
+    .guide-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      fill: rgba(17, 17, 17, 0.34);
+      pointer-events: none;
+    }
+
+    .similarity-sliders {
+      display: grid;
+      gap: 6px;
+      padding: 2px 0 4px;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .slider-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      min-width: 90px;
+    }
+
+    .phon-label { color: var(--phonological); }
+    .sem-label { color: var(--semantic); }
+
+    .similarity-slider {
+      flex: 1;
+      height: 4px;
+      cursor: pointer;
+    }
+
+    .phon-slider { accent-color: var(--phonological); }
+    .sem-slider { accent-color: var(--semantic); }
+
+    .slider-value {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      min-width: 18px;
+      text-align: right;
+    }
+
+    .node-tabs {
+      display: flex;
+      gap: 6px;
+    }
+
+    .node-tab {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.88);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+    }
+
+    .node-tab.active {
+      background: var(--ink);
+      color: #ffffff;
+      border-color: var(--ink);
+    }
+
+    .node-tab-content {
+      display: none;
+    }
+
+    .node-tab-content.active {
+      display: block;
+    }
+
+    .fact-type-select {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.66);
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+    }
+
+    .fact-type-select:focus {
+      border-color: rgba(20, 80, 255, 0.38);
+      box-shadow: 0 0 0 3px rgba(20, 80, 255, 0.1);
+    }
+
+    .node-facts-list {
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.5);
+      overflow-y: auto;
+      max-height: 148px;
+    }
+
+    .related-list-pane {
+      overflow-y: auto;
+      max-height: 148px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .node-fact-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+    }
+
+    .node-fact-row:last-child {
+      border-bottom: 0;
+    }
+
+    .node-fact-relation {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      flex-shrink: 0;
+      max-width: 48%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .node-fact-value {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+      text-align: right;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .fact-number {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .numeric-spark {
+      width: 34px;
+      height: 11px;
+      flex-shrink: 0;
+      display: inline-block;
+    }
+
+    .path-stop {
+      display: grid;
+      gap: 6px;
+    }
+
+    .path-stop label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .path-stop-list {
+      gap: 4px;
+    }
+
+    .path-stop-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .path-between {
+      display: grid;
+      justify-items: center;
+      gap: 3px;
+      min-height: 20px;
+    }
+
+    .path-between-line {
+      width: 1px;
+      height: 10px;
+      background: var(--line);
+    }
+
+    .path-config {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition:
+        max-height 420ms cubic-bezier(0.16, 1, 0.3, 1),
+        opacity 260ms linear,
+        margin-top 420ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .path-config.open {
+      max-height: 320px;
+      opacity: 1;
+      margin-top: 6px;
+    }
+
+    @media (max-width: 880px) {
+      .panel {
+        width: calc(100vw - 24px);
+        left: 12px;
+        right: 12px;
+        top: auto;
+        bottom: 12px;
+      }
+
+      .top-card {
+        max-height: min(58vh, 640px);
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .search-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .search-row-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="viewport">
+    <svg id="graph" aria-label="The American Sign Language Knowledge Graph"></svg>
+
+    <aside class="view-box">
+      <div class="eyebrow">View</div>
+      <div class="control-row">
+        <button id="layoutGrouped" class="ghost" type="button">Grouped</button>
+        <button id="layoutForce" class="ghost" type="button">Force</button>
+        <button id="fitButton" class="ghost" type="button">Fit</button>
+      </div>
+    </aside>
+
+    <aside class="panel">
+      <div class="top-card">
+      <header class="panel-header">
+        <h1 class="title">The American Sign Language Knowledge Graph</h1>
+      </header>
+
+      <nav class="tabs">
+        <button class="tab active" data-tab="search">Search</button>
+        <button class="tab" data-tab="filters">Filters</button>
+        <button class="tab" data-tab="paths">Paths</button>
+        <button class="tab" data-tab="about">About</button>
+      </nav>
+
+      <div class="tab-panels">
+        <section class="tab-panel active" data-panel="search">
+          <div class="section">
+            <div id="searchRows" class="search-rows"></div>
+            <div class="search-toolbar">
+              <button id="searchAddRowButton" class="ghost" type="button">Add Triple</button>
+              <button id="searchClearButton" class="ghost" type="button">Clear</button>
+            </div>
+            <datalist id="relationOptions"></datalist>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <span>Results</span>
+              <span id="searchMeta"></span>
+            </div>
+            <div id="searchList" class="list"></div>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-panel="filters">
+          <div class="section">
+            <div class="section-head">
+              <span>Fact Types</span>
+              <span id="factTypeMeta"></span>
+            </div>
+            <div class="control-row">
+              <button id="factTypesShowAll" class="ghost" type="button">Show All</button>
+              <button id="factTypesClear" class="ghost" type="button">Clear</button>
+            </div>
+            <div id="factTypeChips" class="chip-row"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <span>Scope</span>
+              <span id="scopeMeta"></span>
+            </div>
+            <div class="range-box">
+              <label class="label" for="signLimitInput">Sign Limit</label>
+              <input id="signLimitInput" type="range" min="100" max="1200" step="50" value="200">
+              <div id="signLimitValue" class="range-value"></div>
+            </div>
+            <div class="range-box">
+              <label class="label" for="factLimitInput">Fact Limit</label>
+              <input id="factLimitInput" type="range" min="200" max="2200" step="100" value="500">
+              <div id="factLimitValue" class="range-value"></div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="button-grid">
+              <button id="loadButton" class="button" type="button">Load Local TSV</button>
+              <button id="resetFiltersButton" class="ghost" type="button">Reset</button>
+            </div>
+            <input id="fileInput" style="display:none;" type="file" accept=".tsv,text/tab-separated-values" multiple>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-panel="paths">
+          <div class="section">
+            <div id="pathStops" class="path-stop-list"></div>
+            <div class="control-row">
+              <button id="pathConfigToggle" class="ghost" type="button">Configure Search</button>
+            </div>
+            <div id="pathConfigPanel" class="path-config">
+              <div id="pathSimilaritySliders" class="similarity-sliders"></div>
+              <div class="checkbox-row">
+                <label class="checkbox">
+                  <input id="pathUseContinuousInput" type="checkbox">
+                  <span>Use Continuous Values</span>
+                </label>
+              </div>
+            </div>
+            <div class="button-grid">
+              <button id="pathButton" class="button" type="button">Find Path</button>
+              <button id="clearPathButton" class="ghost" type="button">Clear</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <span>Matches</span>
+              <span id="pathMeta"></span>
+            </div>
+            <div id="pathList" class="list"></div>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-panel="about">
+          <div class="section">
+            <div id="overviewStats" class="summary-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;"></div>
+          </div>
+        </section>
+
+      </div>
+      </div><!-- .top-card -->
+
+      <section id="selectionCard" class="selection-card">
+        <div class="selection-head">
+          <div>
+            <h2 id="selectionName" class="selection-name">Overview</h2>
+          </div>
+          <div>
+            <button id="closeNodeButton" class="ghost" type="button" style="display:none;padding:5px 10px;line-height:1;">×</button>
+          </div>
+        </div>
+
+        <div id="selectionPills"></div>
+
+        <div id="selectionSummary" class="summary-grid"></div>
+
+        <div class="node-tabs" id="nodeTabs" style="display:none;">
+          <button class="node-tab active" data-node-tab="facts">Facts</button>
+          <button class="node-tab" data-node-tab="related">Related</button>
+        </div>
+
+        <div id="nodeFactsPane" class="node-tab-content active"></div>
+
+        <div id="nodeRelatedPane" class="node-tab-content"></div>
+
+      </section>
+    </aside>
+
+    <div id="status" class="status">Loading `nodes.tsv` and `edges_node.tsv`.</div>
+    <div id="tooltip" class="tooltip"></div>
+  </div>
+
+  <script>
+    const COLORS = {
+      sign: css('--sign'),
+      phonological: css('--phonological'),
+      semantic: css('--semantic'),
+      syntactic: css('--syntactic'),
+      systematicity: css('--systematicity'),
+      cognitive: css('--cognitive'),
+      other: css('--other')
+    };
+
+    const FACT_TYPES = ['translation', 'phonological', 'semantic', 'syntactic', 'systematicity', 'cognitive', 'other'];
+    const SIMILARITY_TYPES = ['phonological', 'semantic', 'syntactic', 'systematicity', 'cognitive', 'other'];
+    const BLOCKED_PATH_LABELS = new Set(['none']);
+    const ALWAYS_REDUNDANT_SELF_RELATIONS = new Set(['Entry_ID', 'main_entry_gloss_label', 'Word', 'word']);
+    const SOMETIMES_REDUNDANT_SELF_RELATIONS = new Set(['entry_variant_gloss_label', 'occurrence_label', 'Class_Label', 'Lemma_ID', 'Dominant_Translation']);
+
+    const state = {
+      loaded: false,
+      closeSelectionTimer: null,
+      activeTab: 'search',
+      searchRows: [{ subject: '', relation: '', object: '' }],
+      pathQueries: ['', ''],
+      pathSuggestIndex: 0,
+      pathConfigOpen: false,
+      mode: 'breadth',
+      layout: 'grouped',
+      frozen: false,
+      hoveredNodeId: null,
+      selectedNodeId: null,
+      expandedNodeIds: new Set(),
+      selectedFactType: null,
+      nodeTab: 'facts',
+      currentGroupCircles: null,
+      pathNodes: [],
+      pathStartId: null,
+      relatedOverlay: [],
+      currentGraph: { nodes: [], links: [], syntheticLinks: [] },
+      pathUseContinuous: false,
+      filters: {
+        factTypes: new Set(['translation', 'phonological', 'semantic', 'syntactic', 'systematicity', 'cognitive', 'other']),
+        clauses: [],
+        signLimit: 200,
+        factLimit: 500
+      },
+      similarity: {
+        phonological: 1.0, semantic: 1.0, syntactic: 1.0,
+        systematicity: 1.0, cognitive: 1.0, other: 1.0
+      },
+      data: {
+        nodeMap: new Map(),
+        signIds: [],
+        signNodes: [],
+        allFacts: [],
+        factsBySign: new Map(),
+        factsByNode: new Map(),
+        nodeNeighbors: new Map(),
+        relations: [],
+        relationCounts: new Map(),
+        factTypeCounts: new Map(),
+        factNodeIndex: new Map(),
+        propertyNodeSourceType: new Map(),
+        relationOptions: [],
+        graphStats: {},
+        signFeatureCache: new Map(),
+        featureFrequency: new Map(),
+        numericRanges: new Map(),
+        categoricalIndex: new Map(),
+        numericRelationIndex: new Map(),
+        numericHistograms: new Map(),
+        similarityCache: new Map(),
+        topDegreeSigns: []
+      }
+    };
+
+    const els = {
+      graph: document.getElementById('graph'),
+      status: document.getElementById('status'),
+      tooltip: document.getElementById('tooltip'),
+      selectionCard: document.getElementById('selectionCard'),
+      selectionName: document.getElementById('selectionName'),
+      selectionPills: document.getElementById('selectionPills'),
+      selectionSummary: document.getElementById('selectionSummary'),
+      closeNodeButton: document.getElementById('closeNodeButton'),
+      nodeFactsPane: document.getElementById('nodeFactsPane'),
+      nodeRelatedPane: document.getElementById('nodeRelatedPane'),
+      nodeTabs: document.getElementById('nodeTabs'),
+      layoutGrouped: document.getElementById('layoutGrouped'),
+      layoutForce: document.getElementById('layoutForce'),
+      fitButton: document.getElementById('fitButton'),
+      pathSimilaritySliders: document.getElementById('pathSimilaritySliders'),
+      tabs: Array.from(document.querySelectorAll('.tab')),
+      panels: Array.from(document.querySelectorAll('.tab-panel')),
+      searchRows: document.getElementById('searchRows'),
+      searchAddRowButton: document.getElementById('searchAddRowButton'),
+      searchClearButton: document.getElementById('searchClearButton'),
+      searchMeta: document.getElementById('searchMeta'),
+      searchList: document.getElementById('searchList'),
+      factTypeMeta: document.getElementById('factTypeMeta'),
+      factTypesShowAll: document.getElementById('factTypesShowAll'),
+      factTypesClear: document.getElementById('factTypesClear'),
+      factTypeChips: document.getElementById('factTypeChips'),
+      relationOptions: document.getElementById('relationOptions'),
+      signLimitInput: document.getElementById('signLimitInput'),
+      signLimitValue: document.getElementById('signLimitValue'),
+      factLimitInput: document.getElementById('factLimitInput'),
+      factLimitValue: document.getElementById('factLimitValue'),
+      scopeMeta: document.getElementById('scopeMeta'),
+      loadButton: document.getElementById('loadButton'),
+      resetFiltersButton: document.getElementById('resetFiltersButton'),
+      fileInput: document.getElementById('fileInput'),
+      pathStops: document.getElementById('pathStops'),
+      pathConfigToggle: document.getElementById('pathConfigToggle'),
+      pathConfigPanel: document.getElementById('pathConfigPanel'),
+      pathUseContinuousInput: document.getElementById('pathUseContinuousInput'),
+      pathButton: document.getElementById('pathButton'),
+      clearPathButton: document.getElementById('clearPathButton'),
+      pathMeta: document.getElementById('pathMeta'),
+      pathList: document.getElementById('pathList'),
+      overviewStats: document.getElementById('overviewStats')
+    };
+
+    const svg = d3.select(els.graph);
+    const zoomRoot = svg.append('g').attr('class', 'zoom-root');
+    const guideLayer = zoomRoot.append('g').attr('class', 'guides');
+    const linkLayer = zoomRoot.append('g').attr('class', 'links');
+    const nodeLayer = zoomRoot.append('g').attr('class', 'nodes');
+    const labelLayer = zoomRoot.append('g').attr('class', 'labels');
+
+    const zoomBehavior = d3.zoom()
+      .scaleExtent([0.16, 5])
+      .on('zoom', (event) => zoomRoot.attr('transform', event.transform));
+
+    svg.call(zoomBehavior);
+
+    const simulation = d3.forceSimulation()
+      .force('link', d3.forceLink().id((d) => d.id).distance((d) => linkDistance(d)).strength((d) => d.synthetic ? 0.18 : 0.06))
+      .force('charge', d3.forceManyBody().strength(-55))
+      .force('center', d3.forceCenter())
+      .force('collide', d3.forceCollide().radius((d) => nodeRadius(d) + 7));
+
+    simulation.on('tick', ticked);
+
+    bindEvents();
+    renderSearchRows();
+    renderPathStops();
+    updateTabState();
+    updateControls();
+    tryAutoLoad();
+
+    function bindEvents() {
+      els.tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          state.activeTab = tab.dataset.tab;
+          updateTabState();
+        });
+      });
+
+      els.layoutGrouped.addEventListener('click', () => {
+        state.layout = 'grouped';
+        updateControls();
+        refreshGraph({ preservePositions: true, refit: true });
+      });
+
+      els.layoutForce.addEventListener('click', () => {
+        state.layout = 'force';
+        updateControls();
+        refreshGraph({ preservePositions: true, refit: true });
+      });
+
+      els.fitButton.addEventListener('click', fitGraph);
+
+      els.closeNodeButton.addEventListener('click', () => {
+        if (state.closeSelectionTimer) {
+          clearTimeout(state.closeSelectionTimer);
+          state.closeSelectionTimer = null;
+        }
+        state.selectedNodeId = null;
+        state.selectedFactType = null;
+        state.relatedOverlay = [];
+        state.nodeTab = 'facts';
+        if (!state.pathNodes.length) {
+          state.mode = 'breadth';
+        }
+        updateControls();
+        state.closeSelectionTimer = setTimeout(() => {
+          state.closeSelectionTimer = null;
+          refreshGraph({ preservePositions: true, refit: true });
+        }, 180);
+      });
+
+      els.nodeTabs.querySelectorAll('[data-node-tab]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.nodeTab = btn.dataset.nodeTab;
+          renderNodeTabs();
+          if (state.nodeTab === 'related') updateRelatedOverlay();
+          else if (state.relatedOverlay && state.relatedOverlay.length > 0) {
+            state.relatedOverlay = [];
+            refreshGraph({ preservePositions: true, softRestart: true });
+          }
+        });
+      });
+
+      els.searchRows.addEventListener('input', (event) => {
+        const rowIndex = Number(event.target.dataset.searchRowIndex);
+        const field = event.target.dataset.searchField;
+        if (!Number.isInteger(rowIndex) || !field) {
+          return;
+        }
+        state.searchRows[rowIndex][field] = event.target.value;
+        renderSearch();
+        refreshGraph({ preservePositions: true });
+      });
+      els.searchRows.addEventListener('click', (event) => {
+        const removeIndex = event.target.dataset.removeSearchRow;
+        if (removeIndex !== undefined) {
+          state.searchRows.splice(Number(removeIndex), 1);
+          if (!state.searchRows.length) {
+            state.searchRows.push({ subject: '', relation: '', object: '' });
+          }
+          renderSearchRows();
+          renderSearch();
+          refreshGraph({ preservePositions: true });
+        }
+      });
+      els.searchAddRowButton.addEventListener('click', () => {
+        state.searchRows.push({ subject: '', relation: '', object: '' });
+        renderSearchRows();
+      });
+      els.searchClearButton.addEventListener('click', () => {
+        state.searchRows = [{ subject: '', relation: '', object: '' }];
+        renderSearchRows();
+        renderSearch();
+        refreshGraph({ preservePositions: true });
+      });
+
+      els.factTypesShowAll.addEventListener('click', () => {
+        state.filters.factTypes = new Set(FACT_TYPES);
+        renderFactTypeChips();
+        refreshGraph({ refit: true });
+      });
+
+      els.factTypesClear.addEventListener('click', () => {
+        state.filters.factTypes = new Set();
+        renderFactTypeChips();
+        refreshGraph({ refit: true });
+      });
+
+      els.signLimitInput.addEventListener('input', () => {
+        state.filters.signLimit = Number(els.signLimitInput.value);
+        updateControls();
+        refreshGraph({ refit: true });
+      });
+
+      els.factLimitInput.addEventListener('input', () => {
+        state.filters.factLimit = Number(els.factLimitInput.value);
+        updateControls();
+        refreshGraph({ refit: true });
+      });
+
+      els.loadButton.addEventListener('click', () => els.fileInput.click());
+      els.fileInput.addEventListener('change', manualLoad);
+      els.resetFiltersButton.addEventListener('click', resetFilters);
+
+      els.pathStops.addEventListener('input', (event) => {
+        const index = Number(event.target.dataset.pathIndex);
+        if (!Number.isInteger(index)) {
+          return;
+        }
+        state.pathQueries[index] = event.target.value;
+        state.pathSuggestIndex = index;
+        renderPathPanel();
+      });
+      els.pathStops.addEventListener('focusin', (event) => {
+        const index = Number(event.target.dataset.pathIndex);
+        if (Number.isInteger(index)) {
+          state.pathSuggestIndex = index;
+          renderPathPanel();
+        }
+      });
+      els.pathStops.addEventListener('click', (event) => {
+        const insertIndex = event.target.dataset.insertWaypointAfter;
+        const removeIndex = event.target.dataset.removePathStop;
+        if (insertIndex !== undefined) {
+          state.pathQueries.splice(Number(insertIndex) + 1, 0, '');
+          renderPathStops();
+          return;
+        }
+        if (removeIndex !== undefined) {
+          state.pathQueries.splice(Number(removeIndex), 1);
+          if (state.pathQueries.length < 2) {
+            state.pathQueries = ['', ''];
+          }
+          state.pathSuggestIndex = Math.max(0, Math.min(state.pathSuggestIndex, state.pathQueries.length - 1));
+          renderPathStops();
+          renderPathPanel();
+        }
+      });
+      els.pathConfigToggle.addEventListener('click', () => {
+        state.pathConfigOpen = !state.pathConfigOpen;
+        updateControls();
+      });
+      els.pathUseContinuousInput.addEventListener('change', () => {
+        state.pathUseContinuous = els.pathUseContinuousInput.checked;
+        if ((state.pathQueries[0].trim() || selectedSign()) && state.pathQueries[state.pathQueries.length - 1].trim()) {
+          findPath();
+        } else {
+          renderPathPanel();
+        }
+      });
+      els.pathButton.addEventListener('click', findPath);
+      els.clearPathButton.addEventListener('click', () => clearPath(true));
+
+      window.addEventListener('resize', () => refreshGraph({ preservePositions: true, refit: true }));
+    }
+
+    async function tryAutoLoad() {
+      try {
+        const [nodesResponse, edgesResponse] = await Promise.all([
+          fetch('./nodes.tsv'),
+          fetch('./edges_node.tsv')
+        ]);
+        if (!nodesResponse.ok || !edgesResponse.ok) {
+          throw new Error('fetch failed');
+        }
+        const [nodesText, edgesText] = await Promise.all([nodesResponse.text(), edgesResponse.text()]);
+        await loadDataset(nodesText, edgesText);
+      } catch (error) {
+        setStatus('Automatic loading was blocked. Load the TSV files manually or serve the folder with `python3 -m http.server`.', true);
+      }
+    }
+
+    async function manualLoad(event) {
+      const files = Array.from(event.target.files || []);
+      const nodesFile = files.find((file) => file.name === 'nodes.tsv') || files.find((file) => file.name.toLowerCase().includes('nodes'));
+      const edgesFile = files.find((file) => file.name === 'edges_node.tsv') || files.find((file) => file.name.toLowerCase().includes('edges_node'));
+      if (!nodesFile || !edgesFile) {
+        setStatus('Select both `nodes.tsv` and `edges_node.tsv`.', true);
+        return;
+      }
+      const [nodesText, edgesText] = await Promise.all([nodesFile.text(), edgesFile.text()]);
+      await loadDataset(nodesText, edgesText);
+    }
+
+    async function loadDataset(nodesText, edgesText) {
+      setStatus('Parsing nodes.tsv...');
+      await nextFrame();
+      const nodeRows = parseTSV(nodesText);
+      setStatus('Parsing edges_node.tsv...');
+      await nextFrame();
+      const edgeRows = parseTSV(edgesText);
+      setStatus('Indexing facts...');
+      await nextFrame();
+
+      const nodeMap = new Map();
+      nodeRows.forEach((row) => {
+        if (!row.id) {
+          return;
+        }
+        let node = nodeMap.get(row.id);
+        if (!node) {
+          node = {
+            id: row.id,
+            label: row.label || row.id,
+            types: new Set(),
+            isSign: false,
+            kind: 'other',
+            degree: 0,
+            outgoingFacts: 0,
+            incomingFacts: 0
+          };
+          nodeMap.set(row.id, node);
+        }
+        node.types.add(row.type || 'other');
+      });
+
+      nodeMap.forEach((node) => {
+        node.types = Array.from(node.types).sort(typeSort);
+        node.isSign = node.types.includes('translation');
+        node.kind = node.isSign ? 'sign' : dominantKind(node.types);
+      });
+
+      const factNodeIndex = new Map();
+      const propertyNodeSourceType = new Map();
+      const factsBySign = new Map();
+      const factsByNode = new Map();
+      const nodeNeighbors = new Map();
+      const allFacts = [];
+      let hiddenFactCount = 0;
+      const relationCounts = new Map();
+      const factTypeCounts = new Map();
+
+      edgeRows.forEach((row, index) => {
+        const subjectId = row.node1;
+        const relation = row.relation || 'unknown';
+        const factType = row.type || 'other';
+        const sourceName = row.source || 'unknown';
+
+        if (!nodeMap.has(subjectId)) {
+          return;
+        }
+
+        const subjectNode = nodeMap.get(subjectId);
+        const objectInfo = resolveObject(row.node2, relation, factType, nodeMap);
+        const objectKey = objectInfo.id;
+
+        const fact = {
+          id: `fact-${index}`,
+          subjectId,
+          relation,
+          factType,
+          sourceName,
+          objectId: objectKey,
+          objectLabel: objectInfo.label,
+          objectKind: objectInfo.kind,
+          synthetic: objectInfo.synthetic,
+          rawValue: row.node2,
+          numericValue: numericFactValue(row.node2, factType),
+          isNumeric: numericFactValue(row.node2, factType) !== null,
+          truthy: numericFactValue(row.node2, factType) === 1,
+          searchText: `${relation} ${objectInfo.label} ${row.node2} ${factType} ${sourceName}`.toLowerCase(),
+          hiddenRedundant: isRedundantIdentifierFact(subjectNode, relation, row.node2, nodeMap)
+        };
+
+        if (fact.hiddenRedundant) {
+          hiddenFactCount += 1;
+          return;
+        }
+
+        if (!factNodeIndex.has(objectKey)) {
+          factNodeIndex.set(objectKey, {
+            id: objectKey,
+            label: objectInfo.label,
+            isSign: objectInfo.kind === 'sign',
+            kind: objectInfo.kind,
+            factType,
+            relation,
+            value: objectInfo.value,
+            degree: 0,
+            outgoingFacts: 0,
+            incomingFacts: 0,
+            synthetic: objectInfo.synthetic,
+            unresolved: Boolean(objectInfo.unresolved)
+          });
+        }
+
+        if (!propertyNodeSourceType.has(objectKey)) {
+          propertyNodeSourceType.set(objectKey, factType);
+        }
+
+        const objectNode = factNodeIndex.get(objectKey);
+
+        allFacts.push(fact);
+        addToArrayMap(factsBySign, subjectId, fact);
+        addToArrayMap(factsByNode, objectKey, fact);
+        addToArrayMap(nodeNeighbors, subjectId, objectKey);
+        addToArrayMap(nodeNeighbors, objectKey, subjectId);
+        increment(relationCounts, relation);
+        increment(factTypeCounts, factType);
+
+        subjectNode.outgoingFacts += 1;
+        subjectNode.degree += 1;
+        objectNode.incomingFacts += 1;
+        objectNode.degree += 1;
+      });
+
+      const signNodes = Array.from(nodeMap.values()).filter((node) => node.isSign);
+      const signIds = signNodes.map((node) => node.id);
+
+      const graphStats = {
+        nodes: nodeMap.size,
+        signs: signNodes.length,
+        properties: factNodeIndex.size,
+        facts: allFacts.length,
+        relations: relationCounts.size,
+        hiddenFacts: hiddenFactCount
+      };
+
+      const signFeatureCache = new Map();
+      const featureFrequency = new Map();
+      const numericRanges = new Map();
+      const categoricalIndex = new Map();
+      const numericRelationIndex = new Map();
+
+      signIds.forEach((signId) => {
+        const features = buildSignFeatures(signId, factsBySign.get(signId) || []);
+        signFeatureCache.set(signId, features);
+        features.categorical.forEach((set, typeKey) => {
+          if (!categoricalIndex.has(typeKey)) {
+            categoricalIndex.set(typeKey, new Map());
+          }
+          set.forEach((featureKey) => increment(featureFrequency, featureKey));
+          set.forEach((featureKey) => addToArrayMap(categoricalIndex.get(typeKey), featureKey, signId));
+        });
+        features.numeric.forEach((map, typeKey) => {
+          if (!numericRelationIndex.has(typeKey)) {
+            numericRelationIndex.set(typeKey, new Map());
+          }
+          map.forEach((value, relationKey) => {
+            const rangeKey = `${typeKey}|${relationKey}`;
+            if (!numericRanges.has(rangeKey)) {
+              numericRanges.set(rangeKey, { min: value, max: value });
+            } else {
+              const range = numericRanges.get(rangeKey);
+              range.min = Math.min(range.min, value);
+              range.max = Math.max(range.max, value);
+            }
+            addToArrayMap(numericRelationIndex.get(typeKey), relationKey, signId);
+          });
+        });
+      });
+
+      // Mark binary relations on facts and update binary-true node labels
+      const isBinaryRange = (range) => range &&
+        (range.min === 0 || range.min === 1) && (range.max === 0 || range.max === 1);
+
+      allFacts.forEach((fact) => {
+        if (!fact.isNumeric) return;
+        fact.isBinaryRelation = isBinaryRange(numericRanges.get(`${fact.factType}|${fact.relation}`));
+      });
+
+      const numericValuesByRelation = new Map();
+      allFacts.forEach((fact) => {
+        if (!fact.isNumeric || fact.isBinaryRelation) {
+          return;
+        }
+        addToArrayMap(numericValuesByRelation, `${fact.factType}|${fact.relation}`, fact.numericValue);
+      });
+
+      const numericHistograms = new Map();
+      numericValuesByRelation.forEach((values, key) => {
+        numericHistograms.set(key, buildNumericHistogram(values, 14));
+      });
+
+      signFeatureCache.forEach((features) => {
+        features.numeric.forEach((map, typeKey) => {
+          map.forEach((value, relationKey) => {
+            if (value !== 1) {
+              return;
+            }
+            if (!isBinaryRange(numericRanges.get(`${typeKey}|${relationKey}`))) {
+              return;
+            }
+            increment(featureFrequency, `${relationKey}::1`);
+          });
+        });
+      });
+
+      factNodeIndex.forEach((node) => {
+        if (!node.synthetic || !node.relation) return;
+        const range = numericRanges.get(`${node.factType}|${node.relation}`);
+        if (isBinaryRange(range) && (Number(node.value) === 1 || node.value === '1' || node.value === '1.0')) {
+          node.label = node.relation;
+          node.isBinaryTrue = true;
+        }
+      });
+
+      state.data = {
+        nodeMap,
+        signIds,
+        signNodes,
+        allFacts,
+        factsBySign,
+        factsByNode,
+        nodeNeighbors,
+        relations: Array.from(relationCounts.keys()).sort(),
+        relationCounts,
+        factTypeCounts,
+        factNodeIndex,
+        propertyNodeSourceType,
+        relationOptions: Array.from(relationCounts.keys()).sort(),
+        graphStats,
+        signFeatureCache,
+        featureFrequency,
+        numericRanges,
+        categoricalIndex,
+        numericRelationIndex,
+        numericHistograms,
+        similarityCache: new Map(),
+        topDegreeSigns: signNodes.slice().sort((a, b) => d3.descending(a.outgoingFacts, b.outgoingFacts)).slice(0, 400)
+      };
+
+      state.loaded = true;
+      state.selectedNodeId = chooseInitialSign();
+      state.mode = 'breadth';
+      state.pathNodes = [];
+
+      renderRelationOptions();
+      renderFactTypeChips();
+      renderSearchRows();
+      renderPathStops();
+      updateControls();
+      renderSearch();
+      renderPathPanel();
+      refreshGraph({ refit: true });
+
+      renderOverview();
+      setStatus(`Loaded ${formatNumber(graphStats.signs)} signs, ${formatNumber(graphStats.properties)} property nodes, and ${formatNumber(graphStats.facts)} facts.`);
+    }
+
+    function chooseInitialSign() {
+      const sign = state.data.topDegreeSigns.find((node) => !BLOCKED_PATH_LABELS.has(normalize(node.label)));
+      return sign?.id || state.data.signIds[0] || null;
+    }
+
+    function buildSignFeatures(signId, facts) {
+      const categorical = new Map();
+      const numeric = new Map();
+
+      facts.forEach((fact) => {
+        const bucketKey = fact.factType;
+        if (!categorical.has(bucketKey)) {
+          categorical.set(bucketKey, new Set());
+        }
+        if (!numeric.has(bucketKey)) {
+          numeric.set(bucketKey, new Map());
+        }
+
+        if (fact.isNumeric) {
+          if (fact.factType === 'phonological' && fact.numericValue === 0) {
+            return;
+          }
+          if (fact.factType === 'phonological' && fact.numericValue === 1) {
+            categorical.get(bucketKey).add(`${fact.relation}::1`);
+            return;
+          }
+          numeric.get(bucketKey).set(fact.relation, fact.numericValue);
+          return;
+        }
+
+        if (fact.factType === 'semantic' &&
+            fact.relation === 'SignBank_Semantic_Field' &&
+            normalize(fact.objectLabel) === 'none') {
+          return;
+        }
+
+        categorical.get(bucketKey).add(`${fact.relation}::${normalize(fact.objectLabel)}`);
+      });
+
+      return { signId, categorical, numeric };
+    }
+
+    function resolveObject(rawValue, relation, factType, nodeMap) {
+      if (/^N\d+$/.test(rawValue)) {
+        if (!nodeMap.has(rawValue)) {
+          return {
+            id: `unresolved:${rawValue}`,
+            label: rawValue,
+            value: rawValue,
+            kind: factType,
+            synthetic: true,
+            unresolved: true
+          };
+        }
+        const node = nodeMap.get(rawValue);
+        if (node.isSign) {
+          // Sign-to-sign reference: use the sign's own ID so it renders as a sign node.
+          return { id: rawValue, label: node.label, value: node.label, kind: 'sign', synthetic: false };
+        }
+        return {
+          id: `node:${rawValue}`,
+          label: node.label,
+          value: node.label,
+          kind: dominantKind(node.types),
+          synthetic: false
+        };
+      }
+
+      const numeric = numericFactValue(rawValue, factType);
+      if (numeric !== null && factType === 'phonological' && numeric === 0) {
+        return {
+          id: `lit:${factType}:${relation}:false`,
+          label: `${relation}: false`,
+          value: '0',
+          kind: factType,
+          synthetic: true
+        };
+      }
+
+      return {
+        id: `lit:${factType}:${relation}:${normalize(String(rawValue))}`,
+        label: formatFactLabel(relation, rawValue),
+        value: rawValue,
+        kind: factType,
+        synthetic: true
+      };
+    }
+
+    function isRedundantIdentifierFact(subjectNode, relation, rawValue, nodeMap) {
+      const normalizedValue = normalize(rawValue);
+      const normalizedLabel = normalize(subjectNode?.label);
+      const unresolvedNodeRef = /^N\d+$/.test(String(rawValue || '')) && !nodeMap.has(String(rawValue || ''));
+      if (unresolvedNodeRef) {
+        return false;
+      }
+      if (ALWAYS_REDUNDANT_SELF_RELATIONS.has(relation)) {
+        return normalizedValue === normalizedLabel;
+      }
+      if (SOMETIMES_REDUNDANT_SELF_RELATIONS.has(relation)) {
+        return normalizedValue === normalizedLabel;
+      }
+      return false;
+    }
+
+    function formatFactLabel(relation, rawValue) {
+      const value = String(rawValue);
+      return value.length > 28 ? `${relation}: ${value.slice(0, 28)}…` : `${relation}: ${value}`;
+    }
+
+    function numericFactValue(value, factType) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) {
+        return null;
+      }
+      if (factType === 'phonological' && numeric === 0) {
+        return 0;
+      }
+      return numeric;
+    }
+
+    function factDisplayValue(fact) {
+      if (!fact) {
+        return '';
+      }
+      if (fact.objectKind === 'sign' || /^N\d+$/.test(String(fact.rawValue || ''))) {
+        return fact.objectLabel;
+      }
+      if (fact.isBinaryRelation) {
+        return Number(fact.rawValue) === 1 ? 'true' : 'false';
+      }
+      const raw = String(fact.rawValue ?? '').trim();
+      if (raw) {
+        return raw;
+      }
+      const label = String(fact.objectLabel || '');
+      const prefix = `${fact.relation}: `;
+      return label.startsWith(prefix) ? label.slice(prefix.length) : label;
+    }
+
+    function updateTabState() {
+      els.tabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === state.activeTab));
+      els.panels.forEach((panel) => panel.classList.toggle('active', panel.dataset.panel === state.activeTab));
+      if (state.activeTab === 'paths') {
+        renderWeightSliders(els.pathSimilaritySliders, state.similarity, () => {
+          state.data.similarityCache = new Map();
+          applyForceWeights();
+          updateRelatedOverlay();
+          renderPathPanel();
+        });
+      }
+    }
+
+    function updateControls() {
+      els.layoutGrouped.classList.toggle('active', state.layout === 'grouped');
+      els.layoutForce.classList.toggle('active', state.layout === 'force');
+      els.signLimitValue.textContent = `${state.filters.signLimit} signs`;
+      els.factLimitValue.textContent = `${state.filters.factLimit} fact nodes`;
+      els.scopeMeta.textContent = `${state.filters.signLimit} / ${state.filters.factLimit}`;
+      els.pathConfigToggle.classList.toggle('active', state.pathConfigOpen);
+      els.pathConfigPanel.classList.toggle('open', state.pathConfigOpen);
+      renderSelectionCard();
+      updateTabState();
+    }
+
+    function renderOverview() {
+      if (!els.overviewStats) return;
+      if (state.loaded) {
+        const gs = state.data.graphStats;
+        els.overviewStats.innerHTML = `
+          ${summaryCard(gs.signs, 'signs')}
+          ${summaryCard(gs.facts, 'facts')}
+          ${summaryCard(gs.relations, 'relations')}
+          ${summaryCard(gs.properties, 'properties')}
+        `;
+      } else {
+        els.overviewStats.innerHTML = '<div class="micro" style="padding:12px;">Load data to see overview.</div>';
+      }
+    }
+
+    function renderSelectionCard() {
+      const node = currentNode();
+
+      if (!node) {
+        els.selectionCard.classList.add('collapsed');
+        els.closeNodeButton.style.display = 'none';
+        els.nodeTabs.style.display = 'none';
+        els.nodeFactsPane.classList.remove('active');
+        els.nodeRelatedPane.classList.remove('active');
+        els.selectionName.textContent = '';
+        els.selectionPills.innerHTML = '';
+        els.nodeFactsPane.innerHTML = '';
+        els.selectionSummary.innerHTML = '';
+        renderOverview();
+        return;
+      }
+
+      els.selectionCard.classList.remove('collapsed');
+      els.nodeTabs.style.display = node.isSign ? '' : 'none';
+
+      els.closeNodeButton.style.display = '';
+      els.selectionName.textContent = node.label;
+
+      if (!node.isSign) {
+        els.selectionPills.innerHTML = `<span class="pill"><span class="swatch" style="background:${nodeColor(node)}"></span>${escapeHtml(node.kind)}</span>`;
+      } else {
+        els.selectionPills.innerHTML = '';
+      }
+
+      const relatedCount = node.isSign ? getSimilarSignsWeighted(node.id, state.similarity, 18).length : 0;
+      els.selectionSummary.innerHTML = `
+        ${summaryCard(node.isSign ? node.outgoingFacts : node.incomingFacts, node.isSign ? 'facts' : 'incoming')}
+        ${summaryCard(node.degree, 'degree')}
+        ${summaryCard(node.isSign ? relatedCount : (state.data.factsByNode.get(node.id) || []).length, node.isSign ? 'related' : 'subjects')}
+      `;
+
+      renderNodeTabs();
+    }
+
+    function renderNodeTabs() {
+      if (!currentNode()?.isSign && state.nodeTab !== 'facts') {
+        state.nodeTab = 'facts';
+      }
+      const tabs = els.nodeTabs.querySelectorAll('[data-node-tab]');
+      tabs.forEach((btn) => btn.classList.toggle('active', btn.dataset.nodeTab === state.nodeTab));
+      els.nodeFactsPane.classList.toggle('active', state.nodeTab === 'facts');
+      els.nodeRelatedPane.classList.toggle('active', state.nodeTab === 'related');
+      if (state.nodeTab === 'facts') {
+        renderNodeFactsPane(currentNode());
+      } else if (state.nodeTab === 'related') {
+        renderRelated();
+      }
+    }
+
+    function renderNodeFactsPane(node) {
+      if (!node) {
+        els.nodeFactsPane.innerHTML = '';
+        return;
+      }
+      const allFacts = node.isSign
+        ? (state.data.factsBySign.get(node.id) || [])
+        : (state.data.factsByNode.get(node.id) || []);
+      const availableTypes = [...new Set(allFacts.map((f) => f.factType))].sort(typeSort);
+      if (!state.selectedFactType || !availableTypes.includes(state.selectedFactType)) {
+        state.selectedFactType = availableTypes[0] || null;
+      }
+      const facts = allFacts
+        .filter((f) => !state.selectedFactType || f.factType === state.selectedFactType)
+        .slice(0, 80);
+      els.nodeFactsPane.innerHTML = `
+        <select class="fact-type-select" id="factTypeSelect">
+          ${availableTypes.map((type) => `<option value="${escapeHtml(type)}"${type === state.selectedFactType ? ' selected' : ''}>${escapeHtml(type)}</option>`).join('')}
+        </select>
+        ${facts.length ? `
+        <div class="node-facts-list">
+          ${facts.map((fact) => `
+            <div class="node-fact-row">
+              <span class="node-fact-relation">${escapeHtml(node.isSign ? fact.relation : state.data.nodeMap.get(fact.subjectId)?.label || fact.subjectId)}</span>
+              <span class="node-fact-value">${node.isSign ? factValueHtml(fact) : escapeHtml(fact.relation)}</span>
+            </div>
+          `).join('')}
+        </div>
+        ` : '<div class="micro" style="padding:8px 0;">No facts for this type.</div>'}
+      `;
+      document.getElementById('factTypeSelect')?.addEventListener('change', (e) => {
+        state.selectedFactType = e.target.value;
+        renderNodeFactsPane(node);
+      });
+    }
+
+    function renderRelationOptions() {
+      els.relationOptions.innerHTML = state.data.relationOptions.map((relation) => `<option value="${escapeHtml(relation)}"></option>`).join('');
+    }
+
+    function renderFactTypeChips() {
+      els.factTypeMeta.textContent = `${state.filters.factTypes.size}/${FACT_TYPES.length}`;
+      els.factTypeChips.innerHTML = FACT_TYPES.map((factType) => {
+        const count = state.data.factTypeCounts.get(factType) || 0;
+        return `
+          <button class="chip ${state.filters.factTypes.has(factType) ? 'active' : ''}" type="button" data-fact-type="${escapeHtml(factType)}">
+            <span class="swatch" style="background:${factTypeColor(factType)}"></span>${escapeHtml(factType)} <small>${formatNumber(count)}</small>
+          </button>
+        `;
+      }).join('');
+      els.factTypeChips.querySelectorAll('[data-fact-type]').forEach((button) => {
+        button.addEventListener('click', () => {
+          toggleSet(state.filters.factTypes, button.dataset.factType);
+          renderFactTypeChips();
+          refreshGraph({ refit: true });
+        });
+      });
+    }
+
+    function addClause() {
+      const relation = els.relationInput.value.trim();
+      const value = els.valueInput.value.trim();
+      if (!relation && !value) {
+        return;
+      }
+      state.filters.clauses.push({
+        id: `clause-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        relation: relation.toLowerCase(),
+        value: value.toLowerCase()
+      });
+      els.relationInput.value = '';
+      els.valueInput.value = '';
+      renderClauses();
+      refreshGraph({ refit: true });
+    }
+
+    function renderClauses() {
+      els.clauseMeta.textContent = `${state.filters.clauses.length}`;
+      if (!state.filters.clauses.length) {
+        els.clauseList.innerHTML = '';
+        return;
+      }
+      els.clauseList.innerHTML = state.filters.clauses.map((clause) => `
+        <span class="clause-pill">
+          <span>${escapeHtml([clause.relation, clause.value].filter(Boolean).join(' · '))}</span>
+          <button type="button" data-remove-clause="${escapeHtml(clause.id)}">×</button>
+        </span>
+      `).join('');
+      els.clauseList.querySelectorAll('[data-remove-clause]').forEach((button) => {
+        button.addEventListener('click', () => {
+          state.filters.clauses = state.filters.clauses.filter((clause) => clause.id !== button.dataset.removeClause);
+          renderClauses();
+          refreshGraph({ refit: true });
+        });
+      });
+    }
+
+    function resetFilters() {
+      state.filters.factTypes = new Set(FACT_TYPES);
+      state.filters.clauses = [];
+      state.filters.signLimit = 200;
+      state.filters.factLimit = 500;
+      state.searchRows = [{ subject: '', relation: '', object: '' }];
+      state.pathQueries = ['', ''];
+      state.pathSuggestIndex = 0;
+      state.pathConfigOpen = false;
+      state.expandedNodeIds = new Set();
+      state.mode = 'breadth';
+      state.layout = 'grouped';
+      state.pathNodes = [];
+      state.pathUseContinuous = false;
+      state.selectedFactType = null;
+      els.signLimitInput.value = String(state.filters.signLimit);
+      els.factLimitInput.value = String(state.filters.factLimit);
+      els.pathUseContinuousInput.checked = false;
+      renderFactTypeChips();
+      renderSearchRows();
+      renderPathStops();
+      renderSearch();
+      renderPathPanel();
+      updateControls();
+      refreshGraph({ refit: true });
+    }
+
+    function renderSearchRows() {
+      els.searchRows.innerHTML = state.searchRows.map((row, index) => `
+        <div>
+          ${index ? '<div class="search-row-divider">or</div>' : ''}
+          <div class="search-row-grid">
+            <input type="search" placeholder="subject" autocomplete="off" data-search-row-index="${index}" data-search-field="subject" value="${escapeHtml(row.subject)}">
+            <input type="search" list="relationOptions" placeholder="relation" autocomplete="off" data-search-row-index="${index}" data-search-field="relation" value="${escapeHtml(row.relation)}">
+            <input type="search" placeholder="object" autocomplete="off" data-search-row-index="${index}" data-search-field="object" value="${escapeHtml(row.object)}">
+            ${state.searchRows.length === 1
+              ? '<span></span>'
+              : `<button class="remove-button" type="button" data-remove-search-row="${index}">×</button>`}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderSearch() {
+      if (!state.loaded) {
+        els.searchList.innerHTML = '<div class="micro" style="padding:12px;">Load graph data to search.</div>';
+        els.searchMeta.textContent = '';
+        return;
+      }
+      const clauses = state.searchRows
+        .map((row) => ({
+          subjectQuery: normalize(row.subject),
+          relationQuery: normalize(row.relation),
+          objectQuery: normalize(row.object)
+        }))
+        .filter((row) => row.subjectQuery || row.relationQuery || row.objectQuery);
+      const hasQuery = Boolean(clauses.length);
+
+      if (!hasQuery) {
+        const topRelations = topEntries(state.data.relationCounts, 24);
+        els.searchMeta.textContent = `${formatNumber(state.data.allFacts.length)} indexed facts`;
+        els.searchList.innerHTML = topRelations.map(([relation, count]) => `
+          <button class="list-row" type="button" data-fill-relation="${escapeHtml(relation)}">
+            <span class="row-title">${escapeHtml(relation)}</span>
+            <span class="row-meta">${formatNumber(count)} facts</span>
+          </button>
+        `).join('');
+        els.searchList.querySelectorAll('[data-fill-relation]').forEach((button) => {
+          button.addEventListener('click', () => {
+            state.searchRows[0].relation = button.dataset.fillRelation;
+            renderSearchRows();
+            renderSearch();
+            refreshGraph({ preservePositions: true });
+          });
+        });
+        return;
+      }
+      const results = state.data.allFacts
+        .map((fact) => {
+          const score = factSearchScoreMulti(fact, clauses);
+          return score > 0 ? { fact, score } : null;
+        })
+        .filter(Boolean)
+        .sort((a, b) =>
+          d3.descending(a.score, b.score) ||
+          d3.descending(state.data.nodeMap.get(a.fact.subjectId)?.outgoingFacts || 0, state.data.nodeMap.get(b.fact.subjectId)?.outgoingFacts || 0) ||
+          a.fact.relation.localeCompare(b.fact.relation));
+
+      els.searchMeta.textContent = `${formatNumber(results.length)} facts`;
+      if (!results.length) {
+        els.searchList.innerHTML = '<div class="micro" style="padding:12px;">No matching facts.</div>';
+        return;
+      }
+      els.searchList.innerHTML = results.map(({ fact }) => `
+        <button class="list-row" type="button" data-pick-fact="${escapeHtml(fact.id)}">
+          <span class="row-title">${escapeHtml(state.data.nodeMap.get(fact.subjectId)?.label || fact.subjectId)}</span>
+          <span class="row-meta">${escapeHtml(`${fact.relation} · ${factDisplayValue(fact)} · ${fact.factType}`)}</span>
+        </button>
+      `).join('');
+      els.searchList.querySelectorAll('[data-pick-fact]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const fact = state.data.allFacts.find((entry) => entry.id === button.dataset.pickFact);
+          if (!fact) {
+            return;
+          }
+          state.mode = 'focus';
+          setSelectedNode(fact.subjectId, { refit: true, clearPath: false });
+        });
+      });
+    }
+
+    function activeSearchClauses() {
+      return state.searchRows
+        .map((row) => ({
+          subjectQuery: normalize(row.subject),
+          relationQuery: normalize(row.relation),
+          objectQuery: normalize(row.object)
+        }))
+        .filter((row) => row.subjectQuery || row.relationQuery || row.objectQuery);
+    }
+
+    function searchActive() {
+      return activeSearchClauses().length > 0;
+    }
+
+    function factMatchesActiveSearch(fact, clauses = activeSearchClauses()) {
+      if (!clauses.length) {
+        return true;
+      }
+      return factSearchScoreMulti(fact, clauses) > 0;
+    }
+
+    function focusRandomSign() {
+      const signs = filteredSigns().slice(0, 500);
+      const sign = signs[Math.floor(Math.random() * signs.length)] || state.data.topDegreeSigns[0];
+      if (sign) {
+        state.mode = 'focus';
+        setSelectedNode(sign.id, { refit: true, clearPath: false });
+      }
+    }
+
+    function focusTopSign() {
+      const sign = filteredSigns()[0] || state.data.topDegreeSigns[0];
+      if (sign) {
+        state.mode = 'focus';
+        setSelectedNode(sign.id, { refit: true, clearPath: false });
+      }
+    }
+
+    function activeSimilarityTypes(weights = state.similarity) {
+      return SIMILARITY_TYPES
+        .filter((type) => (weights[type] || 0) > 0)
+        .sort((a, b) => (weights[b] || 0) - (weights[a] || 0));
+    }
+
+    function filteredSigns() {
+      const clauses = activeSearchClauses();
+      return state.data.signNodes.filter((sign) => {
+        const facts = state.data.factsBySign.get(sign.id) || [];
+        if (!facts.length) {
+          return false;
+        }
+        const activeFacts = facts.filter((fact) => state.filters.factTypes.has(fact.factType));
+        if (!activeFacts.length) {
+          return false;
+        }
+        return !clauses.length || activeFacts.some((fact) => factMatchesActiveSearch(fact, clauses));
+      }).sort((a, b) => d3.descending(a.outgoingFacts, b.outgoingFacts));
+    }
+
+    function clauseMatchesFact(clause, fact) {
+      const relationMatch = !clause.relation || fact.relation.toLowerCase().includes(clause.relation);
+      const valueMatch = !clause.value || fact.objectLabel.toLowerCase().includes(clause.value) || String(fact.rawValue).toLowerCase().includes(clause.value);
+      return relationMatch && valueMatch;
+    }
+
+    function refreshGraph(options = {}) {
+      if (!state.loaded) {
+        return;
+      }
+      const previousGraph = state.currentGraph;
+      const graph = state.pathNodes.length ? buildPathGraph() : (state.mode === 'focus' ? buildFocusGraph() : buildBreadthGraph());
+      state.currentGraph = graph;
+
+      const width = els.graph.clientWidth || window.innerWidth;
+      const height = els.graph.clientHeight || window.innerHeight;
+      svg.attr('viewBox', [0, 0, width, height]);
+      simulation.force('center', d3.forceCenter(width / 2, height / 2));
+      applyGroupingForces(width, height, graph.nodes);
+      renderGuides(width, height, graph.nodes);
+
+      const previousPositions = new Map((previousGraph.nodes || []).map((node) => [node.id, node]));
+      graph.nodes.forEach((node) => {
+        const previous = options.preservePositions ? previousPositions.get(node.id) : null;
+        if (previous && Number.isFinite(previous.x) && Number.isFinite(previous.y)) {
+          node.x = previous.x;
+          node.y = previous.y;
+          node.vx = previous.vx || 0;
+          node.vy = previous.vy || 0;
+        } else if (state.layout === 'grouped') {
+          const anchors = getGroupAnchors(width, height);
+          const kind = node.isSign ? 'sign' : (node.kind || 'other');
+          const anchor = anchors[kind] || { x: width / 2, y: height / 2 };
+          node.x = anchor.x + (Math.random() - 0.5) * 50;
+          node.y = anchor.y + (Math.random() - 0.5) * 50;
+        } else {
+          node.x = width / 2 + (Math.random() - 0.5) * 180;
+          node.y = height / 2 + (Math.random() - 0.5) * 180;
+        }
+      });
+
+      renderGraph(graph);
+      renderSelectionCard();
+      renderPathPanel();
+
+      simulation.nodes(graph.nodes);
+      simulation.force('link').links([...graph.links, ...(graph.syntheticLinks || [])]);
+      simulation.alpha(options.softRestart ? 0.25 : 0.9).restart();
+      if (state.frozen) {
+        simulation.stop();
+      }
+
+      if (options.refit) {
+        setTimeout(() => fitGraph(), 120);
+      }
+    }
+
+    function buildBreadthGraph() {
+      const clauses = activeSearchClauses();
+      const signPool = filteredSigns();
+      const signNodes = signPool.slice(0, state.filters.signLimit).map((sign) => graphNodeFromSign(sign));
+      const signIds = new Set(signNodes.map((node) => node.id));
+      const factCounts = new Map();
+
+      signIds.forEach((signId) => {
+        (state.data.factsBySign.get(signId) || []).forEach((fact) => {
+          if (!state.filters.factTypes.has(fact.factType)) {
+            return;
+          }
+          if (clauses.length && !factMatchesActiveSearch(fact, clauses)) {
+            return;
+          }
+          if (!shouldShowInGraph(fact)) {
+            return;
+          }
+          if (!factCounts.has(fact.objectId)) {
+            factCounts.set(fact.objectId, {
+              node: propertyGraphNode(fact.objectId),
+              count: 0
+            });
+          }
+          factCounts.get(fact.objectId).count += 1;
+        });
+      });
+
+      const propertyNodes = balancedPropertySelection(Array.from(factCounts.values()), state.filters.factLimit);
+
+      const propertyIds = new Set(propertyNodes.map((node) => node.id));
+      const links = [];
+      signIds.forEach((signId) => {
+        (state.data.factsBySign.get(signId) || []).forEach((fact) => {
+          if (!state.filters.factTypes.has(fact.factType) || !propertyIds.has(fact.objectId)) {
+            return;
+          }
+          if (clauses.length && !factMatchesActiveSearch(fact, clauses)) {
+            return;
+          }
+          if (!shouldShowInGraph(fact)) {
+            return;
+          }
+          links.push(graphLink(fact));
+        });
+      });
+
+      const expandedNodes = [];
+      const expandedLinks = [];
+      state.expandedNodeIds.forEach((nodeId) => {
+        const expansion = expansionNeighborhood(nodeId);
+        expandedNodes.push(...expansion.nodes);
+        expandedLinks.push(...expansion.links);
+      });
+
+      return {
+        nodes: dedupeNodes([...signNodes, ...propertyNodes, ...expandedNodes]),
+        links: dedupeLinks([...links, ...expandedLinks]),
+        syntheticLinks: []
+      };
+    }
+
+    function expansionNeighborhood(nodeId) {
+      const node = allGraphNodes().get(nodeId);
+      if (!node) {
+        return { nodes: [], links: [] };
+      }
+
+      if (node.isSign) {
+        const signNode = state.data.nodeMap.get(nodeId);
+        const factNodes = [];
+        const links = [];
+        (state.data.factsBySign.get(nodeId) || []).forEach((fact) => {
+          if (!state.filters.factTypes.has(fact.factType) || !shouldShowInGraph(fact)) {
+            return;
+          }
+          factNodes.push(propertyGraphNode(fact.objectId));
+          links.push(graphLink(fact));
+        });
+        return {
+          nodes: dedupeNodes([graphNodeFromSign(signNode), ...factNodes]),
+          links
+        };
+      }
+
+      const incidentFacts = (state.data.factsByNode.get(nodeId) || [])
+        .filter((fact) => state.filters.factTypes.has(fact.factType) && shouldShowInGraph(fact));
+      return {
+        nodes: dedupeNodes([propertyGraphNode(nodeId), ...incidentFacts.map((fact) => graphNodeFromSign(state.data.nodeMap.get(fact.subjectId)))]),
+        links: incidentFacts.map(graphLink)
+      };
+    }
+
+    function buildFocusGraph() {
+      const selected = currentNode();
+      if (!selected) {
+        return { nodes: [], links: [], syntheticLinks: [] };
+      }
+
+      if (selected.isSign) {
+        const factNodes = [];
+        const links = [];
+        (state.data.factsBySign.get(selected.id) || []).forEach((fact) => {
+          if (!state.filters.factTypes.has(fact.factType)) {
+            return;
+          }
+          if (!shouldShowInGraph(fact)) {
+            return;
+          }
+          factNodes.push(propertyGraphNode(fact.objectId));
+          links.push(graphLink(fact));
+        });
+        const limitedFactNodes = dedupeNodes(factNodes).slice(0, state.filters.factLimit);
+        const factIds = new Set(limitedFactNodes.map((node) => node.id));
+        const overlaySignNodes = [];
+        (state.relatedOverlay || []).forEach((overlayId) => {
+          if (overlayId === selected.id) return;
+          const ovSign = state.data.nodeMap.get(overlayId);
+          if (!ovSign) return;
+          overlaySignNodes.push(graphNodeFromSign(ovSign));
+          (state.data.factsBySign.get(overlayId) || []).forEach((fact) => {
+            if (state.filters.factTypes.has(fact.factType) &&
+                factIds.has(fact.objectId)) {
+              links.push(graphLink(fact));
+            }
+          });
+        });
+        return {
+          nodes: dedupeNodes([graphNodeFromSign(selected), ...limitedFactNodes, ...overlaySignNodes]),
+          links: links.filter((link) => factIds.has(link.target)),
+          syntheticLinks: []
+        };
+      }
+
+      const incidentFacts = state.data.factsByNode.get(selected.id) || [];
+      const filteredIncidentFacts = incidentFacts.filter((fact) => state.filters.factTypes.has(fact.factType));
+      const signNodes = dedupeNodes(filteredIncidentFacts.map((fact) => graphNodeFromSign(state.data.nodeMap.get(fact.subjectId)))).slice(0, state.filters.signLimit);
+      const signIds = new Set(signNodes.map((node) => node.id));
+      const links = filteredIncidentFacts.filter((fact) => signIds.has(fact.subjectId)).map(graphLink);
+      return {
+        nodes: [propertyGraphNode(selected.id), ...signNodes],
+        links,
+        syntheticLinks: []
+      };
+    }
+
+    function buildPathGraph() {
+      const pathSignNodes = dedupeNodes(state.pathNodes.map((nodeId) => graphNodeFromSign(state.data.nodeMap.get(nodeId))));
+      const nodes = [...pathSignNodes];
+      const links = [];
+      const syntheticLinks = [];
+      // Deduplicate bridge nodes across hops by feature key so the same feature
+      // isn't rendered twice when shared by multiple consecutive sign pairs.
+      const bridgeNodeIds = new Map(); // feature.key → bridgeId
+
+      for (let index = 0; index < state.pathNodes.length - 1; index += 1) {
+        const a = state.pathNodes[index];
+        const b = state.pathNodes[index + 1];
+        const shared = sharedFeatures(a, b, activeSimilarityTypes(), { useContinuous: state.pathUseContinuous }).slice(0, 3);
+        shared.forEach((feature) => {
+          let bridgeId = bridgeNodeIds.get(feature.key);
+          if (!bridgeId) {
+            bridgeId = `bridge:${feature.key}`;
+            bridgeNodeIds.set(feature.key, bridgeId);
+            nodes.push({
+              id: bridgeId,
+              label: feature.label,
+              isSign: false,
+              kind: feature.type,
+              factType: feature.type,
+              degree: 2,
+              synthetic: true,
+              bridge: true
+            });
+          }
+          links.push({
+            id: `bridge-link-${a}-${bridgeId}`,
+            source: a,
+            target: bridgeId,
+            factType: feature.type,
+            synthetic: false,
+            relation: feature.relation
+          });
+          links.push({
+            id: `bridge-link-${b}-${bridgeId}`,
+            source: b,
+            target: bridgeId,
+            factType: feature.type,
+            synthetic: false,
+            relation: feature.relation
+          });
+        });
+        syntheticLinks.push({
+          id: `path:${a}:${b}`,
+          source: a,
+          target: b,
+          factType: 'other',
+          synthetic: true,
+          relation: 'path'
+        });
+      }
+
+      return { nodes: dedupeNodes(nodes), links, syntheticLinks };
+    }
+
+    function graphNodeFromSign(sign) {
+      return {
+        id: sign.id,
+        label: sign.label,
+        isSign: true,
+        kind: 'sign',
+        factType: 'translation',
+        degree: sign.outgoingFacts,
+        outgoingFacts: sign.outgoingFacts,
+        types: sign.types
+      };
+    }
+
+    function propertyGraphNode(objectId) {
+      const entry = state.data.factNodeIndex.get(objectId);
+      // Sign-referenced objects (sign-to-sign relations) render as sign nodes.
+      if (entry?.isSign) {
+        const sign = state.data.nodeMap.get(objectId);
+        if (sign) return graphNodeFromSign(sign);
+      }
+      return {
+        id: objectId,
+        label: entry.label,
+        isSign: false,
+        kind: entry.kind || state.data.propertyNodeSourceType.get(objectId) || 'other',
+        factType: entry.factType || state.data.propertyNodeSourceType.get(objectId) || 'other',
+        degree: entry.degree || 0,
+        synthetic: entry.synthetic
+      };
+    }
+
+    // Returns true if a fact should appear as a node/edge in the graph visualization.
+    // Non-binary numeric facts are hidden from the graph (shown only in the Facts tab).
+    // Binary (0/1) facts: only value=1 (true) is shown. False (0) is never shown.
+    function shouldShowInGraph(fact) {
+      if (!fact.isNumeric) return true;
+      if (fact.numericValue === 0) return false;
+      // Phonological value=1 facts are binary by convention; buildSignFeatures moves them
+      // to categorical so they won't have a numericRanges entry — treat as binary-true.
+      if (fact.factType === 'phonological' && fact.numericValue === 1) return true;
+      // For all other types: only show if the range is confirmed binary [0,1] and value=1.
+      return fact.isBinaryRelation && fact.numericValue === 1;
+    }
+
+    function graphLink(fact) {
+      return {
+        id: fact.id,
+        source: fact.subjectId,
+        target: fact.objectId,
+        factType: fact.factType,
+        relation: fact.relation,
+        synthetic: false
+      };
+    }
+
+    function applyForceWeights() {
+      if (state.layout === 'grouped') return;
+      const linkForce = simulation.force('link');
+      if (linkForce) linkForce.strength((d) => {
+        if (d.synthetic) return 0.18;
+        const w = state.similarity[d.factType] !== undefined ? state.similarity[d.factType] : 1.0;
+        return w * 0.12;
+      });
+      simulation.alpha(Math.max(simulation.alpha(), 0.2)).restart();
+    }
+
+    function applyGroupingForces(width, height, nodes) {
+      simulation.force('xKind', null);
+      simulation.force('yKind', null);
+      const linkForce = simulation.force('link');
+      if (state.layout !== 'grouped') {
+        simulation.force('groupContain', null);
+        simulation.force('charge', d3.forceManyBody().strength(-120));
+        simulation.force('collide', d3.forceCollide().radius((d) => nodeRadius(d) + 7));
+        simulation.force('center', d3.forceCenter(width / 2, height / 2));
+        if (linkForce) linkForce.strength((d) => {
+          if (d.synthetic) return 0.18;
+          const w = state.similarity[d.factType] !== undefined ? state.similarity[d.factType] : 1.0;
+          return w * 0.12;
+        });
+        return;
+      }
+      // In grouped mode: all global forces off, custom containment handles everything
+      simulation.force('charge', null);
+      simulation.force('collide', null);
+      simulation.force('center', null);
+      if (linkForce) linkForce.strength(0);
+      simulation.force('groupContain', createGroupContainmentForce(width, height));
+    }
+
+    function getGroupAnchors(width, height) {
+      return {
+        sign:          { x: width * 0.24, y: height * 0.46 },
+        phonological:  { x: width * 0.62, y: height * 0.22 },
+        semantic:      { x: width * 0.74, y: height * 0.48 },
+        syntactic:     { x: width * 0.54, y: height * 0.72 },
+        systematicity: { x: width * 0.80, y: height * 0.76 },
+        cognitive:     { x: width * 0.90, y: height * 0.28 },
+        other:         { x: width * 0.52, y: height * 0.50 }
+      };
+    }
+
+    function createGroupContainmentForce(width, height) {
+      const anchors = getGroupAnchors(width, height);
+
+      // Supernodes are independent physics objects with their own x/y/vx/vy.
+      const supernodes = new Map();
+      Object.entries(anchors).forEach(([kind, pos]) => {
+        supernodes.set(kind, { kind, x: pos.x, y: pos.y, vx: 0, vy: 0, r: 60, members: [] });
+      });
+
+      let allNodes;
+
+      function force(/* alpha unused — all forces are alpha-independent */) {
+        if (!allNodes) return;
+        const pathMode = state.pathNodes.length > 0;
+
+        // 1. Assign members & recompute radii
+        supernodes.forEach((sn) => { sn.members = []; });
+        allNodes.forEach((node) => {
+          if (!Number.isFinite(node.x) || !Number.isFinite(node.y) || (node.bridge && !pathMode)) return;
+          const kind = node.isSign ? 'sign' : (node.kind || 'other');
+          const sn = supernodes.get(kind);
+          if (sn) sn.members.push(node);
+        });
+        supernodes.forEach((sn) => {
+          sn.r = sn.members.length ? Math.sqrt(sn.members.length) * 19 + 42 : 42;
+        });
+
+        const active = Array.from(supernodes.values()).filter((sn) => sn.members.length > 0);
+
+        // 2. Count visible inter-supernode connections
+        const connCounts = new Map(); // key = "kindA|kindB" (sorted)
+        if (state.currentGraph && state.currentGraph.links) {
+          state.currentGraph.links.forEach((link) => {
+            const src = link.source, tgt = link.target;
+            if (!src || !tgt) return;
+            const sk = src.isSign ? 'sign' : (src.kind || 'other');
+            const tk = tgt.isSign ? 'sign' : (tgt.kind || 'other');
+            if (sk === tk) return; // intra-supernode — skip
+            const key = [sk, tk].sort().join('|');
+            connCounts.set(key, (connCounts.get(key) || 0) + 1);
+          });
+        }
+
+        // 3. Supernode–supernode spring attraction (proportional to sqrt(connections))
+        for (let i = 0; i < active.length; i++) {
+          for (let j = i + 1; j < active.length; j++) {
+            const a = active[i], b = active[j];
+            const key = [a.kind, b.kind].sort().join('|');
+            const count = connCounts.get(key) || 0;
+            if (count === 0) continue;
+            const dx = b.x - a.x, dy = b.y - a.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const rest = a.r + b.r + (pathMode ? 78 : 20);
+            const stretch = dist - rest;
+            if (stretch <= 0) continue; // only attract, collision handles push
+            const k = (pathMode ? 0.00018 : 0.0008) * Math.sqrt(count);
+            const fx = (dx / dist) * stretch * k;
+            const fy = (dy / dist) * stretch * k;
+            a.vx += fx; a.vy += fy;
+            b.vx -= fx; b.vy -= fy;
+          }
+        }
+
+        // 4. Supernode–supernode hard collision (alpha-independent)
+        for (let i = 0; i < active.length; i++) {
+          for (let j = i + 1; j < active.length; j++) {
+            const a = active[i], b = active[j];
+            const dx = b.x - a.x, dy = b.y - a.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const minDist = a.r + b.r + (pathMode ? 44 : 12);
+            if (dist < minDist) {
+              const push = (minDist - dist) / dist * 0.55;
+              a.vx -= dx * push; a.vy -= dy * push;
+              b.vx += dx * push; b.vy += dy * push;
+            }
+          }
+        }
+
+        // 5. Centroid centering — keep the cloud of active supernodes near viewport center
+        let cx = 0, cy = 0;
+        active.forEach((sn) => { cx += sn.x; cy += sn.y; });
+        cx /= active.length; cy /= active.length;
+        const pullCenter = 0.012;
+        active.forEach((sn) => {
+          sn.vx += (width / 2 - cx) * pullCenter;
+          sn.vy += (height / 2 - cy) * pullCenter;
+        });
+
+        // 6. Integrate supernodes (damping + soft screen bounds)
+        supernodes.forEach((sn) => {
+          if (!sn.members.length) return;
+          sn.vx *= 0.68; sn.vy *= 0.68;
+          sn.x += sn.vx; sn.y += sn.vy;
+          const margin = sn.r + 12;
+          if (sn.x < margin)           { sn.x = margin;          sn.vx *= -0.3; }
+          if (sn.x > width  - margin)  { sn.x = width  - margin; sn.vx *= -0.3; }
+          if (sn.y < margin)           { sn.y = margin;          sn.vy *= -0.3; }
+          if (sn.y > height - margin)  { sn.y = height - margin; sn.vy *= -0.3; }
+        });
+
+        // 7. Intra-supernode Coulomb repulsion (only within the same group, no cross-group)
+        const K = 500;
+        for (let i = 0; i < allNodes.length; i++) {
+          const ni = allNodes[i];
+          if ((ni.bridge && !pathMode) || !Number.isFinite(ni.x)) continue;
+          const ki = ni.isSign ? 'sign' : (ni.kind || 'other');
+          for (let j = i + 1; j < allNodes.length; j++) {
+            const nj = allNodes[j];
+            if ((nj.bridge && !pathMode) || !Number.isFinite(nj.x)) continue;
+            const kj = nj.isSign ? 'sign' : (nj.kind || 'other');
+            if (ki !== kj) continue; // only within same supernode
+            const dx = ni.x - nj.x, dy = ni.y - nj.y;
+            const dist2 = dx * dx + dy * dy || 0.01;
+            const dist = Math.sqrt(dist2);
+            const f = K / dist2 / dist; // K / dist³ gives unit vector * K/dist²
+            ni.vx += dx * f; ni.vy += dy * f;
+            nj.vx -= dx * f; nj.vy -= dy * f;
+          }
+        }
+
+        // 8. Gentle pull toward supernode center (keeps nodes centered as SN moves; no alpha)
+        const inPull = 0.035;
+        allNodes.forEach((node) => {
+          if ((node.bridge && !pathMode) || !Number.isFinite(node.x)) return;
+          const kind = node.isSign ? 'sign' : (node.kind || 'other');
+          const sn = supernodes.get(kind);
+          if (!sn || !sn.members.length) return;
+          node.vx += (sn.x - node.x) * inPull;
+          node.vy += (sn.y - node.y) * inPull;
+        });
+
+        // 8b. Intra-supernode node–node collision
+        supernodes.forEach((sn) => {
+          const m = sn.members;
+          for (let i = 0; i < m.length; i++) {
+            for (let j = i + 1; j < m.length; j++) {
+              const ni = m[i], nj = m[j];
+              if (!Number.isFinite(ni.x) || !Number.isFinite(nj.x)) continue;
+              const dx = ni.x - nj.x, dy = ni.y - nj.y;
+              const dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
+              const minD = nodeRadius(ni) + nodeRadius(nj) + 4;
+              if (dist < minD) {
+                const push = (minD - dist) / dist * 0.5;
+                ni.vx += dx * push; ni.vy += dy * push;
+                nj.vx -= dx * push; nj.vy -= dy * push;
+              }
+            }
+          }
+        });
+
+        // 9. Hard clamp: keep nodes inside their supernode circle, cancel outward velocity
+        allNodes.forEach((node) => {
+          if (!Number.isFinite(node.x) || !Number.isFinite(node.y) || (node.bridge && !pathMode)) return;
+          const kind = node.isSign ? 'sign' : (node.kind || 'other');
+          const sn = supernodes.get(kind);
+          if (!sn || !sn.members.length) return;
+          const dx = node.x - sn.x, dy = node.y - sn.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const maxR = sn.r - nodeRadius(node) - 3;
+          if (dist > maxR && maxR > 0) {
+            node.x = sn.x + (dx / dist) * maxR;
+            node.y = sn.y + (dy / dist) * maxR;
+            const vr = node.vx * (dx / dist) + node.vy * (dy / dist);
+            if (vr > 0) { node.vx -= vr * (dx / dist); node.vy -= vr * (dy / dist); }
+          }
+        });
+
+        state.currentGroupCircles = supernodes;
+      }
+
+      force.initialize = function (_nodes) { allNodes = _nodes; };
+      return force;
+    }
+
+    function renderGuides(width, height, nodes) {
+      guideLayer.selectAll('*').remove();
+      if (state.layout !== 'grouped') {
+        return;
+      }
+      const activeKinds = new Set(nodes.map((node) => node.isSign ? 'sign' : node.kind));
+      const circleData = [
+        ['sign', COLORS.sign],
+        ['phonological', COLORS.phonological],
+        ['semantic', COLORS.semantic],
+        ['syntactic', COLORS.syntactic],
+        ['systematicity', COLORS.systematicity],
+        ['cognitive', COLORS.cognitive],
+        ['other', COLORS.other]
+      ].filter(([kind]) => activeKinds.has(kind));
+
+      guideLayer.selectAll('circle.guide-circle')
+        .data(circleData, (d) => d[0])
+        .enter()
+        .append('circle')
+        .attr('class', 'guide-circle')
+        .attr('cx', width / 2)
+        .attr('cy', height / 2)
+        .attr('r', 40)
+        .attr('fill', (d) => d[1])
+        .attr('fill-opacity', 0.05)
+        .attr('stroke', (d) => d[1])
+        .attr('stroke-opacity', 0.22)
+        .attr('stroke-width', 1.5)
+        .attr('stroke-dasharray', '6,4')
+        .style('pointer-events', 'none');
+
+      guideLayer.selectAll('text.guide-label')
+        .data(circleData, (d) => d[0])
+        .enter()
+        .append('text')
+        .attr('class', 'guide-label')
+        .attr('x', width / 2)
+        .attr('y', height / 2)
+        .attr('text-anchor', 'middle')
+        .text((d) => d[0] === 'sign' ? 'signs' : `${d[0]} facts`);
+    }
+
+    function renderGraph(graph) {
+      const activePathEdges = new Set(pathEdgeKeys(state.pathNodes));
+
+      const allLinks = [...graph.links, ...(graph.syntheticLinks || [])];
+      const linkJoin = linkLayer.selectAll('line').data(allLinks, (d) => d.id);
+      linkJoin.exit().remove();
+      linkJoin.enter().append('line').attr('stroke-linecap', 'round').merge(linkJoin);
+
+      const nodeJoin = nodeLayer.selectAll('circle').data(graph.nodes, (d) => d.id);
+      nodeJoin.exit().remove();
+      nodeJoin.enter()
+        .append('circle')
+        .style('cursor', 'pointer')
+        .on('mouseenter', (event, node) => {
+          state.hoveredNodeId = node.id;
+          showTooltip(event, tooltipHtml(node));
+          updateGraphStyles();
+        })
+        .on('mousemove', (event, node) => showTooltip(event, tooltipHtml(node)))
+        .on('mouseleave', () => {
+          state.hoveredNodeId = null;
+          hideTooltip();
+          updateGraphStyles();
+        })
+        .on('click', (event, node) => {
+          toggleNodeExplosion(node.id);
+          event.stopPropagation();
+        })
+        .call(d3.drag().on('start', dragStarted).on('drag', dragged).on('end', dragEnded))
+        .merge(nodeJoin)
+        .attr('r', (d) => nodeRadius(d));
+
+      const labelJoin = labelLayer.selectAll('text').data(graph.nodes, (d) => d.id);
+      labelJoin.exit().remove();
+      labelJoin.enter()
+        .append('text')
+        .attr('font-family', '"Helvetica Neue", Helvetica, Arial, sans-serif')
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'central')
+        .style('pointer-events', 'none')
+        .merge(labelJoin)
+        .text((d) => d.label);
+
+      svg.on('click', () => {
+        state.hoveredNodeId = null;
+        hideTooltip();
+        updateGraphStyles();
+      });
+
+      updateGraphStyles(activePathEdges);
+    }
+
+    function updateGraphStyles(activePathEdges = new Set(pathEdgeKeys(state.pathNodes))) {
+      const immediateIds = new Set(currentImmediateNodeIds());
+      const hoverIds = new Set(hoverImmediateNodeIds());
+
+      linkLayer.selectAll('line')
+        .attr('stroke', (d) => {
+          if (d.synthetic) return css('--signal');
+          if (d.relation === 'response') return '#111111';
+          return factTypeColor(d.factType);
+        })
+        .attr('stroke-opacity', (d) => {
+          const sourceId = d.source.id || d.source;
+          const targetId = d.target.id || d.target;
+          if (activePathEdges.has(edgeKey(sourceId, targetId))) {
+            return 0.96;
+          }
+          if (state.hoveredNodeId) {
+            return hoverIds.has(sourceId) && hoverIds.has(targetId) ? 0.82 : 0.08;
+          }
+          if (immediateIds.size) {
+            return immediateIds.has(sourceId) && immediateIds.has(targetId) ? 0.74 : 0.15;
+          }
+          return 0.34;
+        })
+        .attr('stroke-width', (d) => {
+          const sourceId = d.source.id || d.source;
+          const targetId = d.target.id || d.target;
+          if (activePathEdges.has(edgeKey(sourceId, targetId))) {
+            return 2.8;
+          }
+          return d.synthetic ? 2.2 : d.relation === 'response' ? 1.4 : 1.3;
+        })
+        .attr('stroke-dasharray', null);
+
+      nodeLayer.selectAll('circle')
+        .attr('fill', (d) => nodeFill(d))
+        .attr('stroke', (d) => nodeStroke(d))
+        .attr('stroke-width', (d) => nodeStrokeWidth(d))
+        .attr('opacity', (d) => {
+          if (state.hoveredNodeId) {
+            return hoverIds.has(d.id) ? 1 : 0.18;
+          }
+          if (immediateIds.size) {
+            return immediateIds.has(d.id) ? 1 : 0.26;
+          }
+          return 1;
+        });
+
+      labelLayer.selectAll('text')
+        .attr('font-size', (d) => labelSize(d))
+        .attr('font-weight', (d) => (state.hoveredNodeId && hoverIds.has(d.id)) ? 700 : 300)
+        .attr('fill', (d) => d.id === state.selectedNodeId ? '#111111' : d.id === state.hoveredNodeId ? css('--signal') : css('--ink'))
+        .style('display', (d) => (state.hoveredNodeId && hoverIds.has(d.id)) ? null : 'none')
+        .style('opacity', (d) => {
+          if (state.hoveredNodeId) {
+            return hoverIds.has(d.id) ? 1 : 0.2;
+          }
+          return 0;
+        });
+    }
+
+    function ticked() {
+      linkLayer.selectAll('line')
+        .attr('x1', (d) => d.source.x)
+        .attr('y1', (d) => d.source.y)
+        .attr('x2', (d) => d.target.x)
+        .attr('y2', (d) => d.target.y);
+
+      nodeLayer.selectAll('circle')
+        .attr('cx', (d) => d.x)
+        .attr('cy', (d) => d.y);
+
+      labelLayer.selectAll('text')
+        .attr('x', (d) => d.x)
+        .attr('y', (d) => d.y - nodeRadius(d) - 10);
+
+      if (state.layout === 'grouped' && state.currentGroupCircles) {
+        guideLayer.selectAll('circle.guide-circle').each(function (d) {
+          const sn = state.currentGroupCircles.get(d[0]);
+          if (!sn || !sn.members.length) return;
+          d3.select(this).attr('cx', sn.x).attr('cy', sn.y).attr('r', sn.r);
+        });
+        guideLayer.selectAll('text.guide-label').each(function (d) {
+          const sn = state.currentGroupCircles.get(d[0]);
+          if (!sn || !sn.members.length) return;
+          d3.select(this).attr('x', sn.x).attr('y', sn.y - sn.r - 10);
+        });
+      }
+    }
+
+    function currentImmediateNodeIds() {
+      if (!state.selectedNodeId) {
+        return [];
+      }
+      return [state.selectedNodeId, ...immediateFactsForNode(state.selectedNodeId)];
+    }
+
+    function hoverImmediateNodeIds() {
+      if (!state.hoveredNodeId) {
+        return [];
+      }
+      return [state.hoveredNodeId, ...immediateFactsForNode(state.hoveredNodeId)];
+    }
+
+    function immediateFactsForNode(nodeId) {
+      const node = allGraphNodes().get(nodeId);
+      if (!node) {
+        return [];
+      }
+      if (node.isSign) {
+        return (state.data.factsBySign.get(nodeId) || [])
+          .filter((fact) => state.filters.factTypes.has(fact.factType))
+          .filter((fact) => shouldShowInGraph(fact))
+          .map((fact) => fact.objectId);
+      }
+      return (state.data.factsByNode.get(nodeId) || []).map((fact) => fact.subjectId);
+    }
+
+    function setSelectedNode(nodeId, options = {}) {
+      if (state.closeSelectionTimer) {
+        clearTimeout(state.closeSelectionTimer);
+        state.closeSelectionTimer = null;
+      }
+      if (nodeId !== state.selectedNodeId) {
+        state.selectedFactType = null;
+      }
+      state.selectedNodeId = nodeId;
+      if (options.clearPath !== false) {
+        state.pathNodes = [];
+      }
+      if (options.mode) {
+        state.mode = options.mode;
+      }
+      updateControls();
+      refreshGraph({ refit: Boolean(options.refit) });
+    }
+
+    function toggleNodeExplosion(nodeId) {
+      if (state.closeSelectionTimer) {
+        clearTimeout(state.closeSelectionTimer);
+        state.closeSelectionTimer = null;
+      }
+      const wasExpanded = state.expandedNodeIds.has(nodeId);
+      state.selectedNodeId = nodeId;
+      state.selectedFactType = null;
+      if (wasExpanded) {
+        state.expandedNodeIds.delete(nodeId);
+      } else {
+        state.expandedNodeIds.add(nodeId);
+      }
+      if (!state.pathNodes.length) {
+        state.mode = 'breadth';
+      }
+      updateControls();
+      refreshGraph({ refit: true, preservePositions: true });
+    }
+
+    function renderWeightSliders(container, weights, onChange) {
+      if (!container) return;
+      container.innerHTML = SIMILARITY_TYPES.map((type) => {
+        const val = Math.round((weights[type] || 0) * 10);
+        const color = COLORS[type] || '#888';
+        return `
+          <div class="slider-row">
+            <span class="slider-label" style="color:${color}">${type}</span>
+            <input type="range" min="0" max="10" step="1" value="${val}"
+                   class="similarity-slider" data-sim-type="${escapeHtml(type)}"
+                   style="accent-color:${color}">
+            <span class="slider-value">${val}</span>
+          </div>
+        `;
+      }).join('');
+      container.querySelectorAll('[data-sim-type]').forEach((input) => {
+        input.addEventListener('input', () => {
+          weights[input.dataset.simType] = Number(input.value) / 10;
+          input.nextElementSibling.textContent = input.value;
+          onChange();
+        });
+      });
+    }
+
+
+    function renderRelated() {
+      const sign = selectedSign();
+      if (!sign) {
+        els.nodeRelatedPane.innerHTML = '';
+        updateRelatedOverlay();
+        return;
+      }
+      const related = getSimilarSignsWeighted(sign.id, state.similarity, 18, { useContinuous: state.pathUseContinuous });
+      els.nodeRelatedPane.innerHTML = related.length ? `
+        <div class="related-list-pane">
+          ${related.map((entry) => `
+            <button class="list-row" type="button" data-related-sign="${escapeHtml(entry.node.id)}">
+              <span class="row-title">${escapeHtml(entry.node.label)}</span>
+              <span class="row-meta">${escapeHtml(entry.explanation.join(' · '))}</span>
+            </button>
+          `).join('')}
+        </div>
+      ` : '<div class="micro" style="padding:8px 0;">No related signs.</div>';
+      els.nodeRelatedPane.querySelectorAll('[data-related-sign]').forEach((button) => {
+        button.addEventListener('click', () => setSelectedNode(button.dataset.relatedSign, { refit: true, clearPath: false }));
+      });
+      updateRelatedOverlay();
+    }
+
+    function getSimilarSigns(signId, types, limit) {
+      if (!signId || !types.length) {
+        return [];
+      }
+      const cacheKey = `${signId}|${types.slice().sort().join('+')}`;
+      if (state.data.similarityCache.has(cacheKey)) {
+        return state.data.similarityCache.get(cacheKey).slice(0, limit);
+      }
+
+      const candidateIds = similarityCandidates(signId, types);
+      const results = [];
+      candidateIds.forEach((otherId) => {
+        if (otherId === signId || BLOCKED_PATH_LABELS.has(normalize(state.data.nodeMap.get(otherId).label))) {
+          return;
+        }
+        const score = similarityScore(signId, otherId, types);
+        if (score.score > 0) {
+          results.push({
+            node: state.data.nodeMap.get(otherId),
+            score: score.score,
+            explanation: score.explanation
+          });
+        }
+      });
+
+      results.sort((a, b) => d3.descending(a.score, b.score) || a.node.label.localeCompare(b.node.label));
+      state.data.similarityCache.set(cacheKey, results);
+      return results.slice(0, limit);
+    }
+
+    function getSimilarSignsWeighted(signId, weights, limit, options = {}) {
+      const activeTypes = activeSimilarityTypes(weights);
+      if (!signId || !activeTypes.length) return [];
+      const candidateIds = similarityCandidates(signId, activeTypes, options);
+      const results = [];
+      candidateIds.forEach((otherId) => {
+        if (otherId === signId || BLOCKED_PATH_LABELS.has(normalize(state.data.nodeMap.get(otherId)?.label || ''))) return;
+        const score = similarityScoreWeighted(signId, otherId, weights, options);
+        if (score.score > 0) results.push({ node: state.data.nodeMap.get(otherId), score: score.score, explanation: score.explanation });
+      });
+      results.sort((a, b) => d3.descending(a.score, b.score) || a.node.label.localeCompare(b.node.label));
+      return results.slice(0, limit);
+    }
+
+    function similarityScoreWeighted(aId, bId, weights, options = {}) {
+      const featuresA = state.data.signFeatureCache.get(aId);
+      const featuresB = state.data.signFeatureCache.get(bId);
+      if (!featuresA || !featuresB) return { score: 0, explanation: [] };
+      const activeTypes = activeSimilarityTypes(weights);
+      const useContinuous = options.useContinuous !== false;
+      if (!activeTypes.length) {
+        return { score: 0, explanation: [] };
+      }
+
+      let weightedOverlap = 0;
+      let weightTotal = 0;
+      const allExplanations = [];
+
+      activeTypes.forEach((type) => {
+        const slider = Math.max(0, Math.min(1, weights[type] ?? 0));
+        const catA = featuresA.categorical.get(type) || new Set();
+        const catB = featuresB.categorical.get(type) || new Set();
+        const numA = featuresA.numeric.get(type) || new Map();
+        const numB = featuresB.numeric.get(type) || new Map();
+        if (!catA.size && !catB.size && !numA.size && !numB.size) return;
+
+        let sharedWeight = 0;
+        let unionWeight = 0;
+        const categoricalUnion = new Set([...catA, ...catB]);
+
+        categoricalUnion.forEach((featureKey) => {
+          const infoWeight = featureInformationWeight(featureKey);
+          if (infoWeight <= 0) {
+            return;
+          }
+          unionWeight += infoWeight;
+          if (catA.has(featureKey) && catB.has(featureKey)) {
+            sharedWeight += infoWeight;
+            const [rel, val] = featureKey.split('::');
+            allExplanations.push({ score: infoWeight, text: `${rel} = ${val}` });
+          }
+        });
+
+        const numericKeys = new Set([...numA.keys(), ...numB.keys()]);
+        numericKeys.forEach((relation) => {
+          const range = state.data.numericRanges.get(`${type}|${relation}`);
+          if (!range) return;
+          if (isBinaryNumericRange(range)) {
+            const binaryKey = `${relation}::1`;
+            const infoWeight = featureInformationWeight(binaryKey);
+            if (infoWeight <= 0) {
+              return;
+            }
+            const presentA = numA.get(relation) === 1;
+            const presentB = numB.get(relation) === 1;
+            if (!presentA && !presentB) {
+              return;
+            }
+            unionWeight += infoWeight;
+            if (presentA && presentB) {
+              sharedWeight += infoWeight;
+              allExplanations.push({ score: infoWeight, text: relation });
+            }
+            return;
+          }
+          if (!useContinuous) return;
+          const infoWeight = numericRelationInformationWeight(type, relation);
+          if (infoWeight <= 0) {
+            return;
+          }
+          unionWeight += infoWeight;
+          if (!numA.has(relation) || !numB.has(relation)) {
+            return;
+          }
+          const valueA = numA.get(relation);
+          const valueB = numB.get(relation);
+          const w = range.max - range.min;
+          const sim = w === 0 ? 1 : Math.max(0, 1 - Math.abs(valueA - valueB) / w);
+          if (sim > 0) {
+            sharedWeight += infoWeight * sim;
+            allExplanations.push({ score: infoWeight * sim, text: `${relation} ≈ ${trimNumber(valueA)}/${trimNumber(valueB)}` });
+          }
+        });
+
+        if (unionWeight <= 0) return;
+        const overlap = Math.max(0, Math.min(1, sharedWeight / unionWeight));
+        const inverseSliderWeight = 1 / slider;
+        weightedOverlap += overlap * inverseSliderWeight;
+        weightTotal += inverseSliderWeight;
+      });
+
+      const explanation = allExplanations
+        .sort((a, b) => d3.descending(a.score, b.score) || a.text.localeCompare(b.text))
+        .slice(0, 3)
+        .map((e) => e.text);
+      return {
+        score: weightTotal ? weightedOverlap / weightTotal : 0,
+        explanation
+      };
+    }
+
+    function updateRelatedOverlayAndRender() {
+      updateRelatedOverlay();
+      renderPathPanel();
+    }
+
+    function updateRelatedOverlay() {
+      const sign = selectedSign();
+      if (!sign || state.nodeTab !== 'related') {
+        if (state.relatedOverlay.length > 0) {
+          state.relatedOverlay = [];
+          refreshGraph({ preservePositions: true, softRestart: true });
+        }
+        return;
+      }
+      const topRelated = getSimilarSignsWeighted(sign.id, state.similarity, 8);
+      const newOverlay = topRelated.map((e) => e.node.id);
+      const changed = newOverlay.join(',') !== (state.relatedOverlay || []).join(',');
+      state.relatedOverlay = newOverlay;
+      if (changed) {
+        refreshGraph({ preservePositions: true, softRestart: true });
+      }
+    }
+
+    function similarityCandidates(signId, types, options = {}) {
+      const features = state.data.signFeatureCache.get(signId);
+      const useContinuous = options.useContinuous !== false;
+      const candidates = new Set();
+
+      types.forEach((type) => {
+        const categorical = features.categorical.get(type) || new Set();
+        const numerical = features.numeric.get(type) || new Map();
+        categorical.forEach((featureKey) => {
+          (state.data.categoricalIndex.get(type)?.get(featureKey) || []).forEach((candidateId) => candidates.add(candidateId));
+        });
+        numerical.forEach((_, relationKey) => {
+          if (!useContinuous && !isBinaryNumericRange(state.data.numericRanges.get(`${type}|${relationKey}`))) {
+            return;
+          }
+          (state.data.numericRelationIndex.get(type)?.get(relationKey) || []).forEach((candidateId) => candidates.add(candidateId));
+        });
+      });
+
+      candidates.delete(signId);
+
+      if (candidates.size < 80) {
+        state.data.topDegreeSigns.slice(0, 160).forEach((node) => candidates.add(node.id));
+      }
+
+      return Array.from(candidates)
+        .sort((a, b) => d3.descending(state.data.nodeMap.get(a)?.outgoingFacts || 0, state.data.nodeMap.get(b)?.outgoingFacts || 0))
+        .slice(0, 900);
+    }
+
+    function similarityScore(aId, bId, types) {
+      const featuresA = state.data.signFeatureCache.get(aId);
+      const featuresB = state.data.signFeatureCache.get(bId);
+      let categoricalScore = 0;
+      let numericScore = 0;
+      const explanations = [];
+
+      types.forEach((type) => {
+        const catA = featuresA.categorical.get(type) || new Set();
+        const catB = featuresB.categorical.get(type) || new Set();
+        catA.forEach((featureKey) => {
+          if (catB.has(featureKey)) {
+            const rarity = state.data.featureFrequency.get(featureKey) || 1;
+            const weight = 1 / Math.sqrt(rarity);
+            categoricalScore += weight * 2.4;
+            explanations.push({ score: weight * 2.4, text: featureKey.replace('::', ' = '), type });
+          }
+        });
+
+        const numA = featuresA.numeric.get(type) || new Map();
+        const numB = featuresB.numeric.get(type) || new Map();
+        numA.forEach((valueA, relation) => {
+          if (!numB.has(relation)) {
+            return;
+          }
+          const valueB = numB.get(relation);
+          const range = state.data.numericRanges.get(`${type}|${relation}`);
+          if (!range) {
+            return;
+          }
+          const width = range.max - range.min;
+          if (width === 0) {
+            numericScore += 1.2;
+            explanations.push({ score: 1.2, text: `${relation} ≈ ${valueA}`, type });
+            return;
+          }
+          const sim = Math.max(0, 1 - Math.abs(valueA - valueB) / width);
+          if (sim > 0.75) {
+            const weight = sim * 1.4;
+            numericScore += weight;
+            explanations.push({ score: weight, text: `${relation} ≈ ${trimNumber(valueA)}/${trimNumber(valueB)}`, type });
+          }
+        });
+      });
+
+      const degreePenalty = 1 + Math.abs((state.data.nodeMap.get(aId).outgoingFacts || 0) - (state.data.nodeMap.get(bId).outgoingFacts || 0)) / 120;
+      const total = (categoricalScore + numericScore) / degreePenalty;
+      const explanation = explanations
+        .sort((a, b) => d3.descending(a.score, b.score))
+        .slice(0, 3)
+        .map((entry) => entry.text);
+
+      return { score: total, explanation };
+    }
+
+    function sharedFeatures(aId, bId, types, options = {}) {
+      const featuresA = state.data.signFeatureCache.get(aId);
+      const featuresB = state.data.signFeatureCache.get(bId);
+      const useContinuous = options.useContinuous !== false;
+      const shared = [];
+
+      types.forEach((type) => {
+        const catA = featuresA.categorical.get(type) || new Set();
+        const catB = featuresB.categorical.get(type) || new Set();
+        catA.forEach((featureKey) => {
+          if (!catB.has(featureKey)) {
+            return;
+          }
+          const score = featureInformationWeight(featureKey);
+          const [relation, value] = featureKey.split('::');
+          shared.push({
+            key: featureKey,
+            label: `${relation}: ${value}`,
+            relation,
+            type,
+            score
+          });
+        });
+
+        // Only include binary numeric features (value=1 means "true" for a 0/1 relation).
+        const numA = featuresA.numeric.get(type) || new Map();
+        const numB = featuresB.numeric.get(type) || new Map();
+        numA.forEach((valueA, relation) => {
+          if (!numB.has(relation)) return;
+          const range = state.data.numericRanges.get(`${type}|${relation}`);
+          const isBinary = isBinaryNumericRange(range);
+          if (!isBinary) return;
+          const valueB = numB.get(relation);
+          if (valueA === 1 && valueB === 1) {
+            shared.push({
+              key: `${relation}:bin`,
+              label: relation,
+              relation,
+              type,
+              score: featureInformationWeight(`${relation}::1`)
+            });
+          }
+        });
+
+        if (!useContinuous) {
+          return;
+        }
+
+        numA.forEach((valueA, relation) => {
+          if (!numB.has(relation)) return;
+          const range = state.data.numericRanges.get(`${type}|${relation}`);
+          if (!range || isBinaryNumericRange(range)) return;
+          const valueB = numB.get(relation);
+          const width = range.max - range.min;
+          const sim = width === 0 ? 1 : Math.max(0, 1 - Math.abs(valueA - valueB) / width);
+          const infoWeight = numericRelationInformationWeight(type, relation);
+          const score = sim * infoWeight;
+          if (score > 0) {
+            shared.push({
+              key: `${type}:${relation}:num`,
+              label: `${relation} ≈ ${trimNumber(valueA)}/${trimNumber(valueB)}`,
+              relation,
+              type,
+              score
+            });
+          }
+        });
+      });
+
+      return shared.sort((a, b) => d3.descending(a.score, b.score));
+    }
+
+    function renderPathStops() {
+      els.pathStops.innerHTML = state.pathQueries.map((query, index) => {
+        const isStart = index === 0;
+        const isEnd = index === state.pathQueries.length - 1;
+        return `
+          <div>
+            ${index ? `
+              <div class="path-between">
+                <div class="path-between-line"></div>
+                <button class="insert-button" type="button" data-insert-waypoint-after="${index - 1}">+</button>
+                <div class="path-between-line"></div>
+              </div>
+            ` : ''}
+            <div class="path-stop">
+              <label>${isStart ? 'Start' : isEnd ? 'End' : 'Waypoint'}</label>
+              <div class="path-stop-row">
+                <input
+                  type="search"
+                  autocomplete="off"
+                  placeholder="${isStart ? 'start' : isEnd ? 'end' : 'waypoint'}"
+                  data-path-index="${index}"
+                  value="${escapeHtml(query)}">
+                ${!isStart && !isEnd ? `<button class="remove-button" type="button" data-remove-path-stop="${index}">×</button>` : '<span></span>'}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderPathPanel() {
+      const activeIndex = Math.max(0, Math.min(state.pathSuggestIndex, state.pathQueries.length - 1));
+      const activeQuery = state.pathQueries[activeIndex].trim();
+      const activeMatches = activeQuery
+        ? findSignMatches(activeQuery, 12).filter((node) => !BLOCKED_PATH_LABELS.has(normalize(node.label)))
+        : [];
+      els.pathMeta.textContent = state.pathNodes.length ? `${state.pathNodes.length - 1} hops` : '';
+      if (!activeQuery) {
+        els.pathList.innerHTML = '';
+        return;
+      }
+      if (!activeMatches.length) {
+        els.pathList.innerHTML = '<div class="micro" style="padding:12px;">No matching signs.</div>';
+        return;
+      }
+      els.pathList.innerHTML = activeMatches.map((node) => `
+        <button class="list-row" type="button" data-path-pick-index="${activeIndex}" data-path-pick-id="${escapeHtml(node.id)}">
+          <span class="row-title">${escapeHtml(node.label)}</span>
+          <span class="row-meta">${escapeHtml(node.id)}</span>
+        </button>
+      `).join('');
+      els.pathList.querySelectorAll('[data-path-pick-id]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const node = state.data.nodeMap.get(button.dataset.pathPickId);
+          if (!node) {
+            return;
+          }
+          state.pathQueries[Number(button.dataset.pathPickIndex)] = node.label;
+          renderPathStops();
+          renderPathPanel();
+        });
+      });
+    }
+
+    function findPath() {
+      const start = resolvePathSignQuery(state.pathQueries[0]) || selectedSign() || (state.pathStartId ? state.data.nodeMap.get(state.pathStartId) : null);
+      if (!start) {
+        setStatus('Enter a valid start sign.', true);
+        return;
+      }
+      state.pathStartId = start.id;
+      state.pathQueries[0] = start.label;
+
+      const targetIndex = state.pathQueries.length - 1;
+      const target = resolvePathSignQuery(state.pathQueries[targetIndex]);
+      const waypointEntries = state.pathQueries
+        .slice(1, -1)
+        .map((query) => ({ query, sign: resolvePathSignQuery(query) }));
+      if (waypointEntries.some((entry) => entry.query.trim() && !entry.sign)) {
+        setStatus('One or more waypoints did not match a sign.', true);
+        return;
+      }
+
+      if (!target || BLOCKED_PATH_LABELS.has(normalize(target.label))) {
+        setStatus('No valid end sign matched the query.', true);
+        return;
+      }
+      state.pathQueries[targetIndex] = target.label;
+
+      const stops = [start, ...waypointEntries.filter((entry) => entry.query.trim()).map((entry) => entry.sign), target];
+      const segments = [];
+      for (let index = 0; index < stops.length - 1; index += 1) {
+        const segment = informativePath(stops[index].id, stops[index + 1].id, state.similarity);
+        if (!segment.length) {
+          state.pathNodes = [];
+          renderPathPanel();
+          refreshGraph({ refit: true });
+          setStatus(`No informative path found from ${stops[index].label} to ${stops[index + 1].label}.`, true);
+          return;
+        }
+        segments.push(segment);
+      }
+      const path = segments.reduce((acc, segment, index) => acc.concat(index ? segment.slice(1) : segment), []);
+      if (!path.length) {
+        state.pathNodes = [];
+        renderPathPanel();
+        refreshGraph({ refit: true });
+        setStatus(`No informative path found from ${start.label} to ${target.label}.`, true);
+        return;
+      }
+
+      state.pathNodes = path;
+      state.mode = 'focus';
+      renderPathStops();
+      updateControls();
+      refreshGraph({ refit: true });
+      setStatus(`Path length ${path.length - 1} from ${start.label} to ${target.label}.`);
+    }
+
+    function informativePath(startId, targetId, types) {
+      const activeWeights = state.similarity;
+      const pathOptions = { useContinuous: state.pathUseContinuous };
+      if (!activeSimilarityTypes(activeWeights).length) {
+        return [];
+      }
+      if (BLOCKED_PATH_LABELS.has(normalize(state.data.nodeMap.get(targetId)?.label))) {
+        return [];
+      }
+      if (startId === targetId) {
+        return [startId];
+      }
+
+      const distances = new Map([[startId, 0]]);
+      const previous = new Map([[startId, null]]);
+      const frontier = [{ id: startId, cost: 0 }];
+      const visited = new Set();
+      let expansions = 0;
+
+      while (frontier.length) {
+        frontier.sort((a, b) => a.cost - b.cost);
+        const current = frontier.shift();
+        if (visited.has(current.id)) {
+          continue;
+        }
+        visited.add(current.id);
+        expansions += 1;
+        if (expansions > 280) {
+          break;
+        }
+        if (current.id === targetId) {
+          break;
+        }
+
+        const neighbors = getSimilarSignsWeighted(current.id, activeWeights, 40, pathOptions);
+        const targetScore = similarityScoreWeighted(current.id, targetId, activeWeights, pathOptions);
+        if (targetScore.score > 0 && !neighbors.some((entry) => entry.node.id === targetId)) {
+          neighbors.unshift({
+            node: state.data.nodeMap.get(targetId),
+            score: targetScore.score,
+            explanation: targetScore.explanation
+          });
+        }
+        neighbors.forEach((entry) => {
+          const neighborId = entry.node.id;
+          if (BLOCKED_PATH_LABELS.has(normalize(entry.node.label))) {
+            return;
+          }
+          const cost = 1 - Math.max(0, Math.min(1, entry.score));
+          const nextCost = current.cost + cost;
+          if (!distances.has(neighborId) || nextCost < distances.get(neighborId)) {
+            distances.set(neighborId, nextCost);
+            previous.set(neighborId, current.id);
+            frontier.push({ id: neighborId, cost: nextCost });
+          }
+        });
+      }
+
+      if (!previous.has(targetId)) {
+        const direct = similarityScoreWeighted(startId, targetId, activeWeights);
+        return direct.score > 0 ? [startId, targetId] : [];
+      }
+
+      const path = [targetId];
+      let cursor = previous.get(targetId);
+      while (cursor !== null) {
+        path.push(cursor);
+        cursor = previous.get(cursor);
+      }
+      return path.reverse();
+    }
+
+    function clearPath(shouldRefresh) {
+      state.pathNodes = [];
+      state.pathStartId = null;
+      state.pathQueries = ['', ''];
+      state.pathSuggestIndex = 0;
+      renderPathStops();
+      renderPathPanel();
+      if (shouldRefresh) {
+        refreshGraph({ refit: true });
+      }
+    }
+
+    function renderFactsTab() {
+      const node = currentNode();
+      renderCurrentFacts(node);
+      renderDisplayedGraphInfo();
+      renderEntireGraphInfo();
+    }
+
+    function renderCurrentFacts(node) {
+      if (!node) {
+        els.currentNodeMeta.textContent = '0';
+        els.currentFactsTable.innerHTML = '<div class="micro" style="padding:12px;">Select a node.</div>';
+        return;
+      }
+
+      const facts = node.isSign
+        ? (state.data.factsBySign.get(node.id) || []).filter((fact) => state.filters.factTypes.has(fact.factType)).slice(0, 200)
+        : (state.data.factsByNode.get(node.id) || []).slice(0, 200);
+
+      els.currentNodeMeta.textContent = `${facts.length}`;
+      if (!facts.length) {
+        els.currentFactsTable.innerHTML = '<div class="micro" style="padding:12px;">No facts.</div>';
+        return;
+      }
+
+      els.currentFactsTable.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>${node.isSign ? 'Relation' : 'Sign'}</th>
+              <th>${node.isSign ? 'Value' : 'Relation'}</th>
+              <th>Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${facts.map((fact) => `
+              <tr>
+                <td>${escapeHtml(node.isSign ? fact.relation : state.data.nodeMap.get(fact.subjectId)?.label || fact.subjectId)}</td>
+                <td>${escapeHtml(node.isSign ? factDisplayValue(fact) : fact.relation)}</td>
+                <td>${escapeHtml(fact.factType)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderDisplayedGraphInfo() {
+      const graph = state.currentGraph;
+      const signCount = graph.nodes.filter((node) => node.isSign).length;
+      const propertyCount = graph.nodes.filter((node) => !node.isSign).length;
+      els.displayedGraphMeta.textContent = `${graph.nodes.length} nodes`;
+      renderBarBlock(els.displayedGraphInfo, [
+        { label: 'sign nodes', value: signCount, color: COLORS.sign },
+        { label: 'property nodes', value: propertyCount, color: COLORS.other },
+        { label: 'fact links', value: graph.links.length, color: COLORS.semantic },
+        { label: 'path links', value: (graph.syntheticLinks || []).length, color: css('--signal') }
+      ]);
+    }
+
+    function renderEntireGraphInfo() {
+      els.entireGraphMeta.textContent = `${formatNumber(state.data.graphStats.facts)} facts`;
+      renderBarBlock(els.entireGraphInfo, [
+        { label: 'sign nodes', value: state.data.graphStats.signs, color: COLORS.sign },
+        { label: 'property nodes', value: state.data.graphStats.properties, color: COLORS.other },
+        { label: 'relations', value: state.data.graphStats.relations, color: COLORS.systematicity },
+        { label: 'facts', value: state.data.graphStats.facts, color: COLORS.semantic }
+      ]);
+    }
+
+    function renderBarBlock(container, items) {
+      const max = d3.max(items, (item) => item.value) || 1;
+      container.innerHTML = `
+        <div class="bar-list">
+          ${items.map((item) => `
+            <div class="bar-row">
+              <div class="bar-meta">
+                <span>${escapeHtml(item.label)}</span>
+                <span>${formatNumber(item.value)}</span>
+              </div>
+              <div class="track"><div class="fill" style="width:${Math.max(4, item.value / max * 100)}%; background:${item.color};"></div></div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function factValueHtml(fact) {
+      const value = escapeHtml(factDisplayValue(fact));
+      if (!fact.isNumeric || fact.isBinaryRelation) {
+        return `<span class="fact-number">${value}</span>`;
+      }
+      return `<span class="fact-number">${value}</span>${numericSparkSvg(fact)}`;
+    }
+
+    function numericSparkSvg(fact) {
+      const hist = state.data.numericHistograms.get(`${fact.factType}|${fact.relation}`);
+      if (!hist) {
+        return '';
+      }
+      const markerRank = hist.markerForValue(fact.numericValue);
+      const markerX = hist.binCount <= 1
+        ? 17
+        : ((markerRank + 0.5) / hist.binCount) * 34;
+      return `
+        <svg class="numeric-spark" viewBox="0 0 34 11" aria-hidden="true" focusable="false">
+          ${hist.bars.map((bar, index) => `
+            <rect x="${index * hist.barWidth}" y="${11 - bar.height}" width="${hist.barWidth}" height="${bar.height}" fill="rgba(17,17,17,0.18)"></rect>
+          `).join('')}
+          <rect x="${Math.max(0, markerX - 0.65)}" y="0" width="1.3" height="11" fill="#b91515"></rect>
+        </svg>
+      `;
+    }
+
+    function factSearchScore(fact, { subjectQuery, relationQuery, objectQuery }) {
+      const subjectText = `${state.data.nodeMap.get(fact.subjectId)?.label || ''} ${fact.subjectId}`;
+      const objectText = `${fact.objectLabel} ${fact.rawValue} ${fact.objectId}`;
+      const scores = [
+        subjectQuery ? textMatchScore(subjectText, subjectQuery) : null,
+        relationQuery ? textMatchScore(fact.relation, relationQuery) : null,
+        objectQuery ? textMatchScore(objectText, objectQuery) : null
+      ].filter((value) => value !== null);
+      if (!scores.length) {
+        return 0;
+      }
+      return scores.every((score) => score > 0) ? d3.sum(scores) : 0;
+    }
+
+    function factSearchScoreMulti(fact, clauses) {
+      let best = 0;
+      clauses.forEach((clause) => {
+        best = Math.max(best, factSearchScore(fact, clause));
+      });
+      return best;
+    }
+
+    function textMatchScore(text, query) {
+      const haystack = normalize(text);
+      const needle = normalize(query);
+      if (!needle) {
+        return 0;
+      }
+      if (haystack === needle) {
+        return 14;
+      }
+      if (haystack.startsWith(needle)) {
+        return 9;
+      }
+      return haystack.includes(needle) ? 5 : 0;
+    }
+
+    function balancedPropertySelection(entries, limit) {
+      const buckets = new Map();
+      entries.forEach((entry) => {
+        const kind = entry.node.kind || entry.node.factType || 'other';
+        if (!buckets.has(kind)) {
+          buckets.set(kind, []);
+        }
+        buckets.get(kind).push(entry);
+      });
+      buckets.forEach((bucket) => {
+        bucket.sort((a, b) => d3.descending(a.count, b.count) || a.node.label.localeCompare(b.node.label));
+      });
+      const orderedKinds = ['translation', 'phonological', 'semantic', 'syntactic', 'systematicity', 'cognitive', 'other'];
+      const selected = [];
+      let madeProgress = true;
+      while (selected.length < limit && madeProgress) {
+        madeProgress = false;
+        orderedKinds.forEach((kind) => {
+          const bucket = buckets.get(kind === 'translation' ? 'sign' : kind);
+          if (bucket && bucket.length && selected.length < limit) {
+            selected.push(bucket.shift().node);
+            madeProgress = true;
+          }
+        });
+      }
+      return selected;
+    }
+
+    function buildNumericHistogram(values, binCount = 14) {
+      if (!values.length) {
+        return null;
+      }
+      const min = d3.min(values);
+      const max = d3.max(values);
+      if (!Number.isFinite(min) || !Number.isFinite(max)) {
+        return null;
+      }
+      const bins = Array.from({ length: binCount }, (_, index) => ({ index, count: 0 }));
+      const width = max - min || 1;
+      values.forEach((value) => {
+        const ratio = width === 0 ? 0 : (value - min) / width;
+        const index = Math.max(0, Math.min(binCount - 1, Math.floor(ratio * binCount)));
+        bins[index].count += 1;
+      });
+      const sorted = bins
+        .map((bin) => ({ ...bin }))
+        .sort((a, b) => d3.descending(a.count, b.count) || d3.ascending(a.index, b.index));
+      const maxCount = d3.max(sorted, (bin) => bin.count) || 1;
+      return {
+        min,
+        max,
+        binCount,
+        barWidth: 34 / binCount,
+        bars: sorted.map((bin) => ({
+          index: bin.index,
+          count: bin.count,
+          height: maxCount ? Math.max(bin.count ? 2 : 1, Math.round((bin.count / maxCount) * 11)) : 1
+        })),
+        markerForValue(value) {
+          const ratio = width === 0 ? 0 : (value - min) / width;
+          const binIndex = Math.max(0, Math.min(binCount - 1, Math.floor(ratio * binCount)));
+          const markerRank = sorted.findIndex((bin) => bin.index === binIndex);
+          return markerRank < 0 ? 0 : markerRank;
+        }
+      };
+    }
+
+    function findMatches(nodes, query, limit = 28) {
+      const q = String(query || '').trim().toLowerCase();
+      if (!q) {
+        return [];
+      }
+      return nodes
+        .filter((node) => node.label.toLowerCase().includes(q) || node.id.toLowerCase().includes(q))
+        .sort((a, b) => d3.descending(matchScore(a, q), matchScore(b, q)) || d3.descending(a.degree || 0, b.degree || 0))
+        .slice(0, limit);
+    }
+
+    function findSignMatches(query, limit = 12) {
+      return findMatches(state.data.signNodes, query, limit);
+    }
+
+    function resolvePathSignQuery(query) {
+      return findSignMatches(query, 12).find((node) => !BLOCKED_PATH_LABELS.has(normalize(node.label))) || null;
+    }
+
+    function currentNode() {
+      return allGraphNodes().get(state.selectedNodeId) || null;
+    }
+
+    function selectedSign() {
+      const node = state.data.nodeMap.get(state.selectedNodeId);
+      return node && node.isSign ? node : null;
+    }
+
+    function allGraphNodes() {
+      const map = new Map();
+      state.data.nodeMap.forEach((node, id) => map.set(id, node));
+      state.data.factNodeIndex.forEach((node, id) => map.set(id, node));
+      return map;
+    }
+
+    function nodeFill(node) {
+      if (node.id === state.selectedNodeId) {
+        return css('--signal');
+      }
+      return nodeColor(node);
+    }
+
+    function nodeColor(node) {
+      if (node.isSign) {
+        return COLORS.sign;
+      }
+      return factTypeColor(node.kind || node.factType || 'other');
+    }
+
+    function nodeStroke(node) {
+      if (node.id === state.selectedNodeId) {
+        return '#ffffff';
+      }
+      if (node.id === state.hoveredNodeId) {
+        return css('--signal');
+      }
+      return 'rgba(17, 17, 17, 0.18)';
+    }
+
+    function nodeStrokeWidth(node) {
+      if (node.id === state.selectedNodeId) {
+        return 3;
+      }
+      if (node.id === state.hoveredNodeId) {
+        return 2.2;
+      }
+      return 1.1;
+    }
+
+    function nodeRadius(node) {
+      if (node.isSign) {
+        return Math.max(8, Math.min(20, 8 + Math.sqrt(node.degree || 0) * 0.65));
+      }
+      return Math.max(5, Math.min(14, 5 + Math.sqrt(node.degree || 0) * 0.45));
+    }
+
+    function labelSize(node) {
+      return node.isSign ? 12 : 10;
+    }
+
+    function importantLabel(node) {
+      return node.id === state.selectedNodeId || node.id === state.hoveredNodeId || node.isSign || node.bridge;
+    }
+
+    function showLabel(node, graphSize) {
+      return graphSize < 90 || importantLabel(node);
+    }
+
+    function factTypeColor(factType) {
+      return COLORS[factType] || COLORS.other;
+    }
+
+    function dominantKind(types) {
+      if (types.includes('phonological')) {
+        return 'phonological';
+      }
+      if (types.includes('semantic')) {
+        return 'semantic';
+      }
+      if (types.includes('syntactic')) {
+        return 'syntactic';
+      }
+      if (types.includes('systematicity')) {
+        return 'systematicity';
+      }
+      if (types.includes('cognitive')) {
+        return 'cognitive';
+      }
+      return 'other';
+    }
+
+    function tooltipHtml(node) {
+      return `
+        <strong>${escapeHtml(node.label)}</strong><br>
+        ${escapeHtml(node.isSign ? 'sign' : `${node.kind} property`)}<br>
+        ${escapeHtml(node.id)}<br>
+        degree ${formatNumber(node.degree || 0)}
+      `;
+    }
+
+    function dragStarted(event, node) {
+      if (!event.active && !state.frozen) {
+        simulation.alphaTarget(0.18).restart();
+      }
+      node.fx = node.x;
+      node.fy = node.y;
+    }
+
+    function dragged(event, node) {
+      node.fx = event.x;
+      node.fy = event.y;
+    }
+
+    function dragEnded(event, node) {
+      if (!event.active && !state.frozen) {
+        simulation.alphaTarget(0);
+      }
+      node.fx = event.x;
+      node.fy = event.y;
+    }
+
+    function fitGraph() {
+      const nodes = state.currentGraph.nodes;
+      if (!nodes.length) {
+        return;
+      }
+      const xExtent = d3.extent(nodes, (node) => node.x || 0);
+      const yExtent = d3.extent(nodes, (node) => node.y || 0);
+      const width = els.graph.clientWidth || window.innerWidth;
+      const height = els.graph.clientHeight || window.innerHeight;
+      const dx = (xExtent[1] - xExtent[0]) || 1;
+      const dy = (yExtent[1] - yExtent[0]) || 1;
+      const centerX = (xExtent[0] + xExtent[1]) / 2;
+      const centerY = (yExtent[0] + yExtent[1]) / 2;
+      const scale = Math.max(0.22, Math.min(2.1, 0.9 / Math.max(dx / width, dy / height)));
+      const transform = d3.zoomIdentity.translate(width / 2, height / 2).scale(scale).translate(-centerX, -centerY);
+      svg.transition().duration(420).call(zoomBehavior.transform, transform);
+    }
+
+    function showTooltip(event, html) {
+      els.tooltip.innerHTML = html;
+      els.tooltip.style.opacity = '1';
+      els.tooltip.style.left = `${event.offsetX + 12}px`;
+      els.tooltip.style.top = `${event.offsetY + 12}px`;
+    }
+
+    function hideTooltip() {
+      els.tooltip.style.opacity = '0';
+    }
+
+    function setStatus(message, warn = false) {
+      els.status.textContent = message;
+      els.status.style.color = warn ? css('--danger') : css('--ink');
+      els.status.style.borderColor = warn ? 'rgba(195, 90, 49, 0.28)' : css('--line');
+    }
+
+    function dedupeNodes(nodes) {
+      const map = new Map();
+      nodes.forEach((node) => {
+        if (!map.has(node.id)) {
+          map.set(node.id, node);
+        }
+      });
+      return Array.from(map.values());
+    }
+
+    function dedupeLinks(links) {
+      const map = new Map();
+      links.forEach((link) => {
+        const key = link.id || `${link.source.id || link.source}|${link.target.id || link.target}|${link.relation || ''}|${link.factType || ''}`;
+        if (!map.has(key)) {
+          map.set(key, link);
+        }
+      });
+      return Array.from(map.values());
+    }
+
+    function summaryCard(value, label) {
+      return `<div class="summary-card"><strong>${formatNumber(value)}</strong><span>${escapeHtml(label)}</span></div>`;
+    }
+
+    function topEntries(map, limit) {
+      return Array.from(map.entries()).sort((a, b) => d3.descending(a[1], b[1]) || a[0].localeCompare(b[0])).slice(0, limit);
+    }
+
+    function matchScore(node, query) {
+      const label = node.label.toLowerCase();
+      const id = node.id.toLowerCase();
+      if (label === query || id === query) {
+        return 12;
+      }
+      if (label.startsWith(query)) {
+        return 8;
+      }
+      if (id.startsWith(query)) {
+        return 7;
+      }
+      return (label.includes(query) ? 4 : 0) + (id.includes(query) ? 3 : 0);
+    }
+
+    function trimNumber(value) {
+      return Number(value).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+    }
+
+    function informationWeightFromFrequency(count) {
+      const total = state.data.graphStats.signs || 1;
+      if (!Number.isFinite(count) || count <= 0 || total <= 1) {
+        return 0;
+      }
+      if (count >= total) {
+        return 0;
+      }
+      return Math.max(0, Math.min(1, -Math.log(count / total) / Math.log(total)));
+    }
+
+    function featureInformationWeight(featureKey) {
+      return informationWeightFromFrequency(state.data.featureFrequency.get(featureKey) || 0);
+    }
+
+    function numericRelationInformationWeight(type, relation) {
+      const count = state.data.numericRelationIndex.get(type)?.get(relation)?.length || 0;
+      return informationWeightFromFrequency(count);
+    }
+
+    function isBinaryNumericRange(range) {
+      return Boolean(range) &&
+        (range.min === 0 || range.min === 1) &&
+        (range.max === 0 || range.max === 1);
+    }
+
+    function normalize(value) {
+      return String(value || '').trim().toLowerCase();
+    }
+
+    function edgeKey(a, b) {
+      return [a, b].sort().join('|');
+    }
+
+    function pathEdgeKeys(path) {
+      const keys = [];
+      for (let index = 0; index < path.length - 1; index += 1) {
+        keys.push(edgeKey(path[index], path[index + 1]));
+      }
+      return keys;
+    }
+
+    function linkDistance(link) {
+      if (link.synthetic) {
+        return 92;
+      }
+      if (link.factType === 'phonological') {
+        return 58;
+      }
+      if (link.factType === 'semantic') {
+        return 72;
+      }
+      return 82;
+    }
+
+    function typeSort(a, b) {
+      const order = ['translation', 'semantic', 'syntactic', 'systematicity', 'phonological', 'cognitive', 'other'];
+      return order.indexOf(a) - order.indexOf(b) || a.localeCompare(b);
+    }
+
+    function toggleSet(set, value) {
+      if (set.has(value)) {
+        set.delete(value);
+      } else {
+        set.add(value);
+      }
+    }
+
+    function addToArrayMap(map, key, value) {
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key).push(value);
+    }
+
+    function increment(map, key, amount = 1) {
+      map.set(key, (map.get(key) || 0) + amount);
+    }
+
+    function parseTSV(text) {
+      const lines = text.replace(/\ufeff/g, '').trim().split(/\r?\n/);
+      if (!lines.length) {
+        return [];
+      }
+      const headers = lines[0].split('\t');
+      return lines.slice(1).filter(Boolean).map((line) => {
+        const parts = line.split('\t');
+        const row = {};
+        headers.forEach((header, index) => {
+          row[header] = parts[index] ?? '';
+        });
+        return row;
+      });
+    }
+
+    function allValues(map) {
+      return Array.from(map.values());
+    }
+
+    function currentTime() {
+      return Date.now();
+    }
+
+    function formatNumber(value) {
+      if (typeof value === 'number') {
+        return new Intl.NumberFormat('en-US').format(value);
+      }
+      return String(value);
+    }
+
+    function css(variable) {
+      return getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function nextFrame() {
+      return new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+  </script>
+</body>
+</html>

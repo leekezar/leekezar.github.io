@@ -1,6 +1,6 @@
 body {
     font-family: Helvetica, sans-serif;
-    font-size: 14px;;
+    font-size: 20px;;
     line-height: 2;
     padding: 20px;
 }
@@ -171,6 +171,60 @@ background-color: #ccc;
     font-weight: bold;
 }
 
+.demo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    margin-bottom: 28px;
+}
+
+.demo-card {
+    display: grid;
+    gap: 12px;
+    align-content: start;
+    min-height: 220px;
+    padding: 20px;
+    border-radius: 18px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(245, 245, 245, 0.94)),
+        radial-gradient(circle at top right, rgba(155,149,255,0.22), transparent 42%);
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.06);
+}
+
+.demo-card h3 {
+    padding-bottom: 0;
+}
+
+.demo-card p {
+    padding: 0;
+    line-height: 1.8;
+    text-align: left;
+}
+
+.demo-kicker {
+    font-size: 0.72em;
+    font-weight: bold;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #666;
+}
+
+.demo-link {
+    width: fit-content;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: #111;
+    color: #fff;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.demo-link:hover {
+    background: linear-gradient(to bottom right, rgba(155,149,255,1), rgba(127,232,255,1));
+    color: #000;
+}
+
 
 @media (max-width: 600px) {
     img.selfie  {
@@ -222,6 +276,10 @@ background-color: #ccc;
 
     div > .container {
         flex-grow: 0;
+    }
+
+    .demo-grid {
+        grid-template-columns: 1fr;
     }
 }
 
