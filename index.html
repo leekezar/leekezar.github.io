@@ -58,76 +58,66 @@
                     Second, I use my formal training in natural language processing to advance those perspectives in the research.
 
                     To date, my work has focused on the basic skills associated with understanding and producing American Sign Language.
-                    I adopt a linguistic approach by training AI models to use sign language phonemes, the basic, recombinable units of signs.
+                    I adopt a linguistic approach by studying sign language <span class="expandable concept highlight" id="phonology">phonemes</span>, <span class="expandable concept highlight" id="semantics">lexical semantics</span>, and <span class="expandable concept highlight" id="knowledgebase">ASL corpora</span>, then using that knowledge to help AI systems <span class="expandable concept highlight" id="perception">perceive</span>, <span class="expandable concept highlight" id="recognition">understand</span>, and <span class="expandable concept highlight" id="comprehension">produce</span> sign language more effectively.
                     This allows sign language models to include a more diverse range of signing while making their behavior more explainable to users.
 
                 </p>
             </section>
 
-            <section class="super concept expansion" id="understanding">
-                <p>
-                    <span class="highlight-noexpand">ML Modeling</span><br>
-                    I use linguistic knowledge in machine learning models to <span class="expandable concept highlight" id="perception">perceive</span> sign structure from video, <span class="expandable concept highlight" id="recognition">understand</span> unfamiliar signs, and <span class="expandable concept highlight" id="comprehension">produce</span> compact representations that support broader coverage of the ASL lexicon.
-                    This work treats linguistic structure not just as an object of study, but as a practical tool for building better models.
-                </p>
-                <section class="concept expansion" id="perception">
-                    <p>
-                        <span class="highlight-noexpand">Perceive</span><br>
-                        I train models to recover phonological features such as handshape, movement, and location directly from video, so higher-level predictions have something structured to build on. (<span class="expandable concept highlight" id="phonology">Phonemes</span>; <span class="expandable paper highlight" id="esann">ESANN</span>; <span class="expandable paper highlight" id="eacl">EACL</span>)<br><br>
-                        I use those visual components to improve sign recognition, especially when signs are rare, visually similar, or produced with variation. (<span class="expandable paper highlight" id="assets">Sem-Lex</span>; <span class="highlight"><a href="/asl-dashboard/">ASL Annotation Dashboard</a></span>)<br><br>
-                        I also study compact sign encodings that preserve the parts of a sign, not just its identity, so the model can generalize across related forms instead of memorizing isolated labels. (<span class="expandable concept highlight" id="phonology">Phonemes</span>; <span class="highlight"><a href="/embedding-viz/">Embedding Visualization</a></span>; VQ work)
-                    </p>
-                </section>
-        
-                <section class="concept expansion" id="recognition">
-                    <p>
-                        <span class="highlight-noexpand">Understand</span><br>
-                        I use knowledge graphs to represent signs as linked bundles of linguistic facts about form, meaning, and lexical structure rather than as isolated labels. (<span class="expandable paper highlight" id="aslkg">ASLKG paper</span>; <span class="highlight"><a href="/knowledge-graph/">Knowledge Graph demo</a></span>)<br><br>
-                        I study unseen sign understanding by asking whether a model can estimate what a sign means even when it has never seen that exact sign before, using regularities between form and meaning to guide its predictions. (<span class="expandable concept highlight" id="semantics">Lexical Semantics</span>)<br><br>
-                        I also use embedding neighborhoods to place related signs near one another in a shared space, so similarity itself becomes a tool for exploration, interpretation, and semantic generalization. (<span class="highlight"><a href="/embedding-viz/">Embedding Visualization</a></span>; <span class="expandable concept highlight" id="semantics">Lexical Semantics</span>; <span class="expandable paper highlight" id="lrec26">STEM discourse paper</span>)
-                    </p>
-                </section>
-
-                <section class="concept expansion" id="comprehension">
-                    <p>
-                        <span class="highlight-noexpand">Produce</span><br>
-                        I am interested in production models that build signs from compact discrete units rather than treating signing as an uninterpretable stream of motion. (VQ work; producing ASL in the agenda)<br><br>
-                        This matters in part because discrete representations can improve coverage for out-of-vocabulary signs, giving models a way to represent unfamiliar items through reusable structure rather than failing on anything outside the training set. (VQ work; <span class="expandable concept highlight" id="semantics">Lexical Semantics</span>; <span class="highlight"><a href="/embedding-viz/">Embedding Visualization</a></span>)<br><br>
-                        More broadly, I want these representations to support reconstruction and generation, so models can produce signs from structured internal units that remain tied to linguistic distinctions users can inspect and control. (VQ work; producing ASL in the agenda)
-                    </p>
-            </section>
-        </section>
-
         <section class="super concept expansion" id="ling">
             <p>
                 <span class="highlight-noexpand">Sign Language Linguistics</span><br>
-                Sign languages are full natural languages with their own internal structure.
-                My research focuses on the linguistic organization of ASL signs, especially how <span class="expandable concept highlight" id="phonology">form</span> and <span class="expandable concept highlight" id="semantics">meaning</span> are patterned across the lexicon, and how those patterns can be documented, analyzed, and later used in <span class="super expandable concept highlight" id="understanding">machine learning models</span>.
+                Sign languages are full natural languages with their own internal structure. My research focuses on the linguistic organization of ASL signs, especially how <span class="expandable concept highlight" id="phonology">form</span> and <span class="expandable concept highlight" id="semantics">meaning</span> are patterned across the lexicon, and how those patterns can be documented, analyzed, and later used in <span class="super expandable concept highlight" id="understanding">SL technologies</span>.
             </p>
 
             <section class="concept expansion" id="phonology">
                 <p>
                     <span class="highlight-noexpand">Phonemes</span><br>
-                    ASL signs are built from smaller visual units such as handshape, movement, and location.
-                    I study these units because they provide a concrete account of sign structure and make it possible to compare signs at a level below the gloss. (<span class="expandable paper highlight" id="eacl">EACL</span>; <span class="expandable paper highlight" id="esann">ESANN</span>)
+                    ASL signs are built from smaller visual units such as handshape, movement, and location. I study these units because they provide a concrete account of sign structure and make it possible to compare signs at a level below the gloss, as in my <span class="expandable paper highlight" id="eacl">EACL</span> and <span class="expandable paper highlight" id="esann">ESANN</span> papers.
                 </p>
             </section> 
 
             <section class="concept expansion" id="semantics">
                 <p>
                     <span class="highlight-noexpand">Lexical Semantics</span><br>
-                    ASL signs also participate in broader patterns of meaning, and those patterns are not arbitrary.
-                    I study lexical semantics in ASL, including how similarities in form can align with similarities in meaning, because these regularities help explain how the lexicon is organized and how unfamiliar signs may be interpreted.
+                    ASL signs also participate in broader patterns of meaning, and those patterns are not arbitrary. I study lexical semantics in ASL, including how similarities in form can align with similarities in meaning, because these regularities help explain how the lexicon is organized and how unfamiliar signs may be interpreted.
                 </p>
             </section> 
 
             <section class="concept expansion" id="knowledgebase">
                 <p>
                     <span class="highlight-noexpand">ASL Corpora</span><br>
-                    Linguistic analysis also depends on representative ASL data.
-                    I work with corpora and benchmark datasets that link videos of signing to lexical, phonological, and semantic information, creating shared resources for both scientific study and model evaluation. (<span class="expandable paper highlight" id="assets">Sem-Lex</span>; <span class="highlight"><a href="/asl-dashboard/">ASL Annotation Dashboard</a></span>; <span class="expandable paper highlight" id="lrec26">STEM discourse paper</span>)
+                    Linguistic analysis also depends on representative ASL data. I work with corpora and benchmark datasets that link videos of signing to lexical, phonological, and semantic information, including <span class="expandable paper highlight" id="assets">Sem-Lex</span>, the <span class="highlight"><a href="/asl-dashboard/">ASL Annotation Dashboard</a></span>, and my <span class="expandable paper highlight" id="lrec26">STEM discourse paper</span>.
                 </p>
         </section> 
+        </section>
+
+            <section class="super concept expansion" id="understanding">
+                <p>
+                    <span class="highlight-noexpand">SL Technologies</span><br>
+                    I use linguistic knowledge in SL technologies to <span class="expandable concept highlight" id="perception">perceive</span> sign structure from video, <span class="expandable concept highlight" id="recognition">understand</span> unfamiliar signs, and <span class="expandable concept highlight" id="comprehension">produce</span> compact representations that support broader coverage of the ASL lexicon.
+                    This work treats linguistic structure not just as an object of study, but as a practical tool for building better models.
+                </p>
+                <section class="concept expansion" id="perception">
+                    <p>
+                        <span class="highlight-noexpand">Perceive</span><br>
+                        I train models to recover <span class="expandable concept highlight" id="phonology">phonological features</span> such as handshape, movement, and location directly from video, as in my <span class="expandable paper highlight" id="esann">ESANN</span> and <span class="expandable paper highlight" id="eacl">EACL</span> work, so higher-level predictions have something structured to build on. I use those visual components to improve sign recognition, especially when signs are rare, visually similar, or produced with variation, including in <span class="expandable paper highlight" id="assets">Sem-Lex</span> and the <span class="highlight"><a href="/asl-dashboard/">ASL Annotation Dashboard</a></span>. I also study compact sign encodings that preserve the parts of a sign, not just its identity, so the model can generalize across related forms instead of memorizing isolated labels, which connects directly to the <span class="highlight"><a href="/embedding-viz/">Embedding Visualization</a></span> and my ongoing VQ work.
+                    </p>
+                </section>
+        
+                <section class="concept expansion" id="recognition">
+                    <p>
+                        <span class="highlight-noexpand">Understand</span><br>
+                        I use knowledge graphs to represent signs as linked bundles of linguistic facts about form, meaning, and lexical structure rather than as isolated labels, as in the <span class="expandable paper highlight" id="aslkg">ASLKG paper</span> and <span class="highlight"><a href="/knowledge-graph/">Knowledge Graph demo</a></span>. I study unseen sign understanding by asking whether a model can estimate what a sign means even when it has never seen that exact sign before, using <span class="expandable concept highlight" id="semantics">lexical semantics</span> regularities between form and meaning to guide its predictions. I also use embedding neighborhoods to place related signs near one another in a shared space, so similarity itself becomes a tool for exploration, interpretation, and semantic generalization in the <span class="highlight"><a href="/embedding-viz/">Embedding Visualization</a></span> and in work like my <span class="expandable paper highlight" id="lrec26">STEM discourse paper</span>.
+                    </p>
+                </section>
+
+                <section class="concept expansion" id="comprehension">
+                    <p>
+                        <span class="highlight-noexpand">Produce</span><br>
+                        I am interested in production models that build signs from compact discrete units rather than treating signing as an uninterpretable stream of motion, which is the central motivation behind my VQ work. This matters in part because discrete representations can improve coverage for out-of-vocabulary signs, giving models a way to represent unfamiliar items through reusable structure rather than failing on anything outside the training set, especially when paired with <span class="expandable concept highlight" id="semantics">lexical semantics</span> structure and tools like the <span class="highlight"><a href="/embedding-viz/">Embedding Visualization</a></span>. More broadly, I want these representations to support reconstruction and generation, so models can produce signs from structured internal units that remain tied to linguistic distinctions users can inspect and control.
+                    </p>
+            </section>
         </section>
     
         <header class="container banner">
