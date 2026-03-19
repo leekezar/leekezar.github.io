@@ -84,15 +84,6 @@ p {
     text-align: justify;
 }
 
-.intro-copy {
-    width: min(52rem, 58vw);
-    max-width: 100%;
-}
-
-.intro-copy p {
-    max-width: 100%;
-}
-
 a {
     text-decoration: none;
     color: rgb(0, 0, 0);
@@ -307,9 +298,6 @@ background-color: #ccc;
         grid-template-columns: 1fr;
     }
 
-    .intro-copy {
-        max-width: 100%;
-    }
 }
 
 @media (min-width: 1000px) {
