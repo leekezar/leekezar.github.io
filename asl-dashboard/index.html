@@ -6,31 +6,31 @@
   <title>ASL Annotation Dashboard</title>
   <style>
     :root {
-      --bg: #f4efe5;
-      --panel: rgba(255,255,255,0.88);
-      --panel-strong: #fffaf2;
-      --text: #1d2421;
-      --muted: #5e655f;
-      --accent: #1f6f5f;
-      --accent-soft: #cbe7dd;
-      --danger: #8f3b2e;
-      --danger-soft: #f7d6cf;
-      --ok: #2f6e3f;
-      --ok-soft: #d8eddc;
-      --border: rgba(29,36,33,0.12);
-      --shadow: 0 24px 60px rgba(31,37,34,0.12);
+      --bg: #f2efe8;
+      --panel: rgba(244,241,236,0.84);
+      --panel-strong: rgba(255,255,255,0.9);
+      --text: #111111;
+      --muted: #625c55;
+      --accent: #182433;
+      --accent-soft: rgba(24,36,51,0.08);
+      --danger: #7f3f34;
+      --danger-soft: rgba(127,63,52,0.14);
+      --ok: #2d6f58;
+      --ok-soft: rgba(45,111,88,0.14);
+      --border: rgba(17,17,17,0.10);
+      --shadow: 0 20px 48px rgba(0,0,0,0.08);
     }
     * { box-sizing: border-box; }
-    a { color: inherit; text-decoration-color: rgba(31,111,95,0.45); }
+    a { color: inherit; text-decoration-color: rgba(24,36,51,0.32); }
     a:hover { text-decoration-color: currentColor; }
     body {
       margin: 0;
-      font-family: "IBM Plex Sans","Avenir Next",sans-serif;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at 0% 0%, rgba(31,111,95,0.18), transparent 24%),
-        radial-gradient(circle at 100% 0%, rgba(191,126,74,0.18), transparent 22%),
-        linear-gradient(180deg, #f9f5ee 0%, var(--bg) 100%);
+        radial-gradient(circle at 8% 0%, rgba(24,36,51,0.09), transparent 24%),
+        radial-gradient(circle at 100% 12%, rgba(244,162,97,0.10), transparent 22%),
+        linear-gradient(180deg, #f8f6f1 0%, var(--bg) 100%);
     }
     .page { max-width: 1720px; margin: 0 auto; padding: 20px; display: grid; gap: 18px; }
     .toolbar,.grid,.retrieval,.embedding-space,.feedback-panel,.motion-panel,.detail-tabs {
@@ -74,7 +74,7 @@
     .badge.active {
       background: var(--accent-soft);
       color: var(--accent);
-      border-color: rgba(31,111,95,0.35);
+      border-color: rgba(24,36,51,0.22);
     }
     button,.toggle,select {
       appearance: none;
@@ -86,13 +86,13 @@
       cursor: pointer;
       font: inherit;
     }
-    button:hover { border-color: rgba(31,111,95,0.35); }
+    button:hover { border-color: rgba(24,36,51,0.22); }
     button.progress-button {
       background:
         linear-gradient(90deg, var(--accent-soft) 0%, var(--accent-soft) var(--btn-progress, 0%), var(--panel-strong) var(--btn-progress, 0%), var(--panel-strong) 100%);
     }
     button.primary {
-      background: linear-gradient(135deg, #245e53, var(--accent));
+      background: linear-gradient(135deg, #111111, var(--accent));
       color: #fff;
     }
     .grid {
@@ -109,7 +109,7 @@
       position: relative;
       border-radius: 18px;
       overflow: hidden;
-      background: #101513;
+      background: #0b1521;
       aspect-ratio: 16 / 9;
     }
     video,#poseOverlay {
@@ -379,7 +379,7 @@
     }
     .tab-button.active {
       background: var(--accent-soft);
-      border-color: rgba(31,111,95,0.35);
+      border-color: rgba(24,36,51,0.22);
       color: var(--accent);
     }
     .tab-page {
@@ -414,7 +414,7 @@
       width: 28px;
       height: 28px;
       border-radius: 999px;
-      border: 3px solid rgba(31,111,95,0.16);
+      border: 3px solid rgba(24,36,51,0.12);
       border-top-color: var(--accent);
       animation: spin 0.8s linear infinite;
     }
@@ -604,11 +604,8 @@
       gap: 4px;
     }
     .segment-list-item.active {
-      border-color: rgba(31,111,95,0.5);
-      background: rgba(203,231,221,0.55);
-    }
-    .theme-picker {
-      min-width: 180px;
+      border-color: rgba(24,36,51,0.28);
+      background: rgba(24,36,51,0.08);
     }
     .thumb {
       width: 100%;
@@ -692,7 +689,7 @@
       overflow: hidden;
     }
     progress::-webkit-progress-bar { background: rgba(29,36,33,0.08); }
-    progress::-webkit-progress-value { background: linear-gradient(135deg, #245e53, var(--accent)); }
+    progress::-webkit-progress-value { background: linear-gradient(135deg, #111111, var(--accent)); }
     .section-controls {
       display: flex;
       align-items: center;
@@ -736,13 +733,6 @@
         <h1 class="app-title">ASL Annotation Dashboard</h1>
       </div>
       <div class="right">
-        <select id="themeSelect" class="theme-picker">
-          <option value="tron">Tron</option>
-          <option value="cherry">Cherry Blossom</option>
-          <option value="pastel">Pastel</option>
-          <option value="gemstone">Gemstone</option>
-          <option value="forest">Forest</option>
-        </select>
         <button id="exportFeedback">Export feedback</button>
         <button id="clearFeedback">Clear feedback</button>
         <span class="badge" id="feedbackCount">0 feedback items</span>
@@ -986,7 +976,6 @@
     const noteBox = document.getElementById("noteBox");
     const feedbackCount = document.getElementById("feedbackCount");
     const currentFeedbackKey = document.getElementById("currentFeedbackKey");
-    const themeSelect = document.getElementById("themeSelect");
     const videoSelect = document.getElementById("videoSelect");
     const poseToggle = document.getElementById("poseToggle");
     const replayToggle = document.getElementById("replayToggle");
@@ -1051,13 +1040,6 @@
     let pendingRegenSegmentId = null;
     let hoverMotionFrame = null;
     let hoverRemoveFrame = null;
-    const THEME_PRESETS = {
-      tron: {"--bg":"#090d14","--panel":"rgba(246,249,252,0.94)","--panel-strong":"#ffffff","--text":"#17212b","--muted":"#5f6c7b","--accent":"#1ec9ff","--accent-soft":"rgba(30,201,255,0.14)","--danger":"#ff8c3a","--danger-soft":"rgba(255,140,58,0.16)","--ok":"#1dbf73","--ok-soft":"rgba(29,191,115,0.14)","--border":"rgba(23,33,43,0.12)"},
-      cherry: {"--bg":"#11161a","--panel":"rgba(250,246,248,0.95)","--panel-strong":"#fffdfd","--text":"#25312b","--muted":"#6f7a75","--accent":"#e88db1","--accent-soft":"rgba(232,141,177,0.16)","--danger":"#c46b8a","--danger-soft":"rgba(196,107,138,0.14)","--ok":"#7caf8f","--ok-soft":"rgba(124,175,143,0.14)","--border":"rgba(37,49,43,0.12)"},
-      pastel: {"--bg":"#121417","--panel":"rgba(248,246,255,0.95)","--panel-strong":"#ffffff","--text":"#2d3042","--muted":"#777b93","--accent":"#8ea7ff","--accent-soft":"rgba(142,167,255,0.18)","--danger":"#f29ab1","--danger-soft":"rgba(242,154,177,0.16)","--ok":"#77c7b6","--ok-soft":"rgba(119,199,182,0.16)","--border":"rgba(45,48,66,0.12)"},
-      gemstone: {"--bg":"#0d1015","--panel":"rgba(246,248,251,0.95)","--panel-strong":"#ffffff","--text":"#1b2432","--muted":"#667289","--accent":"#5d7cff","--accent-soft":"rgba(93,124,255,0.16)","--danger":"#cc5b7b","--danger-soft":"rgba(204,91,123,0.15)","--ok":"#179f8a","--ok-soft":"rgba(23,159,138,0.14)","--border":"rgba(27,36,50,0.12)"},
-      forest: {"--bg":"#0d1410","--panel":"rgba(248,249,244,0.95)","--panel-strong":"#ffffff","--text":"#233126","--muted":"#69756d","--accent":"#2f8f63","--accent-soft":"rgba(47,143,99,0.16)","--danger":"#b96b4f","--danger-soft":"rgba(185,107,79,0.14)","--ok":"#1e7a55","--ok-soft":"rgba(30,122,85,0.14)","--border":"rgba(35,49,38,0.12)"}
-    };
     const segmentationConfigByVideo = new Map();
     const useVideoFrameCallback = typeof video.requestVideoFrameCallback === "function";
     let videoFrameCallbackPending = false;
@@ -1087,11 +1069,6 @@
         });
       }
       return segmentationConfigByVideo.get(videoId);
-    }
-    function applyTheme(name) {
-      const preset = THEME_PRESETS[name] || THEME_PRESETS.tron;
-      Object.entries(preset).forEach(([key, value]) => document.documentElement.style.setProperty(key, value));
-      themeSelect.value = name in THEME_PRESETS ? name : "tron";
     }
     function baseSegments() {
       return generatedBaseSegments.get(currentVideoId) || currentVideo().segments;
@@ -1699,7 +1676,7 @@
       g.fill();
       g.stroke();
       g.fillStyle = "rgba(29,36,33,0.58)";
-      g.font = "600 10px IBM Plex Sans, sans-serif";
+      g.font = "600 10px "Helvetica Neue", Helvetica, Arial, sans-serif";
       g.fillText(label, boxX + 6, boxY + 12);
       if (!snapshot.length) {
         g.restore();
@@ -2014,7 +1991,7 @@
         g.restore();
       }
       g.fillStyle = "rgba(29,36,33,0.66)";
-      g.font = "700 10px IBM Plex Sans, sans-serif";
+      g.font = "700 10px "Helvetica Neue", Helvetica, Arial, sans-serif";
       g.fillText(label, boxX + 6, boxY + 11);
       g.restore();
     }
@@ -2065,7 +2042,7 @@
           g.rect(left + 5, chipBandTop, Math.max(0, width - 10), chipBandH);
           g.clip();
           g.fillStyle = "rgba(255,255,255,0.96)";
-          g.font = "700 11px IBM Plex Sans, sans-serif";
+          g.font = "700 11px "Helvetica Neue", Helvetica, Arial, sans-serif";
           g.textBaseline = "middle";
           g.fillText(seg.displayLabel, left + 6, chipBandTop + chipBandH * 0.55);
           g.restore();
@@ -2135,7 +2112,7 @@
       });
 
       g.fillStyle = "rgba(29,36,33,0.62)";
-      g.font = "600 12px IBM Plex Sans, sans-serif";
+      g.font = "600 12px "Helvetica Neue", Helvetica, Arial, sans-serif";
       g.fillText("left velocity", 10, chartTop - 6);
       g.fillText("right velocity", 96, chartTop - 6);
       g.fillText("adaptive threshold", 186, chartTop - 6);
@@ -3335,7 +3312,7 @@
           ];
           const [x, y] = toCanvasPoint(mean, bounds);
           embeddingCtx.fillStyle = label.startsWith("unk_") ? "#7c2418" : "#1d2421";
-          embeddingCtx.font = label.startsWith("unk_") ? "700 14px IBM Plex Sans, sans-serif" : "600 12px IBM Plex Sans, sans-serif";
+          embeddingCtx.font = label.startsWith("unk_") ? "700 14px "Helvetica Neue", Helvetica, Arial, sans-serif" : "600 12px "Helvetica Neue", Helvetica, Arial, sans-serif";
           embeddingCtx.fillText(label, x + 8, y - 8);
         });
       if (trace.length > 0) {
@@ -3956,7 +3933,6 @@
       segmentSortMode = segmentSort.value || "desc";
       renderSegmentList();
     });
-    themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
     vocabSearch.addEventListener("input", () => {
       vocabSearchQuery = vocabSearch.value || "";
       if (activeDetailTab === "predictions") setSegment(selectedSegmentId, false);
@@ -4122,7 +4098,6 @@
     });
 
     resizeEmbeddingCanvas();
-    applyTheme(themeSelect.value || "tron");
     updateSegmentationControls();
     setRegenButtonState(0, "Regenerate Graph");
     replayToggle.checked = false;
