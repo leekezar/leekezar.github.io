@@ -85,7 +85,12 @@ p {
 }
 
 .intro-copy {
-    max-width: 58rem;
+    width: min(52rem, 58vw);
+    max-width: 100%;
+}
+
+.intro-copy p {
+    max-width: 100%;
 }
 
 a {
@@ -199,6 +204,7 @@ background-color: #ccc;
 .demo-card h3 {
     padding-bottom: 0;
     text-align: center;
+    font-weight: 400;
 }
 
 .demo-card p {
@@ -225,8 +231,12 @@ background-color: #ccc;
 }
 
 .demo-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: fit-content;
-    justify-self: center;
+    margin-left: auto;
+    margin-right: auto;
     padding: 8px 12px;
     border-radius: 999px;
     background: #111;
