@@ -66,39 +66,34 @@
 
             <section class="super concept expansion" id="understanding">
                 <p>
-                    <span class="highlight-noexpand">Understanding Sign Language</span><br>
-                    Understanding any sign language requires <span class="expandable concept highlight" id="perception">perceiving</span> visual features like the location and configuration of the hands, <span class="expandable concept highlight" id="recognition">recognizing</span> what those features signify, and 
-                    <span class="expandable concept highlight" id="comprehension">comprehending</span> the intended meaning through inference. 
-                    To satisfy these requirements, I adopt a <span class="super expandable concept highlight" id="ling">linguistic</span> approach. 
-                    My work presents the argument that a model which can recognize phonological features not only recognizes isolated signs more accurately, but also enables it to approximate the meaning of signs it has never seen before!
+                    <span class="highlight-noexpand">ML Modeling</span><br>
+                    I use linguistic knowledge in machine learning models to <span class="expandable concept highlight" id="perception">perceive</span> sign structure from video, <span class="expandable concept highlight" id="recognition">understand</span> unfamiliar signs, and <span class="expandable concept highlight" id="comprehension">produce</span> compact representations that support broader coverage of the ASL lexicon.
+                    This work treats linguistic structure not just as an object of study, but as a practical tool for building better models.
                 </p>
                 <section class="concept expansion" id="perception">
                     <p>
-                        <span class="highlight-noexpand">Perception</span><br>
-                        Understanding sign language begins with perceiving many subtle visual features called <span class="expandable concept highlight" id="phonology">phonemes</span>, for example the flexion of each finger or the path that the hands move along. 
-                        Our EACL paper <span class="expandable paper highlight" id="eacl">Improving Sign Recognition with Phonology</span> shows that models miss many of these features, leading to poorer performance in higher-level tasks like recognizing signs. 
-                        To improve models' phonological perception, a follow-up work 
-                        
-                        <span class="expandable paper highlight" id="esann">Exploring Strategies for Modeling Sign Language Phonology</span> provides a method which recognizes 16 types of phonological features with 75%-90% accuracy using a technique called curriculum learning.
+                        <span class="highlight-noexpand">Perceive</span><br>
+                        I train models to recover phonological features such as handshape, movement, and location directly from video, so higher-level predictions have something structured to build on. (<span class="expandable concept highlight" id="phonology">Phonemes</span>; <span class="expandable paper highlight" id="esann">ESANN</span>; <span class="expandable paper highlight" id="eacl">EACL</span>)<br><br>
+                        I use those visual components to improve sign recognition, especially when signs are rare, visually similar, or produced with variation. (<span class="expandable paper highlight" id="assets">Sem-Lex</span>; <span class="highlight"><a href="/asl-dashboard/">ASL Annotation Dashboard</a></span>)<br><br>
+                        I also study compact sign encodings that preserve the parts of a sign, not just its identity, so the model can generalize across related forms instead of memorizing isolated labels. (<span class="expandable concept highlight" id="phonology">Phonemes</span>; <span class="highlight"><a href="/embedding-viz/">Embedding Visualization</a></span>; VQ work)
                     </p>
                 </section>
         
                 <section class="concept expansion" id="recognition">
                     <p>
-                        <span class="highlight-noexpand">Recognition</span><br>
-                        Recognizing which sign(s) are present in a video is a critical step towards automatic sign language translation and requires distinguishing many visually-similar signs. 
-                        This is a difficult task for rare and modified signs, which are unlikely to have been seen in training.
-                        Our paper, <span class="expandable paper highlight" id="eacl">Improving Sign Recognition with Phonology</span> showed that models are better at distinguishing signs when they can also recognize the pieces of those signs, i.e. <span class="expandable concept highlight" id="phonology">phonemes</span>. 
-                        This result was replicated in <span class="expandable paper highlight" id="assets">The Sem-Lex Benchmark: Modeling ASL Signs and Their Phonemes</span>, adding that rare signs benefit the most from phoneme recognition.                       
-                        </p>
+                        <span class="highlight-noexpand">Understand</span><br>
+                        I use knowledge graphs to represent signs as linked bundles of linguistic facts about form, meaning, and lexical structure rather than as isolated labels. (<span class="expandable paper highlight" id="aslkg">ASLKG paper</span>; <span class="highlight"><a href="/knowledge-graph/">Knowledge Graph demo</a></span>)<br><br>
+                        I study unseen sign understanding by asking whether a model can estimate what a sign means even when it has never seen that exact sign before, using regularities between form and meaning to guide its predictions. (<span class="expandable concept highlight" id="semantics">Lexical Semantics</span>)<br><br>
+                        I also use embedding neighborhoods to place related signs near one another in a shared space, so similarity itself becomes a tool for exploration, interpretation, and semantic generalization. (<span class="highlight"><a href="/embedding-viz/">Embedding Visualization</a></span>; <span class="expandable concept highlight" id="semantics">Lexical Semantics</span>; <span class="expandable paper highlight" id="lrec26">STEM discourse paper</span>)
+                    </p>
                 </section>
 
                 <section class="concept expansion" id="comprehension">
                     <p>
-                        <span class="highlight-noexpand">Comprehension</span><br>
-                        One powerful benefit of modeling sign language <span class="expandable concept highlight" id="phonology">phonology</span> is the ability to apply inference to the phonemes after they are recognized. 
-                        Specifically, by leveraging systematic relationships between form and meaning, we may be able to infer the meaning of a sign even if the model has never seen it before! 
-                        Ongoing work explores this possibility, which we intend to publish in 2024.
+                        <span class="highlight-noexpand">Produce</span><br>
+                        I am interested in production models that build signs from compact discrete units rather than treating signing as an uninterpretable stream of motion. (VQ work; producing ASL in the agenda)<br><br>
+                        This matters in part because discrete representations can improve coverage for out-of-vocabulary signs, giving models a way to represent unfamiliar items through reusable structure rather than failing on anything outside the training set. (VQ work; <span class="expandable concept highlight" id="semantics">Lexical Semantics</span>; <span class="highlight"><a href="/embedding-viz/">Embedding Visualization</a></span>)<br><br>
+                        More broadly, I want these representations to support reconstruction and generation, so models can produce signs from structured internal units that remain tied to linguistic distinctions users can inspect and control. (VQ work; producing ASL in the agenda)
                     </p>
             </section>
         </section>
@@ -106,38 +101,31 @@
         <section class="super concept expansion" id="ling">
             <p>
                 <span class="highlight-noexpand">Sign Language Linguistics</span><br>
-                Sign languages are comparable spoken languages in almost every way. 
-                Each sign language has its own vocabulary and grammar, and they are independent of any spoken language used in their region. 
-                They have a complex structure at all levels, such as <span class="expandable concept highlight" id="phonology">phonology</span> and <span class="expandable concept highlight" id="semantics">semantics</span>. 
-                My work leverages the relationship between phonology and semantics, also known as systematicity, to help machine learning models understand signs they haven't seen before. <span class="super expandable concept highlight" id="understanding">understand sign language</span>
+                Sign languages are full natural languages with their own internal structure.
+                My research focuses on the linguistic organization of ASL signs, especially how <span class="expandable concept highlight" id="phonology">form</span> and <span class="expandable concept highlight" id="semantics">meaning</span> are patterned across the lexicon, and how those patterns can be documented, analyzed, and later used in <span class="super expandable concept highlight" id="understanding">machine learning models</span>.
             </p>
 
             <section class="concept expansion" id="phonology">
                 <p>
                     <span class="highlight-noexpand">Phonemes</span><br>
-                    Phonemes are the smallest units of language. 
-                    In sign languages, phonemes fall into one of several categories, such as hand configuration, movement, and location. 
-                    My work loosely falls under Brentari's Prosodic Model, which emphasizes the simultaneity and interdependency of phonemes.
+                    ASL signs are built from smaller visual units such as handshape, movement, and location.
+                    I study these units because they provide a concrete account of sign structure and make it possible to compare signs at a level below the gloss. (<span class="expandable paper highlight" id="eacl">EACL</span>; <span class="expandable paper highlight" id="esann">ESANN</span>)
                 </p>
             </section> 
 
             <section class="concept expansion" id="semantics">
                 <p>
                     <span class="highlight-noexpand">Lexical Semantics</span><br>
-                    Many times, the meaning of a sign has a direct relationship to its form. 
-                    This relationship, called systematicity, provides valuable scaffolding to learn signs more efficiently and can enable understanding even when the sign has never been seen before. 
-                    Currently, my team is working on a large knowledge graph of ASL signs' form and meaning, which we will be releasing in Fall 2024. 
-                    We hope this resource will be used in creative ways to computationally model ASL systematicity.                       
+                    ASL signs also participate in broader patterns of meaning, and those patterns are not arbitrary.
+                    I study lexical semantics in ASL, including how similarities in form can align with similarities in meaning, because these regularities help explain how the lexicon is organized and how unfamiliar signs may be interpreted.
                 </p>
             </section> 
 
             <section class="concept expansion" id="knowledgebase">
                 <p>
-                    <span class="highlight-noexpand">Linguistic Knowledge Bases</span><br>
-                    Structured, accurate knowledge about the structure of signs can be a powerful addition to current models for sign language. 
-                    For example, training models to simultaneously recognize phonological features alongside sign identifiers improves their accuracy at both tasks. 
-                    My work relies on knowledge bases like <span class="highlight"><a href="https://asl-lex.org/" target="_blank">ASL-LEX 2.0</a></span>, a dataset of linguistic and cognitive facts related to signs, and <span class="highlight"><a href="https://hci.stanford.edu/publications/2016/ethan/empath-chi-2016.pdf" target="_blank">Empath</a></span>, a dataset of semantic categories for many English words. 
-                    We've also released a dataset of our own, <span class="expandable paper highlight" id="assets">The Sem-Lex Benchmark</span>, containing over 91,000 isolated sign videos representing a vocabulary of 3,100 signs (the largest of its kind!).                        
+                    <span class="highlight-noexpand">ASL Corpora</span><br>
+                    Linguistic analysis also depends on representative ASL data.
+                    I work with corpora and benchmark datasets that link videos of signing to lexical, phonological, and semantic information, creating shared resources for both scientific study and model evaluation. (<span class="expandable paper highlight" id="assets">Sem-Lex</span>; <span class="highlight"><a href="/asl-dashboard/">ASL Annotation Dashboard</a></span>; <span class="expandable paper highlight" id="lrec26">STEM discourse paper</span>)
                 </p>
         </section> 
         </section>
@@ -188,6 +176,70 @@
                 <span class="expandable highlight" id="collapse_papers">Collapse All</span>
             </span>
         </header>
+
+        <h3>2026</h3>
+
+        <section style="margin-top:0">
+            Saki Imai, <b>Lee Kezar</b>, Laurel Aichler, Mert Inan, Erin Walker, Alicia Wooten, Lorna Quandt, and Malihe Alikhani.
+            <span class="expandable highlight paper" id="lrec26" style="margin-bottom:0">How Pragmatics Shape Articulation: A Computational Case Study in STEM ASL Discourse</span>. LREC-COLING 2026.
+        </section>
+
+        <section class="paper expansion" id="lrec26">
+            <div class="container">
+                <span class="left-align">
+                    <p>
+                        <span class="highlight-noexpand">TLDR</span><br>
+                        This work studies how signing speed, space, and phonology varies across isolated signs, lecture-type signing, and dialogue signing.
+                    </p>
+                    <p>
+                        <span class="highlight-noexpand">Abstract</span><br>
+                        We study how pragmatics shapes ASL articulation in educational STEM settings by collecting a motion-capture dataset spanning instructor-student dialogue, isolated vocabulary, signed lecture, and interpreted articles. Across these contexts, dialogue signs are substantially shorter than isolated productions and show pragmatic adaptations that are absent in monologue settings. We use the dataset to quantify interaction-driven variation and evaluate whether sign embeddings capture STEM signs and the degree to which repeated forms become entrenched over time.
+                    </p>
+                </span>
+
+                <div style="flex-grow: 1"></div>
+                <span class="right-align" style="padding:0 5% 0 5%; text-align:center;">
+                    <i>Click to view paper</i><br>
+                    <a href="./pdfs/LREC26_STEM_ASL_Discourse.pdf" target="_blank">
+                        <img src="./images/LREC26.png" style="height:200px;">
+                    </a>
+                </span>
+            </div>
+        </section>
+
+        <h3>2025</h3>
+
+        <section style="margin-top:0">
+            <b>Lee Kezar</b>, Nidhi Munikote, Zian Zeng, Zed Sehyr, Naomi Caselli, and Jesse Thomason.
+            <span class="expandable highlight paper" id="aslkg" style="margin-bottom:0">The American Sign Language Knowledge Graph: Infusing ASL Models with Linguistic Knowledge</span>. NAACL 2025.
+        </section>
+
+        <section class="paper expansion" id="aslkg">
+            <div class="container">
+                <span class="left-align">
+                    <p>
+                        <span class="highlight-noexpand">TLDR</span><br>
+                        The ASLKG is a linguistic knowledge base for studying lexicon-wide relationships related to form, meaning, and other linguistic properties.
+                    </p>
+                    <p>
+                        <span class="highlight-noexpand">Abstract</span><br>
+                        We introduce the American Sign Language Knowledge Graph (ASLKG), a collection of linguistic facts drawn from multiple resources that connects ASL signs to phonological and semantic properties. The graph serves as an inductive prior for neurosymbolic ASL models, improving isolated sign recognition while also supporting prediction of unseen semantic features and topic classification for Youtube-ASL videos. This work argues that structured linguistic knowledge can help ASL systems both recognize forms and reason about meaning.
+                    </p>
+                </span>
+
+                <div style="flex-grow: 1"></div>
+                <span class="right-align" style="padding:0 5% 0 5%; text-align:center;">
+                    <i>Click to view paper</i><br>
+                    <a href="./pdfs/ASLKG_NAACL_2025.pdf" target="_blank">
+                        <img src="./images/ASLKG.png" style="height:200px;">
+                    </a>
+                    <br>
+                    <span class="highlight">
+                        <a href="/knowledge-graph/" target="_blank">ASLKG Demo</a>
+                    </span>
+                </span>
+            </div>
+        </section>
 
         <h3>2023</h3>
 
