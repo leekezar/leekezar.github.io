@@ -72,11 +72,13 @@ main .line {
 }
 
 img.selfie {
-    width: 125px;
-    height: auto;
+    width: 260px;
+    max-width: 100%;
+    height: 320px;
+    object-fit: cover;
+    object-position: center;
     margin-left: auto;
     margin-right: auto;
-    border-radius: 50%;
     border: 2px solid black;
     display: block;
 }
