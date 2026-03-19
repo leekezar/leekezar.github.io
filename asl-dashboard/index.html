@@ -654,6 +654,27 @@
     }
     .pending { opacity: 0.55; }
     .embedding-space { display: none !important; }
+    body.embedding-only .toolbar .right,
+    body.embedding-only .grid,
+    body.embedding-only .feedback-panel {
+      display: none !important;
+    }
+    body.embedding-only .page {
+      max-width: 1640px;
+    }
+    body.embedding-only .toolbar {
+      margin-bottom: 18px;
+    }
+    body.embedding-only .toolbar .left {
+      width: 100%;
+    }
+    body.embedding-only .app-title {
+      margin-bottom: 0;
+    }
+    body.embedding-only .embedding-space {
+      display: block !important;
+      margin-top: 0;
+    }
     .embedding-wrap {
       border-radius: 18px;
       overflow: hidden;
@@ -962,6 +983,9 @@
   <script src="assets/app_data.js"></script>
   <script src="assets/initial_feedback.js"></script>
   <script>
+    const DASHBOARD_PARAMS = new URLSearchParams(window.location.search);
+    const EMBEDDING_ONLY = DASHBOARD_PARAMS.get("view") === "embedding";
+    if (EMBEDDING_ONLY) document.body.classList.add("embedding-only");
     const APP = window.__ASL_DASHBOARD_DATA__;
     const INITIAL_FEEDBACK = window.__ASL_DASHBOARD_INITIAL_FEEDBACK__ || {};
     const STORAGE_KEY = "asl-dashboard-feedback-v2";
@@ -1017,7 +1041,7 @@
     const generatedMotionLayouts = new Map();
     const patchImageCache = new Map();
     const exactSearchCache = new Map();
-    const SHOW_EMBEDDING = false;
+    const SHOW_EMBEDDING = EMBEDDING_ONLY;
     const labelToIndex = new Map(APP.shared.labelNames.map((label, idx) => [label, idx]));
     const aslLexLabelSet = new Set((APP.shared.aslLexLabels || []).map((label) => label.toLowerCase()));
     const retrievalSelection = new Set();
@@ -1038,6 +1062,11 @@
     let lastMotionCenter = -1;
     let suppressTimelineScroll = false;
     let suppressMotionScroll = false;
+    if (EMBEDDING_ONLY) {
+      document.title = "ASL Embedding Visualization";
+      const title = document.querySelector(".app-title");
+      if (title) title.textContent = "ASL Embedding Visualization";
+    }
     let timelineUserScrubUntil = 0;
     let motionUserScrubUntil = 0;
     let regenDebounce = null;
