@@ -91,6 +91,11 @@
       background:
         linear-gradient(90deg, var(--accent-soft) 0%, var(--accent-soft) var(--btn-progress, 0%), var(--panel-strong) var(--btn-progress, 0%), var(--panel-strong) 100%);
     }
+    button.progress-button:disabled {
+      opacity: 1;
+      color: var(--text);
+      cursor: wait;
+    }
     button.primary {
       background: linear-gradient(135deg, #111111, var(--accent));
       color: #fff;
@@ -189,36 +194,20 @@
     .seg-center { text-align: center; min-width: 0; }
     .seg-clock,.seg-frames { color: var(--muted); font-size: 15px; font-variant-numeric: tabular-nums; }
     .seg-meta { color: var(--muted); font-size: 13px; min-height: 18px; }
-    .time-edit-row {
+    .timing-row {
       display: grid;
-      grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
-      align-items: center;
+      align-items: stretch;
     }
-    .control-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      justify-content: center;
-    }
-    .boundary-group {
+    .timing-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: rgba(29,36,33,0.04);
       display: grid;
-      grid-template-columns: auto auto minmax(68px, 1fr) auto auto;
-      gap: 4px;
-      align-items: center;
+      gap: 3px;
       min-width: 0;
-    }
-    .boundary-group button {
-      min-width: 30px;
-      padding: 6px 8px;
-      border-radius: 10px;
-    }
-    .boundary-value {
-      min-width: 68px;
-      text-align: center;
-      display: grid;
-      gap: 2px;
     }
     .timeline-head {
       display: flex;
@@ -233,36 +222,6 @@
       gap: 8px;
       flex-wrap: wrap;
     }
-    .motion-controls {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px 12px;
-      align-items: start;
-      justify-content: stretch;
-      min-width: 0;
-      max-width: 100%;
-    }
-    .motion-control {
-      display: grid;
-      grid-template-columns: auto auto minmax(0,1fr) auto auto;
-      align-items: center;
-      gap: 6px;
-      min-width: 0;
-    }
-    .motion-control.buttons {
-      display: flex;
-      flex-wrap: wrap;
-      grid-template-columns: none;
-    }
-    .motion-control .value {
-      text-align: center;
-      font-variant-numeric: tabular-nums;
-      min-width: 52px;
-    }
-    .motion-control .step {
-      padding: 6px 8px;
-      min-width: 32px;
-    }
     .timeline-bottom {
       display: grid;
       gap: 10px;
@@ -273,15 +232,6 @@
       align-items: center;
       justify-content: center;
       flex-wrap: wrap;
-    }
-    .timeline-sep {
-      color: var(--muted);
-      font-size: 20px;
-      font-weight: 700;
-      align-self: stretch;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
     }
     .progress-wrap { display: none; }
     .section-title { margin: 0 0 10px; font-size: 18px; font-weight: 700; }
@@ -719,10 +669,105 @@
       padding-right: 32px;
       min-width: 220px;
     }
+    .annotation-toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .annotation-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    #recalibrateBoundaries {
+      min-width: 240px;
+    }
+    .annotation-status {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .annotation-badge {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel-strong);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+    .annotation-workspace {
+      margin-top: 12px;
+      display: grid;
+      gap: 12px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px;
+      background: var(--panel-strong);
+    }
+    .annotation-workspace.hidden {
+      display: none;
+    }
+    .annotation-prompt {
+      display: grid;
+      gap: 4px;
+    }
+    .annotation-choice-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .annotation-choice-group {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+    .choice-buttons {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .choice-button {
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      line-height: 1.2;
+      min-width: 0;
+    }
+    .choice-button.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .choice-button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .annotation-summary {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      min-height: 18px;
+    }
+    .annotation-secondary {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
     @media (max-width: 1280px) {
       .grid { grid-template-columns: 1fr; }
       .predictions-layout { grid-template-columns: 1fr; }
       .scroll { max-height: none; }
+    }
+    @media (max-width: 960px) {
+      .timing-row,
+      .annotation-choice-grid { grid-template-columns: 1fr; }
+      .choice-buttons { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
   </style>
 </head>
@@ -771,34 +816,19 @@
               <button id="nextSeg" class="timeline-nav" aria-label="Next segment">&#10095;</button>
             </div>
             <div class="timeline-bottom">
-              <div class="time-edit-row">
-                <div class="boundary-group">
-                  <button class="mini" id="startMinus5">&lt;&lt;</button>
-                  <button class="mini" id="startMinus">&lt;</button>
-                  <div class="boundary-value">
-                    <div id="currentStartTime" class="seg-clock">00:00</div>
-                    <div id="currentStartFrame" class="seg-frames">0</div>
-                  </div>
-                  <button class="mini" id="startPlus">&gt;</button>
-                  <button class="mini" id="startPlus5">&gt;&gt;</button>
+              <div class="timing-row">
+                <div class="timing-card">
+                  <div class="subtle">Current start</div>
+                  <div id="currentStartTime" class="seg-clock">00:00</div>
+                  <div id="currentStartFrame" class="seg-frames">0</div>
                 </div>
-                <div class="timeline-sep">–</div>
-                <div class="boundary-group">
-                  <button class="mini" id="endMinus5">&lt;&lt;</button>
-                  <button class="mini" id="endMinus">&lt;</button>
-                  <div class="boundary-value">
-                    <div id="currentEndTime" class="seg-clock">00:00</div>
-                    <div id="currentEndFrame" class="seg-frames">0</div>
-                  </div>
-                  <button class="mini" id="endPlus">&gt;</button>
-                  <button class="mini" id="endPlus5">&gt;&gt;</button>
+                <div class="timing-card">
+                  <div class="subtle">Current end</div>
+                  <div id="currentEndTime" class="seg-clock">00:00</div>
+                  <div id="currentEndFrame" class="seg-frames">0</div>
                 </div>
               </div>
               <div class="timeline-controls">
-                <button id="addSegment">Add</button>
-                <button id="splitSegment">Split</button>
-                <button id="mergeSegment">Merge</button>
-                <button id="deleteSegment">Delete</button>
                 <button id="relabelSegment">Relabel</button>
                 <button id="approveSegment">✓</button>
                 <button id="rejectSegment">✕</button>
@@ -827,7 +857,7 @@
       <div class="tab-bar">
         <button class="tab-button active" data-tab="predictions">Predictions</button>
         <button class="tab-button" data-tab="search">Search Results</button>
-        <button class="tab-button" data-tab="motion">Move-Hold Analysis</button>
+        <button class="tab-button" data-tab="motion">Segmentation Calibration</button>
       </div>
 
       <div class="tab-page active" data-tab-page="predictions">
@@ -885,33 +915,44 @@
       </div>
 
       <div class="tab-page" data-tab-page="motion">
-        <div class="loading-overlay"><div class="spinner"></div><div class="subtle">Loading move-hold analysis…</div></div>
+        <div class="loading-overlay"><div class="spinner"></div><div class="subtle">Loading segmentation calibration…</div></div>
         <section class="motion-panel">
           <div style="display:flex;justify-content:space-between;gap:12px;align-items:end;flex-wrap:wrap;">
             <div>
-              <h2 class="section-title" style="margin-bottom:4px;">Move-Hold Analysis</h2>
+              <h2 class="section-title" style="margin-bottom:4px;">Segmentation Calibration</h2>
             </div>
-            <div class="motion-controls">
-              <div class="motion-control subtle"><span>Threshold</span><button class="step" id="segThresholdMultDown">-</button><span class="value" id="segThresholdMultValue">0.56</span><button class="step" id="segThresholdMultUp">+</button></div>
-              <div class="motion-control subtle"><span>Before</span><button class="step" id="segWindowBeforeDown">-</button><span class="value" id="segWindowBeforeValue">0.5s</span><button class="step" id="segWindowBeforeUp">+</button></div>
-              <div class="motion-control subtle"><span>After</span><button class="step" id="segWindowAfterDown">-</button><span class="value" id="segWindowAfterValue">0.0s</span><button class="step" id="segWindowAfterUp">+</button></div>
-              <div class="motion-control subtle"><span>Split</span><button class="step" id="segSplitThresholdDown">-</button><span class="value" id="segSplitThresholdValue">0.48</span><button class="step" id="segSplitThresholdUp">+</button></div>
-              <div class="motion-control subtle"><span>Min Seg</span><button class="step" id="segMinFramesDown">-</button><span class="value" id="segMinFramesValue">10f</span><button class="step" id="segMinFramesUp">+</button></div>
-              <label class="motion-control subtle" for="segSmoothing"><span>Smoothing</span><span></span>
-                <select id="segSmoothing">
-                  <option value="mean">Mean</option>
-                  <option value="ema">EMA</option>
-                  <option value="median">Median</option>
-                </select>
-                <span></span><span></span>
-              </label>
-              <div class="motion-control buttons">
-                <button id="calibrateBoundaries">Calibrate</button>
-              </div>
-              <label class="toggle"><input type="checkbox" id="showUncertaintyCurve" /> Uncertainty</label>
+            <div class="annotation-actions">
+              <button id="calibrateBoundaries">Calibrate</button>
+              <button id="recalibrateBoundaries">Recalibrate</button>
             </div>
           </div>
-          <div class="subtle" id="motionMeta"></div>
+          <div class="annotation-toolbar">
+            <div class="annotation-status">
+              <span class="annotation-badge" id="annotationCountBadge">0 annotations saved</span>
+              <span class="annotation-badge" id="calibrationFitBadge">No fit yet</span>
+            </div>
+            <div class="subtle" id="motionMeta"></div>
+          </div>
+          <div class="annotation-workspace hidden" id="annotationWorkspace">
+            <div class="annotation-prompt">
+              <div class="section-title" style="margin-bottom:0;">Boundary Feedback</div>
+              <div class="subtle" id="annotationPrompt">Choose a segment to calibrate.</div>
+            </div>
+            <div class="annotation-choice-grid">
+              <div class="annotation-choice-group">
+                <div class="subtle">Start</div>
+                <div class="choice-buttons" id="startChoiceButtons"></div>
+              </div>
+              <div class="annotation-choice-group">
+                <div class="subtle">End</div>
+                <div class="choice-buttons" id="endChoiceButtons"></div>
+              </div>
+            </div>
+            <div class="annotation-secondary">
+              <button id="notASignButton">Not a Sign</button>
+            </div>
+            <div class="annotation-summary subtle" id="annotationSummary"></div>
+          </div>
           <div class="motion-stack">
             <div class="motion-window" id="motionWindow">
               <canvas id="motionCanvas"></canvas>
@@ -955,6 +996,8 @@
     const APP = window.__ASL_DASHBOARD_DATA__;
     const INITIAL_FEEDBACK = window.__ASL_DASHBOARD_INITIAL_FEEDBACK__ || {};
     const STORAGE_KEY = "asl-dashboard-feedback-v2";
+    const CALIBRATION_SCHEMA_VERSION = 2;
+    const CALIBRATION_TAIL_PRUNE_AFTER = 1774297500000;
     const video = document.getElementById("video");
     const overlay = document.getElementById("poseOverlay");
     const ctx = overlay.getContext("2d");
@@ -987,21 +1030,42 @@
     const motionCtx = motionCanvas.getContext("2d");
     const motionMeta = document.getElementById("motionMeta");
     const motionWindow = document.getElementById("motionWindow");
-    const segThresholdMultValue = document.getElementById("segThresholdMultValue");
-    const segWindowBeforeValue = document.getElementById("segWindowBeforeValue");
-    const segWindowAfterValue = document.getElementById("segWindowAfterValue");
-    const segSplitThresholdValue = document.getElementById("segSplitThresholdValue");
-    const segMinFramesValue = document.getElementById("segMinFramesValue");
-    const segSmoothing = document.getElementById("segSmoothing");
-    const showUncertaintyCurve = document.getElementById("showUncertaintyCurve");
+    const annotationCountBadge = document.getElementById("annotationCountBadge");
+    const calibrationFitBadge = document.getElementById("calibrationFitBadge");
+    const annotationPrompt = document.getElementById("annotationPrompt");
+    const annotationSummary = document.getElementById("annotationSummary");
+    const annotationWorkspace = document.getElementById("annotationWorkspace");
+    const startChoiceButtons = document.getElementById("startChoiceButtons");
+    const endChoiceButtons = document.getElementById("endChoiceButtons");
+    const notASignButton = document.getElementById("notASignButton");
+    const calibrateBoundariesButton = document.getElementById("calibrateBoundaries");
+    const recalibrateBoundariesButton = document.getElementById("recalibrateBoundaries");
     const tabButtons = Array.from(document.querySelectorAll(".tab-button"));
     const tabPages = Array.from(document.querySelectorAll(".tab-page"));
     const confusionSort = document.getElementById("confusionSort");
     const vocabSearch = document.getElementById("vocabSearch");
     const feedback = Object.assign({}, INITIAL_FEEDBACK, JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"));
+    let prunedCalibrationTail = false;
+    Object.keys(feedback).forEach((key) => {
+      const entry = feedback[key];
+      if (!entry) return;
+      if (entry.kind === "boundary-calibration" && (entry.createdAt || 0) >= CALIBRATION_TAIL_PRUNE_AFTER) {
+        delete feedback[key];
+        prunedCalibrationTail = true;
+        return;
+      }
+      if (entry.kind === "segmentation-fit" && (entry.updatedAt || 0) >= CALIBRATION_TAIL_PRUNE_AFTER) {
+        delete feedback[key];
+        prunedCalibrationTail = true;
+      }
+    });
+    if (prunedCalibrationTail) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(feedback));
+    }
     const labelColors = new Map();
     const decodedCache = new Map();
     const motionCache = new Map();
+    const boundaryModelCache = new Map();
     const motionRenderCache = new Map();
     const generatedMotionLayouts = new Map();
     const patchImageCache = new Map();
@@ -1038,11 +1102,14 @@
     let motionRefreshTimer = null;
     let motionConfigDebounce = null;
     let pendingRegenSegmentId = null;
-    let hoverMotionFrame = null;
-    let hoverRemoveFrame = null;
     const segmentationConfigByVideo = new Map();
     const useVideoFrameCallback = typeof video.requestVideoFrameCallback === "function";
     let videoFrameCallbackPending = false;
+    let pendingCalibrationSegmentId = null;
+    let pendingCalibrationChoices = {start: "", end: ""};
+    let calibrationModeOpen = false;
+    let calibrationQueue = [];
+    let calibrationQueueIndex = -1;
     const HAND_PATCH_EDGES = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20]];
     const captureCanvas = document.createElement("canvas");
     const thumbCaptureVideo = document.createElement("video");
@@ -1061,6 +1128,7 @@
           emaBeforeSec: 0.5,
           emaAfterSec: 0.0,
           splitThreshold: 0.48,
+          boundaryProbThreshold: 0.52,
           minSegFrames: 10,
           smoothing: "mean",
           minHoldFrames: 3,
@@ -1069,6 +1137,66 @@
         });
       }
       return segmentationConfigByVideo.get(videoId);
+    }
+    const START_CALIBRATION_OPTIONS = [
+      {id: "invalid_early_50_plus", label: "Invalid Start", mode: "early", min: 0.5, max: Infinity, ref: "prev"},
+      {id: "early_25_50", label: "Very Early", mode: "early", min: 0.25, max: 0.5, ref: "prev"},
+      {id: "early_0_25", label: "Early", mode: "early", min: 0.0, max: 0.25, ref: "prev"},
+      {id: "good", label: "Good", mode: "neutral"},
+      {id: "perfect", label: "Perfect", mode: "neutral"},
+      {id: "late_0_25", label: "Late", mode: "late", min: 0.0, max: 0.25, ref: "current"},
+      {id: "late_25_50", label: "Very Late", mode: "late", min: 0.25, max: 0.5, ref: "current"},
+      {id: "invalid_late_50_plus", label: "Invalid Start", mode: "late", min: 0.5, max: Infinity, ref: "current"},
+    ];
+    const END_CALIBRATION_OPTIONS = [
+      {id: "invalid_early_50_plus", label: "Invalid End", mode: "early", min: 0.5, max: Infinity, ref: "current"},
+      {id: "early_25_50", label: "Very Early", mode: "early", min: 0.25, max: 0.5, ref: "current"},
+      {id: "early_0_25", label: "Early", mode: "early", min: 0.0, max: 0.25, ref: "current"},
+      {id: "good", label: "Good", mode: "neutral"},
+      {id: "perfect", label: "Perfect", mode: "neutral"},
+      {id: "late_0_25", label: "Late", mode: "late", min: 0.0, max: 0.25, ref: "next"},
+      {id: "late_25_50", label: "Very Late", mode: "late", min: 0.25, max: 0.5, ref: "next"},
+      {id: "invalid_late_50_plus", label: "Invalid End", mode: "late", min: 0.5, max: Infinity, ref: "next"},
+    ];
+    function calibrationEntries(videoId = currentVideoId) {
+      return Object.values(feedback)
+        .filter((entry) => entry && entry.videoId === videoId && entry.kind === "boundary-calibration")
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    }
+    function segmentCalibrationCount(segId, videoId = currentVideoId) {
+      return calibrationEntries(videoId).filter((entry) => entry.segmentId === segId).length;
+    }
+    function latestCalibrationEntryForSegment(segId, videoId = currentVideoId) {
+      const entries = calibrationEntries(videoId);
+      for (let i = entries.length - 1; i >= 0; i--) {
+        if (entries[i].segmentId === segId) return entries[i];
+      }
+      return null;
+    }
+    function recentCalibrationSegmentIds(videoId = currentVideoId, limit = 8) {
+      const seen = new Set();
+      const out = [];
+      const entries = calibrationEntries(videoId);
+      for (let i = entries.length - 1; i >= 0 && out.length < limit; i--) {
+        const segId = entries[i].segmentId;
+        if (seen.has(segId)) continue;
+        seen.add(segId);
+        out.push(segId);
+      }
+      return out;
+    }
+    function calibrationFitEntry(videoId = currentVideoId) {
+      const entry = feedback[`${videoId}::segmentation-fit::latest`] || null;
+      return entry && entry.fitVersion === CALIBRATION_SCHEMA_VERSION ? entry : null;
+    }
+    function updateCalibrationStatus() {
+      if (annotationCountBadge) {
+        annotationCountBadge.textContent = `${calibrationEntries().length} annotations saved`;
+      }
+      if (calibrationFitBadge) {
+        const fit = calibrationFitEntry();
+        calibrationFitBadge.textContent = fit ? `${Math.round(fit.fitPercent)}% fit` : "No fit yet";
+      }
     }
     function baseSegments() {
       return generatedBaseSegments.get(currentVideoId) || currentVideo().segments;
@@ -1279,9 +1407,11 @@
 
     function saveFeedback() {
       invalidateSegmentCache();
+      boundaryModelCache.clear();
       motionRenderCache.clear();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(feedback));
       feedbackCount.textContent = `${Object.keys(feedback).length} feedback items`;
+      updateCalibrationStatus();
     }
 
     function scopedKey(kind, suffix) {
@@ -1676,7 +1806,7 @@
       g.fill();
       g.stroke();
       g.fillStyle = "rgba(29,36,33,0.58)";
-      g.font = "600 10px "Helvetica Neue", Helvetica, Arial, sans-serif";
+      g.font = '600 10px "Helvetica Neue", Helvetica, Arial, sans-serif';
       g.fillText(label, boxX + 6, boxY + 12);
       if (!snapshot.length) {
         g.restore();
@@ -1728,20 +1858,255 @@
       g.restore();
     }
 
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function sigmoid(value) {
+      return 1 / (1 + Math.exp(-value));
+    }
+
+    function finiteQuantile(values, q, fallback = 0) {
+      const finite = values.filter(Number.isFinite).sort((a, b) => a - b);
+      if (!finite.length) return fallback;
+      const idx = Math.max(0, Math.min(finite.length - 1, Math.round((finite.length - 1) * q)));
+      return finite[idx];
+    }
+
+    function fingertipInternalMotion(decodedPose, payload, frameIdx, handStart, imageWidth, imageHeight, handKeypoints, tipOffsets) {
+      if (frameIdx <= 0) {
+        return {aggregate: 0, tipValues: tipOffsets.map(() => 0)};
+      }
+      const wristNow = posePointAt(decodedPose, payload, frameIdx, handStart, imageWidth, imageHeight);
+      const wristPrev = posePointAt(decodedPose, payload, frameIdx - 1, handStart, imageWidth, imageHeight);
+      if (!wristNow || !wristPrev) {
+        return {aggregate: 0, tipValues: tipOffsets.map(() => 0)};
+      }
+      const tipValues = [];
+      for (const offset of tipOffsets) {
+        if (offset >= handKeypoints) {
+          tipValues.push(0);
+          continue;
+        }
+        const tipNow = posePointAt(decodedPose, payload, frameIdx, handStart + offset, imageWidth, imageHeight);
+        const tipPrev = posePointAt(decodedPose, payload, frameIdx - 1, handStart + offset, imageWidth, imageHeight);
+        if (!tipNow || !tipPrev) {
+          tipValues.push(0);
+          continue;
+        }
+        const prevRelX = tipPrev[0] - wristPrev[0];
+        const prevRelY = tipPrev[1] - wristPrev[1];
+        const nowRelX = tipNow[0] - wristNow[0];
+        const nowRelY = tipNow[1] - wristNow[1];
+        const pathDelta = Math.hypot(nowRelX - prevRelX, nowRelY - prevRelY);
+        const scale = Math.max(10, 0.5 * (Math.hypot(prevRelX, prevRelY) + Math.hypot(nowRelX, nowRelY)));
+        tipValues.push(pathDelta / scale);
+      }
+      const active = tipValues.filter((value) => value > 0);
+      return {
+        aggregate: active.length ? active.reduce((acc, value) => acc + value, 0) / active.length : 0,
+        tipValues,
+      };
+    }
+
+    function smoothArray(source, radius = 2) {
+      if (!radius) return source.slice ? source.slice() : Float32Array.from(source);
+      const out = new Float32Array(source.length);
+      for (let i = 0; i < source.length; i++) {
+        let total = 0;
+        let count = 0;
+        for (let j = Math.max(0, i - radius); j <= Math.min(source.length - 1, i + radius); j++) {
+          total += source[j];
+          count += 1;
+        }
+        out[i] = count ? total / count : source[i];
+      }
+      return out;
+    }
+
+    function segmentSpanFramesByFrame(videoId = currentVideoId) {
+      const sourceSegments = generatedBaseSegments.get(videoId) || APP.videos[videoId].segments;
+      const frames = APP.videos[videoId].videoInfo.frames;
+      const out = new Float32Array(frames);
+      sourceSegments.forEach((seg) => {
+        const startFrame = Math.max(0, seg.startFrame);
+        const endFrame = Math.min(frames - 1, seg.endFrame);
+        const span = Math.max(1, endFrame - startFrame);
+        for (let frame = startFrame; frame <= endFrame; frame++) out[frame] = span;
+      });
+      return out;
+    }
+
+    function boundaryTrainingExamples(model, windowCenters, topUncertainty, videoId = currentVideoId) {
+      const segments = videoId === currentVideoId
+        ? visibleSegments()
+        : ((generatedBaseSegments.get(videoId) || APP.videos[videoId].segments).map((seg) => ({...seg})));
+      const positiveBoundaries = [];
+      segments.forEach((seg, idx) => {
+        if (idx > 0) positiveBoundaries.push({frame: seg.startFrame, weight: 0.45});
+        if (idx < segments.length - 1) positiveBoundaries.push({frame: seg.endFrame, weight: 0.45});
+      });
+      calibrationEntries(videoId).forEach((entry) => {
+        if (entry.notASign) return;
+        positiveBoundaries.push({frame: entry.referenceStartFrame, weight: 2.6});
+        positiveBoundaries.push({frame: entry.referenceEndFrame, weight: 2.6});
+      });
+      const notSignRanges = calibrationEntries(videoId)
+        .filter((entry) => entry.notASign)
+        .map((entry) => [entry.referenceStartFrame, entry.referenceEndFrame]);
+      const positives = positiveBoundaries.filter((item) => item.frame > 2 && item.frame < model.frames - 3);
+      const posRadius = Math.max(4, Math.round(model.fps * 0.12));
+      const negRadius = Math.max(9, Math.round(model.fps * 0.30));
+      const examples = [];
+      for (let i = 0; i < windowCenters.length; i++) {
+        const frame = Math.round(windowCenters[i]);
+        const distToBoundary = positives.length
+          ? Math.min(...positives.map((item) => Math.abs(frame - item.frame)))
+          : Infinity;
+        const strongestPositive = positives.reduce((best, item) => {
+          const dist = Math.abs(frame - item.frame);
+          if (dist > posRadius) return best;
+          return !best || item.weight > best.weight ? {weight: item.weight, dist} : best;
+        }, null);
+        const insideNotSign = notSignRanges.some(([startFrame, endFrame]) => frame >= startFrame && frame <= endFrame);
+        let label = null;
+        let weight = 0;
+        if (insideNotSign) {
+          label = 0;
+          weight = 0.22;
+        } else if (strongestPositive) {
+          label = 1;
+          weight = strongestPositive.weight * (1 - strongestPositive.dist / (posRadius + 1));
+        } else if (distToBoundary >= negRadius) {
+          label = 0;
+          weight = 0.8;
+        }
+        if (label == null || weight <= 0) continue;
+        examples.push({index: i, frame, label, weight});
+      }
+      return examples;
+    }
+
+    function boundaryFeatureVector(model, frame, uncertainty = 0) {
+      const left = model.leftSpeed[frame] / Math.max(1e-6, model.speedScale);
+      const right = model.rightSpeed[frame] / Math.max(1e-6, model.speedScale);
+      const leftAccel = model.leftAccel[frame] / Math.max(1e-6, model.speedScale);
+      const rightAccel = model.rightAccel[frame] / Math.max(1e-6, model.speedScale);
+      const leftInternal = model.leftInternalMotion[frame] / Math.max(1e-6, model.internalScale);
+      const rightInternal = model.rightInternalMotion[frame] / Math.max(1e-6, model.internalScale);
+      const vis = model.visible[frame] / 2;
+      const segLenSec = model.segmentSpanFrames[frame] / Math.max(1, model.fps);
+      return [
+        clamp(left, 0, 2.2),
+        clamp(right, 0, 2.2),
+        clamp(leftAccel, 0, 2.2),
+        clamp(rightAccel, 0, 2.2),
+        clamp(leftInternal, 0, 2.2),
+        clamp(rightInternal, 0, 2.2),
+        clamp(uncertainty, 0, 1),
+        clamp(vis, 0, 1),
+        clamp(segLenSec / 1.8, 0, 2.2),
+      ];
+    }
+
+    function trainBoundaryModel(videoId = currentVideoId) {
+      if (boundaryModelCache.has(videoId)) return boundaryModelCache.get(videoId);
+      const model = buildMotionModel(videoId);
+      const topUncertainty = windowTop1Uncertainty();
+      const starts = APP.videos[videoId].windowData.starts;
+      const ends = APP.videos[videoId].windowData.ends;
+      const windowCenters = starts.map((start, idx) => 0.5 * (start + ends[idx]));
+      const rawFeatures = windowCenters.map((center, idx) => boundaryFeatureVector(model, Math.round(center), topUncertainty[idx] || 0));
+      const examples = boundaryTrainingExamples(model, windowCenters, topUncertainty, videoId);
+      const inputDim = rawFeatures[0]?.length || 0;
+      const mean = new Float32Array(inputDim);
+      const stdev = new Float32Array(inputDim);
+      rawFeatures.forEach((feature) => {
+        feature.forEach((value, idx) => { mean[idx] += value; });
+      });
+      for (let i = 0; i < inputDim; i++) mean[i] /= Math.max(1, rawFeatures.length);
+      rawFeatures.forEach((feature) => {
+        feature.forEach((value, idx) => { stdev[idx] += (value - mean[idx]) ** 2; });
+      });
+      for (let i = 0; i < inputDim; i++) stdev[i] = Math.sqrt(stdev[i] / Math.max(1, rawFeatures.length)) || 1;
+      const features = rawFeatures.map((feature) => feature.map((value, idx) => (value - mean[idx]) / stdev[idx]));
+      const W = new Float32Array(inputDim);
+      let b = 0;
+      if (examples.length) {
+        const posWeight = examples
+          .filter((example) => example.label === 1)
+          .reduce((acc, example) => acc + example.weight, 0);
+        const negWeight = examples
+          .filter((example) => example.label === 0)
+          .reduce((acc, example) => acc + example.weight, 0);
+        const classBalance = posWeight > 0 ? clamp(negWeight / posWeight, 0.7, 3.4) : 1;
+        const lr = 0.024;
+        const l2 = 0.0012;
+        for (let epoch = 0; epoch < 180; epoch++) {
+          const gW = new Float32Array(inputDim);
+          let gb = 0;
+          examples.forEach((example) => {
+            const x = features[example.index];
+            let out = b;
+            for (let i = 0; i < inputDim; i++) out += x[i] * W[i];
+            const pred = sigmoid(out);
+            const labelWeight = example.label === 1 ? classBalance : 1;
+            const delta = (pred - example.label) * example.weight * labelWeight;
+            gb += delta;
+            for (let i = 0; i < inputDim; i++) gW[i] += delta * x[i];
+          });
+          const denom = Math.max(1, examples.length);
+          for (let i = 0; i < inputDim; i++) {
+            W[i] -= lr * ((gW[i] / denom) + l2 * W[i]);
+          }
+          b -= lr * (gb / denom);
+        }
+      }
+      const windowProb = new Float32Array(windowCenters.length);
+      for (let idx = 0; idx < windowCenters.length; idx++) {
+        const x = features[idx];
+        let out = b;
+        for (let i = 0; i < inputDim; i++) out += x[i] * W[i];
+        windowProb[idx] = sigmoid(out);
+      }
+      const frameProb = new Float32Array(model.frames);
+      for (let idx = 0; idx < windowCenters.length; idx++) {
+        const frame = clamp(Math.round(windowCenters[idx]), 0, model.frames - 1);
+        frameProb[frame] = Math.max(frameProb[frame], windowProb[idx]);
+      }
+      const smoothedFrameProb = smoothArray(frameProb, Math.max(1, Math.round(model.fps * 0.06)));
+      const trained = {windowCenters, windowProb, frameProb: smoothedFrameProb};
+      boundaryModelCache.set(videoId, trained);
+      return trained;
+    }
+
     function buildMotionModel(videoId) {
       const cached = motionCache.get(videoId);
       if (cached) return cached;
       const videoPayload = APP.videos[videoId];
       const motionSpec = videoPayload.motion;
       const posePayload = videoPayload.pose;
+      const decodedPose = ensureDecoded(videoId).pose;
+      const poseSpec = APP.shared.poseSpec || {};
+      const handKeypoints = Number(poseSpec.handKeypoints || 21);
+      const leftHandStart = Number.isFinite(poseSpec.leftHandStart) ? poseSpec.leftHandStart : 33;
+      const rightHandStart = Number.isFinite(poseSpec.rightHandStart) ? poseSpec.rightHandStart : (leftHandStart + handKeypoints);
+      const fingertipOffsets = [4, 8, 12, 16, 20];
       const frames = posePayload.frameCount;
       const leftWrist = unpackArray(motionSpec.leftWrist);
       const rightWrist = unpackArray(motionSpec.rightWrist);
+      const leftSpeed = unpackArray(motionSpec.leftSpeed);
+      const rightSpeed = unpackArray(motionSpec.rightSpeed);
       const leftX = new Float32Array(frames).fill(NaN);
       const leftY = new Float32Array(frames).fill(NaN);
       const rightX = new Float32Array(frames).fill(NaN);
       const rightY = new Float32Array(frames).fill(NaN);
       const visible = new Uint8Array(frames);
+      const leftTipMotion = fingertipOffsets.map(() => new Float32Array(frames));
+      const rightTipMotion = fingertipOffsets.map(() => new Float32Array(frames));
+      const leftInternalMotion = new Float32Array(frames);
+      const rightInternalMotion = new Float32Array(frames);
+      const segmentSpanFrames = segmentSpanFramesByFrame(videoId);
       for (let frame = 0; frame < frames; frame++) {
         const lx = leftWrist[frame * 2];
         const ly = leftWrist[frame * 2 + 1];
@@ -1752,21 +2117,65 @@
         rightX[frame] = rx;
         rightY[frame] = ry;
         visible[frame] = (Number.isFinite(lx) && Number.isFinite(ly) ? 1 : 0) + (Number.isFinite(rx) && Number.isFinite(ry) ? 1 : 0);
+        const leftInternal = fingertipInternalMotion(decodedPose, posePayload, frame, leftHandStart, motionSpec.imageWidth, motionSpec.imageHeight, handKeypoints, fingertipOffsets);
+        const rightInternal = fingertipInternalMotion(decodedPose, posePayload, frame, rightHandStart, motionSpec.imageWidth, motionSpec.imageHeight, handKeypoints, fingertipOffsets);
+        leftInternalMotion[frame] = leftInternal.aggregate;
+        rightInternalMotion[frame] = rightInternal.aggregate;
+        leftInternal.tipValues.forEach((value, idx) => { leftTipMotion[idx][frame] = value; });
+        rightInternal.tipValues.forEach((value, idx) => { rightTipMotion[idx][frame] = value; });
       }
+      const internalValues = Array.from(leftInternalMotion).concat(Array.from(rightInternalMotion));
+      const internalScale = Math.max(0.04, finiteQuantile(internalValues, 0.9, 0.12));
+      const leftAccel = new Float32Array(frames);
+      const rightAccel = new Float32Array(frames);
+      for (let frame = 1; frame < frames; frame++) {
+        leftAccel[frame] = Math.abs(leftSpeed[frame] - leftSpeed[frame - 1]);
+        rightAccel[frame] = Math.abs(rightSpeed[frame] - rightSpeed[frame - 1]);
+      }
+      if (frames > 1) {
+        leftAccel[0] = leftAccel[1];
+        rightAccel[0] = rightAccel[1];
+      }
+      const combinedMotion = new Float32Array(frames);
+      const combinedValues = [];
+      for (let frame = 0; frame < frames; frame++) {
+        const rightNorm = motionSpec.speedScale > 0 ? (rightSpeed[frame] / motionSpec.speedScale) : 0;
+        const leftNorm = motionSpec.speedScale > 0 ? (leftSpeed[frame] / motionSpec.speedScale) : 0;
+        const rightInternalNorm = rightInternalMotion[frame] / internalScale;
+        const leftInternalNorm = leftInternalMotion[frame] / internalScale;
+        const value = motionSpec.speedScale * (
+          0.56 * clamp(rightNorm, 0, 2) +
+          0.18 * clamp(leftNorm, 0, 2) +
+          0.18 * clamp(rightInternalNorm, 0, 2) +
+          0.08 * clamp(leftInternalNorm, 0, 2)
+        );
+        combinedMotion[frame] = value;
+        combinedValues.push(value);
+      }
+      const combinedScale = Math.max(1, finiteQuantile(combinedValues, 0.9, motionSpec.speedScale));
       const model = {
         imageWidth: motionSpec.imageWidth,
         imageHeight: motionSpec.imageHeight,
         frames,
         fps: videoPayload.videoInfo.fps,
-        leftSpeed: unpackArray(motionSpec.leftSpeed),
-        rightSpeed: unpackArray(motionSpec.rightSpeed),
-        visible: unpackArray(motionSpec.visible),
+        leftSpeed,
+        rightSpeed,
         localThreshold: unpackArray(motionSpec.localThreshold),
         leftX,
         leftY,
         rightX,
         rightY,
         visible,
+        leftTipMotion,
+        rightTipMotion,
+        leftInternalMotion,
+        rightInternalMotion,
+        leftAccel,
+        rightAccel,
+        segmentSpanFrames,
+        internalScale,
+        combinedMotion,
+        combinedScale,
         holds: motionSpec.holds.map((hold) => ({
           ...hold,
           leftImage: imageForDataUri(hold.leftPatch),
@@ -1829,14 +2238,11 @@
 
     function motionThresholdForConfig(model, cfg) {
       const out = new Float32Array(model.frames);
-      const baseSpeed = new Float32Array(model.frames);
-      for (let i = 0; i < model.frames; i++) {
-        baseSpeed[i] = model.rightSpeed[i];
-      }
+      const baseSpeed = model.combinedMotion;
       const pastRadius = Math.max(1, Math.round(model.fps * cfg.emaBeforeSec));
       const futureRadius = Math.max(0, Math.round(model.fps * cfg.emaAfterSec));
       const speedVals = [];
-      for (let i = 0; i < model.frames; i++) if (Number.isFinite(model.rightX[i]) && Number.isFinite(model.rightY[i])) speedVals.push(baseSpeed[i]);
+      for (let i = 0; i < model.frames; i++) if (model.visible[i] > 0) speedVals.push(baseSpeed[i]);
       speedVals.sort((a, b) => a - b);
       const q12 = speedVals.length ? speedVals[Math.max(0, Math.floor((speedVals.length - 1) * 0.12))] : 4.5;
       const localFloor = Math.max(4.5, q12);
@@ -1868,13 +2274,23 @@
         } else {
           smoothed = count ? total / count : 0;
         }
-        out[i] = Math.max(localFloor, Math.min(model.speedScale * 0.50, smoothed * cfg.thresholdMult));
+        out[i] = Math.max(localFloor, Math.min(model.combinedScale * 0.62, smoothed * cfg.thresholdMult));
       }
       return out;
     }
 
     function motionConfigKey(cfg) {
-      return `${cfg.thresholdMult.toFixed(2)}|${cfg.emaBeforeSec.toFixed(1)}|${cfg.emaAfterSec.toFixed(1)}|${cfg.smoothing}|${cfg.showUncertainty ? 1 : 0}`;
+      return [
+        cfg.thresholdMult.toFixed(2),
+        cfg.emaBeforeSec.toFixed(2),
+        cfg.emaAfterSec.toFixed(2),
+        cfg.smoothing,
+        cfg.boundaryProbThreshold.toFixed(2),
+        Math.round(cfg.minSegFrames),
+        Math.round(cfg.minHoldFrames),
+        Math.round(cfg.bufferFrames),
+        cfg.showUncertainty ? 1 : 0,
+      ].join("|");
     }
 
     function segmentLayoutSignature() {
@@ -1889,12 +2305,15 @@
       const topUncertainty = windowTop1Uncertainty();
       const windowCenters = starts.map((s, i) => 0.5 * (s + ends[i]));
       const threshold = motionThresholdForConfig(model, cfg);
+      const boundaryModel = trainBoundaryModel(currentVideoId);
+      const windowBoundaryProb = boundaryModel.windowProb;
+      const frameBoundaryProb = boundaryModel.frameProb;
 
       const holds = [];
       let runStart = -1;
       for (let i = 0; i < model.frames; i++) {
-        const rightVisible = Number.isFinite(model.rightX[i]) && Number.isFinite(model.rightY[i]);
-        const still = rightVisible && model.rightSpeed[i] <= threshold[i];
+        const anyVisible = model.visible[i] > 0;
+        const still = anyVisible && model.combinedMotion[i] <= threshold[i];
         if (still && runStart < 0) runStart = i;
         if ((!still || i === model.frames - 1) && runStart >= 0) {
           const runEnd = (still && i === model.frames - 1) ? i : i - 1;
@@ -1902,9 +2321,9 @@
             let holdFrame = runStart;
             let best = Infinity;
             for (let j = runStart; j <= runEnd; j++) {
-              const s = model.rightSpeed[j];
-              if (s < best) {
-                best = s;
+              const score = model.combinedMotion[j] - frameBoundaryProb[j] * model.combinedScale * 0.12;
+              if (score < best) {
+                best = score;
                 holdFrame = j;
               }
             }
@@ -1926,27 +2345,7 @@
         }
         if (anyVisible) intervals.push({startFrame, endFrame});
       }
-      const edits = motionBoundaryEdits();
-      const removeTol = Math.max(6, Math.round(model.fps * 0.16));
-      let editedHolds = holds.slice();
-      for (const target of edits.removeFrames || []) {
-        let bestIdx = -1;
-        let bestDist = Infinity;
-        for (let i = 0; i < editedHolds.length; i++) {
-          const dist = Math.abs(editedHolds[i].frame - target);
-          if (dist < bestDist) {
-            bestDist = dist;
-            bestIdx = i;
-          }
-        }
-        if (bestIdx >= 0 && bestDist <= removeTol) editedHolds.splice(bestIdx, 1);
-      }
-      for (const frame of edits.addFrames || []) {
-        if (frame <= 0 || frame >= model.frames - 1) continue;
-        if (editedHolds.some((hold) => Math.abs(hold.frame - frame) <= 2)) continue;
-        editedHolds.push({startFrame: Math.max(0, frame - 1), endFrame: Math.min(model.frames - 1, frame + 1), frame});
-      }
-      editedHolds.sort((a, b) => a.frame - b.frame);
+      const editedHolds = holds.slice();
       const editedBoundaries = [0, ...editedHolds.map((hold) => hold.frame), model.frames - 1]
         .filter((frame, idx, arr) => idx === 0 || frame > arr[idx - 1]);
       const editedIntervals = [];
@@ -1959,7 +2358,7 @@
         }
         if (anyVisible) editedIntervals.push({startFrame, endFrame});
       }
-      return {threshold, holds: editedHolds, intervals: editedIntervals, windowCenters, topUncertainty};
+      return {threshold, holds: editedHolds, intervals: editedIntervals, windowCenters, topUncertainty, windowBoundaryProb, frameBoundaryProb};
     }
 
     function drawPatchImage(g, image, boxX, boxY, boxW, boxH, label, borderColor) {
@@ -1991,7 +2390,7 @@
         g.restore();
       }
       g.fillStyle = "rgba(29,36,33,0.66)";
-      g.font = "700 10px "Helvetica Neue", Helvetica, Arial, sans-serif";
+      g.font = '700 10px "Helvetica Neue", Helvetica, Arial, sans-serif';
       g.fillText(label, boxX + 6, boxY + 11);
       g.restore();
     }
@@ -2042,7 +2441,7 @@
           g.rect(left + 5, chipBandTop, Math.max(0, width - 10), chipBandH);
           g.clip();
           g.fillStyle = "rgba(255,255,255,0.96)";
-          g.font = "700 11px "Helvetica Neue", Helvetica, Arial, sans-serif";
+          g.font = '700 11px "Helvetica Neue", Helvetica, Arial, sans-serif';
           g.textBaseline = "middle";
           g.fillText(seg.displayLabel, left + 6, chipBandTop + chipBandH * 0.55);
           g.restore();
@@ -2112,7 +2511,7 @@
       });
 
       g.fillStyle = "rgba(29,36,33,0.62)";
-      g.font = "600 12px "Helvetica Neue", Helvetica, Arial, sans-serif";
+      g.font = '600 12px "Helvetica Neue", Helvetica, Arial, sans-serif';
       g.fillText("left velocity", 10, chartTop - 6);
       g.fillText("right velocity", 96, chartTop - 6);
       g.fillText("adaptive threshold", 186, chartTop - 6);
@@ -2129,19 +2528,11 @@
       return out;
     }
 
-    function regenerateBaseSegments() {
-      const model = buildMotionModel(currentVideoId);
-      const cfg = segmentationConfig();
+    function generateSegmentRangesForConfig(cfg, videoId = currentVideoId) {
+      const model = buildMotionModel(videoId);
       const layout = buildMotionLayout(model, cfg);
-      const {holds, intervals, windowCenters, topUncertainty, threshold} = layout;
-      generatedMotionLayouts.set(currentVideoId, {
-        configKey: motionConfigKey(cfg),
-        holds,
-        intervals,
-        threshold,
-      });
-
-      const currentBase = baseSegments();
+      const {intervals, windowCenters, topUncertainty, threshold, windowBoundaryProb} = layout;
+      const currentBase = generatedBaseSegments.get(videoId) || APP.videos[videoId].segments;
       const customIds = new Set(customSegments().map((seg) => seg.id));
       const locked = visibleSegments()
         .filter((seg) => !customIds.has(seg.id) && currentBase.some((base) => base.id === seg.id) && segmentHasManualFeedback(seg.id))
@@ -2151,7 +2542,6 @@
           endFrame: seg.endFrame,
         }))
         .sort((a, b) => a.startFrame - b.startFrame);
-
       const minGap = Math.max(8, Math.round(cfg.minSegFrames * 0.75));
       const minSeg = Math.max(10, Math.round(cfg.minSegFrames));
       const generated = [];
@@ -2166,15 +2556,24 @@
           if (windowCenters[i] >= interval.startFrame + minGap && windowCenters[i] <= interval.endFrame - minGap) candidate.push(i);
         }
         if (interval.endFrame - interval.startFrame >= Math.round(model.fps * 1.2) && candidate.length >= 5) {
+          let bestCandidate = null;
           for (let j = 1; j < candidate.length - 1; j++) {
             const prev = topUncertainty[candidate[j - 1]];
             const cur = topUncertainty[candidate[j]];
             const next = topUncertainty[candidate[j + 1]];
-            if (cur >= prev && cur >= next && cur >= cfg.splitThreshold) {
-              splitFrame = Math.round(windowCenters[candidate[j]]);
-              break;
+            const prevProb = windowBoundaryProb[candidate[j - 1]] || 0;
+            const curProb = windowBoundaryProb[candidate[j]] || 0;
+            const nextProb = windowBoundaryProb[candidate[j + 1]] || 0;
+            const uncertaintyPeak = cur >= prev && cur >= next;
+            const neuralPeak = curProb >= prevProb && curProb >= nextProb;
+            if (!uncertaintyPeak && !neuralPeak) continue;
+            const score = curProb * 0.72 + cur * 0.28;
+            if (score < cfg.boundaryProbThreshold) continue;
+            if (!bestCandidate || score > bestCandidate.score) {
+              bestCandidate = {score, frame: Math.round(windowCenters[candidate[j]])};
             }
           }
+          if (bestCandidate) splitFrame = bestCandidate.frame;
         }
         const ranges = splitFrame ? [[interval.startFrame, splitFrame], [splitFrame, interval.endFrame]] : [[interval.startFrame, interval.endFrame]];
         for (const [rawStart, rawEnd] of ranges) {
@@ -2183,18 +2582,33 @@
         }
       }
       const combined = [...locked, ...generated].sort((a, b) => a.startFrame - b.startFrame);
-      const finalSegs = [];
+      const finalRanges = [];
       let prevEnd = 0;
       for (let i = 0; i < combined.length; i++) {
         let startFrame = Math.max(combined[i].startFrame, prevEnd);
         let endFrame = combined[i].endFrame;
         if (i + 1 < combined.length) endFrame = Math.min(endFrame, combined[i + 1].startFrame - cfg.bufferFrames);
         if (endFrame - startFrame < minSeg) continue;
-        finalSegs.push(computeSegmentData(startFrame, endFrame, combined[i].id));
+        finalRanges.push({id: combined[i].id, startFrame, endFrame});
         prevEnd = endFrame + cfg.bufferFrames;
       }
+      return {model, layout, threshold, ranges: finalRanges};
+    }
+
+    function regenerateBaseSegments() {
+      const cfg = segmentationConfig();
+      const {layout, threshold, ranges} = generateSegmentRangesForConfig(cfg);
+      const {holds, intervals} = layout;
+      generatedMotionLayouts.set(currentVideoId, {
+        configKey: motionConfigKey(cfg),
+        holds,
+        intervals,
+        threshold,
+      });
+      const finalSegs = ranges.map((seg) => computeSegmentData(seg.startFrame, seg.endFrame, seg.id));
       if (!finalSegs.length) return;
       generatedBaseSegments.set(currentVideoId, finalSegs);
+      boundaryModelCache.clear();
       motionRenderCache.clear();
       invalidateSegmentCache();
     }
@@ -2240,41 +2654,424 @@
       motionCtx.drawImage(cached, 0, 0);
       drawSelectedMotionSegment(trackWidth, height);
       drawMotionHoverOverlay(trackWidth, height);
-      motionMeta.textContent = "";
+      renderCalibrationWorkspace();
       centerMotion(video.currentTime || activeSegment().startSec);
     }
 
+    function matchingSegmentForRange(segments, startFrame, endFrame) {
+      let best = null;
+      let bestOverlap = -1;
+      let bestCenterDist = Infinity;
+      const targetCenter = 0.5 * (startFrame + endFrame);
+      segments.forEach((seg) => {
+        const overlap = Math.max(0, Math.min(endFrame, seg.endFrame) - Math.max(startFrame, seg.startFrame));
+        const center = 0.5 * (seg.startFrame + seg.endFrame);
+        const centerDist = Math.abs(center - targetCenter);
+        if (overlap > bestOverlap || (overlap === bestOverlap && centerDist < bestCenterDist)) {
+          best = seg;
+          bestOverlap = overlap;
+          bestCenterDist = centerDist;
+        }
+      });
+      return best;
+    }
+
+    function calibrationScale(entry, choice, side) {
+      const currentSpan = Math.max(10, entry.referenceEndFrame - entry.referenceStartFrame);
+      if (choice.ref === "prev") return Math.max(10, entry.prevSpanFrames || currentSpan);
+      if (choice.ref === "next") return Math.max(10, entry.nextSpanFrames || currentSpan);
+      return currentSpan;
+    }
+
+    function intervalLoss(value, min, max, scale) {
+      const unit = Math.max(6, scale * 0.18);
+      if (value < min) return (min - value) / unit;
+      if (value > max) return (value - max) / unit;
+      return 0;
+    }
+
+    function normalizeCalibrationChoiceId(choiceId, side) {
+      if (choiceId === "invalid_50_plus") {
+        return side === "start" ? "invalid_late_50_plus" : "invalid_early_50_plus";
+      }
+      return choiceId;
+    }
+
+    function boundaryLossForChoice(choiceId, delta, entry, options, side) {
+      const normalizedChoiceId = normalizeCalibrationChoiceId(choiceId, side);
+      const choice = options.find((item) => item.id === normalizedChoiceId);
+      if (!choice) return 1.2;
+      const currentSpan = Math.max(10, entry.referenceEndFrame - entry.referenceStartFrame);
+      if (choice.mode === "neutral") {
+        const tol = normalizedChoiceId === "perfect" ? Math.max(3, currentSpan * 0.04) : Math.max(6, currentSpan * 0.12);
+        return Math.max(0, Math.abs(delta) - tol) / tol;
+      }
+      const scale = calibrationScale(entry, choice);
+      const lower = choice.mode === "late" ? choice.min * scale : -choice.max * scale;
+      const upper = choice.mode === "late"
+        ? (Number.isFinite(choice.max) ? choice.max * scale : Infinity)
+        : -choice.min * scale;
+      return intervalLoss(delta, lower, upper, scale);
+    }
+
+    function calibrationLossForEntry(entry, segments) {
+      if (entry.notASign) {
+        const match = matchingSegmentForRange(segments, entry.referenceStartFrame, entry.referenceEndFrame);
+        if (!match) return 0;
+        const overlap = Math.max(0, Math.min(entry.referenceEndFrame, match.endFrame) - Math.max(entry.referenceStartFrame, match.startFrame));
+        const refSpan = Math.max(10, entry.referenceEndFrame - entry.referenceStartFrame);
+        return 0.22 * Math.min(1.5, overlap / refSpan);
+      }
+      const match = matchingSegmentForRange(segments, entry.referenceStartFrame, entry.referenceEndFrame);
+      if (!match) return 3.5;
+      const deltaStart = match.startFrame - entry.referenceStartFrame;
+      const deltaEnd = match.endFrame - entry.referenceEndFrame;
+      const startLoss = boundaryLossForChoice(entry.startChoice, deltaStart, entry, START_CALIBRATION_OPTIONS, "start");
+      const endLoss = boundaryLossForChoice(entry.endChoice, deltaEnd, entry, END_CALIBRATION_OPTIONS, "end");
+      const overlap = Math.max(0, Math.min(entry.referenceEndFrame, match.endFrame) - Math.max(entry.referenceStartFrame, match.startFrame));
+      const refSpan = Math.max(10, entry.referenceEndFrame - entry.referenceStartFrame);
+      const overlapPenalty = Math.max(0, 0.6 - overlap / refSpan) * 1.2;
+      return startLoss + endLoss + overlapPenalty;
+    }
+
+    function calibrationFitForConfig(cfg) {
+      const entries = calibrationEntries();
+      if (!entries.length) return {fitPercent: 0, meanLoss: Infinity, segments: []};
+      const {ranges} = generateSegmentRangesForConfig(cfg);
+      const losses = entries.map((entry) => calibrationLossForEntry(entry, ranges));
+      const meanLoss = losses.reduce((acc, value) => acc + value, 0) / Math.max(1, losses.length);
+      const fitPercent = Math.round(100 * Math.exp(-0.7 * meanLoss));
+      return {fitPercent, meanLoss, segments: ranges};
+    }
+
+    function localCandidateConfigs(base = segmentationConfig()) {
+      return [
+        {...base},
+        {...base, thresholdMult: Math.max(0.35, Math.min(0.90, Number((base.thresholdMult - 0.05).toFixed(2))))},
+        {...base, thresholdMult: Math.max(0.35, Math.min(0.90, Number((base.thresholdMult + 0.05).toFixed(2))))},
+        {...base, emaBeforeSec: Math.max(0.1, Math.min(1.5, Number((base.emaBeforeSec - 0.1).toFixed(1))))},
+        {...base, emaBeforeSec: Math.max(0.1, Math.min(1.5, Number((base.emaBeforeSec + 0.1).toFixed(1))))},
+        {...base, boundaryProbThreshold: Math.max(0.30, Math.min(0.82, Number((base.boundaryProbThreshold - 0.05).toFixed(2))))},
+        {...base, boundaryProbThreshold: Math.max(0.30, Math.min(0.82, Number((base.boundaryProbThreshold + 0.05).toFixed(2))))},
+        {...base, minSegFrames: Math.max(8, Math.min(36, Math.round(base.minSegFrames - 2)))},
+        {...base, minSegFrames: Math.max(8, Math.min(36, Math.round(base.minSegFrames + 2)))},
+        {...base, minHoldFrames: Math.max(2, Math.min(6, Math.round(base.minHoldFrames - 1)))},
+        {...base, minHoldFrames: Math.max(2, Math.min(6, Math.round(base.minHoldFrames + 1)))},
+        {...base, bufferFrames: Math.max(1, Math.min(5, Math.round(base.bufferFrames - 1)))},
+        {...base, bufferFrames: Math.max(1, Math.min(5, Math.round(base.bufferFrames + 1)))},
+      ];
+    }
+
+    function normalizeSegmentationCandidate(cfg, base = segmentationConfig()) {
+      return {
+        ...base,
+        ...cfg,
+        thresholdMult: Math.max(0.35, Math.min(0.90, Number((cfg.thresholdMult ?? base.thresholdMult).toFixed(2)))),
+        emaBeforeSec: Math.max(0.1, Math.min(1.5, Number((cfg.emaBeforeSec ?? base.emaBeforeSec).toFixed(2)))),
+        emaAfterSec: Math.max(0.0, Math.min(0.8, Number((cfg.emaAfterSec ?? base.emaAfterSec).toFixed(2)))),
+        boundaryProbThreshold: Math.max(0.30, Math.min(0.82, Number((cfg.boundaryProbThreshold ?? base.boundaryProbThreshold).toFixed(2)))),
+        minSegFrames: Math.max(8, Math.min(36, Math.round(cfg.minSegFrames ?? base.minSegFrames))),
+        minHoldFrames: Math.max(2, Math.min(6, Math.round(cfg.minHoldFrames ?? base.minHoldFrames))),
+        bufferFrames: Math.max(1, Math.min(5, Math.round(cfg.bufferFrames ?? base.bufferFrames))),
+        smoothing: ["mean", "ema", "median"].includes(cfg.smoothing) ? cfg.smoothing : base.smoothing,
+      };
+    }
+
+    function segmentationCandidateKey(cfg) {
+      const normalized = normalizeSegmentationCandidate(cfg);
+      return [
+        normalized.thresholdMult.toFixed(2),
+        normalized.emaBeforeSec.toFixed(2),
+        normalized.emaAfterSec.toFixed(2),
+        normalized.smoothing,
+        normalized.boundaryProbThreshold.toFixed(2),
+        normalized.minSegFrames,
+        normalized.minHoldFrames,
+        normalized.bufferFrames,
+      ].join("|");
+    }
+
+    function collectSegmentationSeedConfigs(base, entries) {
+      const seeds = [
+        {...base},
+        ...(feedback[`${currentVideoId}::segmentation-fit::latest`]?.cfg ? [{...feedback[`${currentVideoId}::segmentation-fit::latest`].cfg}] : []),
+      ];
+      const recent = entries
+        .map((entry) => entry.configSnapshot)
+        .filter(Boolean)
+        .slice(-24);
+      recent.forEach((cfg) => seeds.push({...cfg}));
+      const dedup = new Map();
+      seeds.forEach((cfg) => {
+        const normalized = normalizeSegmentationCandidate(cfg, base);
+        dedup.set(segmentationCandidateKey(normalized), normalized);
+      });
+      return Array.from(dedup.values());
+    }
+
+    function candidateNeighborhoods(cfg) {
+      const base = normalizeSegmentationCandidate(cfg);
+      const deltaCandidates = [
+        {thresholdMult: base.thresholdMult - 0.06},
+        {thresholdMult: base.thresholdMult + 0.06},
+        {emaBeforeSec: base.emaBeforeSec - 0.12},
+        {emaBeforeSec: base.emaBeforeSec + 0.12},
+        {emaAfterSec: base.emaAfterSec - 0.05},
+        {emaAfterSec: base.emaAfterSec + 0.05},
+        {boundaryProbThreshold: base.boundaryProbThreshold - 0.04},
+        {boundaryProbThreshold: base.boundaryProbThreshold + 0.04},
+        {minSegFrames: base.minSegFrames - 2},
+        {minSegFrames: base.minSegFrames + 2},
+        {minHoldFrames: base.minHoldFrames - 1},
+        {minHoldFrames: base.minHoldFrames + 1},
+        {bufferFrames: base.bufferFrames - 1},
+        {bufferFrames: base.bufferFrames + 1},
+        {smoothing: "mean"},
+        {smoothing: "ema"},
+        {smoothing: "median"},
+      ];
+      return deltaCandidates.map((delta) => normalizeSegmentationCandidate({...base, ...delta}, base));
+    }
+
+    function buildRecalibrationCandidates(base, entries) {
+      const seedConfigs = collectSegmentationSeedConfigs(base, entries);
+      const candidateMap = new Map();
+      seedConfigs.forEach((cfg) => candidateMap.set(segmentationCandidateKey(cfg), cfg));
+      seedConfigs.slice(-6).forEach((cfg) => {
+        candidateNeighborhoods(cfg).forEach((neighbor) => candidateMap.set(segmentationCandidateKey(neighbor), neighbor));
+      });
+      candidateNeighborhoods(base).forEach((neighbor) => candidateMap.set(segmentationCandidateKey(neighbor), neighbor));
+      return Array.from(candidateMap.values());
+    }
+
+    function rankCandidateFits(candidates) {
+      return candidates
+        .map((candidate) => ({candidate, fit: calibrationFitForConfig(candidate)}))
+        .sort((a, b) => b.fit.fitPercent - a.fit.fitPercent || a.fit.meanLoss - b.fit.meanLoss);
+    }
+
+    function calibrationCandidateScore(seg, alternativeRanges) {
+      const span = Math.max(10, seg.endFrame - seg.startFrame);
+      let variance = 0;
+      alternativeRanges.forEach((ranges) => {
+        const match = matchingSegmentForRange(ranges, seg.startFrame, seg.endFrame);
+        if (!match) {
+          variance += 1.6;
+          return;
+        }
+        variance += (Math.abs(match.startFrame - seg.startFrame) + Math.abs(match.endFrame - seg.endFrame)) / span;
+      });
+      variance /= Math.max(1, alternativeRanges.length);
+      const latestForSegment = latestCalibrationEntryForSegment(seg.id);
+      const latestLoss = latestForSegment ? calibrationLossForEntry(latestForSegment, visibleSegments()) : null;
+      const mismatchBoost = latestLoss == null ? 0 : Math.min(1.8, latestLoss);
+      const countPenalty = 1 / (1 + segmentCalibrationCount(seg.id) * 1.35);
+      let repeatPenalty = 1;
+      if (latestLoss != null) {
+        if (latestLoss < 0.35) repeatPenalty *= 0.08;
+        else if (latestLoss < 0.75) repeatPenalty *= 0.25;
+        else if (latestLoss < 1.1) repeatPenalty *= 0.52;
+      }
+      const recentIds = recentCalibrationSegmentIds();
+      if (recentIds.includes(seg.id) && (latestLoss == null || latestLoss < 1.2)) {
+        repeatPenalty *= 0.2;
+      }
+      const baseScore = (variance + isrUncertainty(seg) * 0.55) * countPenalty * repeatPenalty;
+      return baseScore + mismatchBoost * 0.85;
+    }
+
+    function rankedCalibrationSegments(excludedIds = new Set()) {
+      const segments = visibleSegments();
+      if (!segments.length) return [];
+      const alternatives = localCandidateConfigs()
+        .slice(1)
+        .map((cfg) => generateSegmentRangesForConfig(cfg).ranges);
+      return [...segments]
+        .filter((seg) => !excludedIds.has(seg.id))
+        .map((seg) => ({seg, score: calibrationCandidateScore(seg, alternatives)}))
+        .sort((a, b) => b.score - a.score || a.seg.startFrame - b.seg.startFrame);
+    }
+
+    function seedCalibrationQueue(excludedIds = new Set()) {
+      const ranked = rankedCalibrationSegments(excludedIds);
+      calibrationQueue = ranked.map((item) => item.seg.id);
+      calibrationQueueIndex = calibrationQueue.length ? 0 : -1;
+      pendingCalibrationSegmentId = calibrationQueueIndex >= 0 ? calibrationQueue[calibrationQueueIndex] : null;
+      pendingCalibrationChoices = {start: "", end: ""};
+      return pendingCalibrationSegmentId != null ? activeSegment(pendingCalibrationSegmentId) : null;
+    }
+
+    function advanceCalibrationQueue(excludedIds = new Set()) {
+      if (!calibrationModeOpen) return null;
+      while (true) {
+        calibrationQueueIndex += 1;
+        if (calibrationQueueIndex >= 0 && calibrationQueueIndex < calibrationQueue.length) {
+          const nextId = calibrationQueue[calibrationQueueIndex];
+          if (excludedIds.has(nextId)) continue;
+          pendingCalibrationSegmentId = nextId;
+          pendingCalibrationChoices = {start: "", end: ""};
+          return activeSegment(nextId);
+        }
+        const nextSeg = seedCalibrationQueue(excludedIds);
+        return nextSeg;
+      }
+    }
+
+    function calibrationChoiceDisabled(option, seg, side) {
+      if (!seg) return true;
+      const ids = visibleSegmentIds();
+      const idx = ids.indexOf(seg.id);
+      if (side === "start" && option.ref === "prev") return idx <= 0;
+      if (side === "end" && option.ref === "next") return idx < 0 || idx >= ids.length - 1;
+      return false;
+    }
+
+    function renderCalibrationChoiceButtons(container, options, side, seg) {
+      container.innerHTML = "";
+      options.forEach((option) => {
+        const button = document.createElement("button");
+        button.className = `choice-button ${pendingCalibrationChoices[side] === option.id ? "active" : ""}`;
+        button.textContent = option.label;
+        button.disabled = calibrationChoiceDisabled(option, seg, side);
+        button.onclick = () => setCalibrationChoice(side, option.id);
+        container.appendChild(button);
+      });
+    }
+
+    function renderCalibrationWorkspace() {
+      annotationWorkspace.classList.toggle("hidden", !calibrationModeOpen);
+      calibrateBoundariesButton.classList.toggle("primary", calibrationModeOpen);
+      if (!calibrationModeOpen) {
+        annotationPrompt.textContent = "Press Calibrate to start the annotation queue.";
+        annotationSummary.textContent = "";
+        notASignButton.disabled = true;
+        renderCalibrationChoiceButtons(startChoiceButtons, START_CALIBRATION_OPTIONS, "start", null);
+        renderCalibrationChoiceButtons(endChoiceButtons, END_CALIBRATION_OPTIONS, "end", null);
+        updateCalibrationStatus();
+        return;
+      }
+      const seg = pendingCalibrationSegmentId != null ? activeSegment(pendingCalibrationSegmentId) : null;
+      if (!seg) {
+        annotationPrompt.textContent = "Choose a segment to calibrate.";
+        annotationSummary.textContent = "";
+        notASignButton.disabled = true;
+        renderCalibrationChoiceButtons(startChoiceButtons, START_CALIBRATION_OPTIONS, "start", null);
+        renderCalibrationChoiceButtons(endChoiceButtons, END_CALIBRATION_OPTIONS, "end", null);
+        updateCalibrationStatus();
+        return;
+      }
+      const queuePos = calibrationQueueIndex >= 0 ? `${calibrationQueueIndex + 1}/${Math.max(calibrationQueue.length, calibrationQueueIndex + 1)}` : "";
+      annotationPrompt.textContent = `${queuePos ? `${queuePos} · ` : ""}${seg.displayLabel} · ${formatClock(seg.startSec)} - ${formatClock(seg.endSec)}`;
+      notASignButton.disabled = false;
+      const startText = pendingCalibrationChoices.start
+        ? START_CALIBRATION_OPTIONS.find((item) => item.id === pendingCalibrationChoices.start)?.label
+        : "Choose start feedback";
+      const endText = pendingCalibrationChoices.end
+        ? END_CALIBRATION_OPTIONS.find((item) => item.id === pendingCalibrationChoices.end)?.label
+        : "Choose end feedback";
+      annotationSummary.textContent = `Start: ${startText} · End: ${endText}`;
+      renderCalibrationChoiceButtons(startChoiceButtons, START_CALIBRATION_OPTIONS, "start", seg);
+      renderCalibrationChoiceButtons(endChoiceButtons, END_CALIBRATION_OPTIONS, "end", seg);
+      updateCalibrationStatus();
+    }
+
+    async function focusCalibrationSegment(seg, preservePlayback = true) {
+      if (!seg) return;
+      const shouldResume = preservePlayback && !video.paused;
+      loopGuard = false;
+      video.pause();
+      const targetTime = seg.startSec + 0.01;
+      setSegment(seg.id, false, true);
+      await seekVideoTo(video, targetTime);
+      centerTimeline(targetTime);
+      centerMotion(targetTime);
+      handlePlaybackFrame(targetTime);
+      if (shouldResume) video.play().catch(() => {});
+    }
+
+    function saveCalibrationAnnotation(seg) {
+      const ids = visibleSegmentIds();
+      const idx = ids.indexOf(seg.id);
+      const prev = idx > 0 ? activeSegment(ids[idx - 1]) : null;
+      const next = idx >= 0 && idx < ids.length - 1 ? activeSegment(ids[idx + 1]) : null;
+      const createdAt = Date.now();
+      feedback[scopedKey("boundary-calibration", `${seg.id}::${createdAt}`)] = {
+        videoId: currentVideoId,
+        kind: "boundary-calibration",
+        segmentId: seg.id,
+        createdAt,
+        referenceStartFrame: seg.startFrame,
+        referenceEndFrame: seg.endFrame,
+        referenceCenterFrame: Math.round((seg.startFrame + seg.endFrame) * 0.5),
+        prevSpanFrames: prev ? Math.max(10, prev.endFrame - prev.startFrame) : 0,
+        nextSpanFrames: next ? Math.max(10, next.endFrame - next.startFrame) : 0,
+        startChoice: pendingCalibrationChoices.start,
+        endChoice: pendingCalibrationChoices.end,
+        notASign: false,
+        configSnapshot: {...segmentationConfig()},
+      };
+      saveFeedback();
+    }
+
+    function saveNotASignAnnotation(seg) {
+      const createdAt = Date.now();
+      feedback[scopedKey("boundary-calibration", `${seg.id}::${createdAt}`)] = {
+        videoId: currentVideoId,
+        kind: "boundary-calibration",
+        segmentId: seg.id,
+        createdAt,
+        referenceStartFrame: seg.startFrame,
+        referenceEndFrame: seg.endFrame,
+        referenceCenterFrame: Math.round((seg.startFrame + seg.endFrame) * 0.5),
+        prevSpanFrames: 0,
+        nextSpanFrames: 0,
+        startChoice: "",
+        endChoice: "",
+        notASign: true,
+        configSnapshot: {...segmentationConfig()},
+      };
+      saveFeedback();
+    }
+
+    async function setCalibrationChoice(side, choiceId) {
+      if (pendingCalibrationSegmentId != null && selectedSegmentId !== pendingCalibrationSegmentId) {
+        const queuedSeg = activeSegment(pendingCalibrationSegmentId);
+        motionMeta.textContent = "Resyncing calibration target…";
+        await focusCalibrationSegment(queuedSeg, false);
+        renderCalibrationWorkspace();
+        return;
+      }
+      const seg = activeSegment(selectedSegmentId);
+      if (!seg) return;
+      pendingCalibrationChoices[side] = pendingCalibrationChoices[side] === choiceId ? "" : choiceId;
+      renderCalibrationWorkspace();
+      if (!pendingCalibrationChoices.start || !pendingCalibrationChoices.end) return;
+      saveCalibrationAnnotation(seg);
+      motionMeta.textContent = "Annotation saved.";
+      const nextSeg = advanceCalibrationQueue(new Set([seg.id]));
+      if (nextSeg) await focusCalibrationSegment(nextSeg, false);
+      renderCalibrationWorkspace();
+    }
+
+    async function markCurrentSegmentNotASign() {
+      if (pendingCalibrationSegmentId != null && selectedSegmentId !== pendingCalibrationSegmentId) {
+        const queuedSeg = activeSegment(pendingCalibrationSegmentId);
+        motionMeta.textContent = "Resyncing calibration target…";
+        await focusCalibrationSegment(queuedSeg, false);
+        renderCalibrationWorkspace();
+        return;
+      }
+      const seg = activeSegment(selectedSegmentId);
+      if (!seg) return;
+      saveNotASignAnnotation(seg);
+      motionMeta.textContent = "Saved as not a sign.";
+      const nextSeg = advanceCalibrationQueue(new Set([seg.id]));
+      if (nextSeg) await focusCalibrationSegment(nextSeg, false);
+      renderCalibrationWorkspace();
+    }
+
     function drawMotionHoverOverlay(trackWidth, height) {
-      const duration = Math.max(1, currentVideo().videoInfo.duration_sec);
-      const frameToX = (frame) => (frame / Math.max(1, currentVideo().videoInfo.frames - 1)) * (trackWidth - 1);
-      if (hoverMotionFrame != null && hoverRemoveFrame == null) {
-        const x = frameToX(hoverMotionFrame);
-        motionCtx.save();
-        motionCtx.strokeStyle = "rgba(31,111,95,0.9)";
-        motionCtx.lineWidth = 1.6;
-        motionCtx.setLineDash([6, 6]);
-        motionCtx.beginPath();
-        motionCtx.moveTo(x, 10);
-        motionCtx.lineTo(x, height - 24);
-        motionCtx.stroke();
-        motionCtx.restore();
-      }
-      if (hoverRemoveFrame != null) {
-        const x = frameToX(hoverRemoveFrame);
-        const y = height - 14;
-        motionCtx.save();
-        motionCtx.fillStyle = "rgba(143,59,46,0.95)";
-        motionCtx.beginPath();
-        motionCtx.arc(x, y, 9, 0, Math.PI * 2);
-        motionCtx.fill();
-        motionCtx.strokeStyle = "#fff";
-        motionCtx.lineWidth = 2;
-        motionCtx.beginPath();
-        motionCtx.moveTo(x - 4, y);
-        motionCtx.lineTo(x + 4, y);
-        motionCtx.stroke();
-        motionCtx.restore();
-      }
+      return;
     }
 
     function centerMotion(timeSec = (video.currentTime || activeSegment().startSec)) {
@@ -3002,7 +3799,13 @@
       if (rerenderTimeline) renderTimeline();
       highlightTimeline(seg.id);
       renderSegmentList();
-      if (activeDetailTab === "motion") renderMotionAsync();
+      if (activeDetailTab === "motion") {
+        if (!calibrationModeOpen) {
+          if (pendingCalibrationSegmentId !== seg.id) pendingCalibrationChoices = {start: "", end: ""};
+          pendingCalibrationSegmentId = seg.id;
+        }
+        renderMotionAsync();
+      }
       drawEmbeddingSpace();
       lastEmbeddingRedraw = video.currentTime || seg.startSec;
     }
@@ -3312,7 +4115,9 @@
           ];
           const [x, y] = toCanvasPoint(mean, bounds);
           embeddingCtx.fillStyle = label.startsWith("unk_") ? "#7c2418" : "#1d2421";
-          embeddingCtx.font = label.startsWith("unk_") ? "700 14px "Helvetica Neue", Helvetica, Arial, sans-serif" : "600 12px "Helvetica Neue", Helvetica, Arial, sans-serif";
+          embeddingCtx.font = label.startsWith("unk_")
+            ? '700 14px "Helvetica Neue", Helvetica, Arial, sans-serif'
+            : '600 12px "Helvetica Neue", Helvetica, Arial, sans-serif';
           embeddingCtx.fillText(label, x + 8, y - 8);
         });
       if (trace.length > 0) {
@@ -3622,26 +4427,33 @@
     }
 
     function updateSegmentationControls() {
-      const cfg = segmentationConfig();
-      segThresholdMultValue.textContent = cfg.thresholdMult.toFixed(2);
-      segWindowBeforeValue.textContent = `${cfg.emaBeforeSec.toFixed(1)}s`;
-      segWindowAfterValue.textContent = `${cfg.emaAfterSec.toFixed(1)}s`;
-      segSplitThresholdValue.textContent = cfg.splitThreshold.toFixed(2);
-      segMinFramesValue.textContent = `${Math.round(cfg.minSegFrames)}f`;
-      segSmoothing.value = cfg.smoothing;
-      showUncertaintyCurve.checked = !!cfg.showUncertainty;
-    }
-
-    function adjustSegmentationParam(key, delta, min, max, digits = 2) {
-      const cfg = segmentationConfig();
-      const next = Math.max(min, Math.min(max, cfg[key] + delta));
-      cfg[key] = digits === 0 ? Math.round(next) : Number(next.toFixed(digits));
-      updateSegmentationControls();
-      scheduleMotionRegeneration(350);
+      updateCalibrationStatus();
+      renderCalibrationWorkspace();
     }
 
     function setRegenButtonState(value, label) {
       return;
+    }
+
+    function setProgressButtonState(button, value, label, disabled = true) {
+      if (!button) return;
+      const pct = `${Math.max(0, Math.min(100, Math.round(value)))}%`;
+      button.classList.add("progress-button");
+      button.style.setProperty("--btn-progress", pct);
+      button.textContent = label;
+      button.disabled = disabled;
+    }
+
+    function resetProgressButtonState(button, label) {
+      if (!button) return;
+      button.classList.remove("progress-button");
+      button.style.removeProperty("--btn-progress");
+      button.textContent = label;
+      button.disabled = false;
+    }
+
+    async function yieldToUI() {
+      await new Promise((resolve) => requestAnimationFrame(() => resolve()));
     }
 
     async function regenerateSegmentsFromControls() {
@@ -3660,126 +4472,105 @@
       setTabLoading("motion", false);
     }
 
-    function scheduleMotionRegeneration(delayMs = 350) {
-      setTabLoading("motion", true);
-      motionMeta.textContent = "Pending…";
-      if (motionConfigDebounce) clearTimeout(motionConfigDebounce);
-      motionConfigDebounce = setTimeout(() => {
-        motionConfigDebounce = null;
-        regenerateSegmentsFromControls();
-      }, delayMs);
-    }
-
-    function addManualBoundaryAtCurrentTime() {
-      const frame = hoverMotionFrame != null ? hoverMotionFrame : Math.round((video.currentTime || activeSegment().startSec) * currentVideo().videoInfo.fps);
-      const edits = motionBoundaryEdits();
-      edits.addFrames = edits.addFrames || [];
-      edits.removeFrames = (edits.removeFrames || []).filter((value) => Math.abs(value - frame) > 2);
-      edits.addFrames.push(frame);
-      saveMotionBoundaryEdits(edits);
-      saveFeedback();
-      scheduleMotionRegeneration(120);
-    }
-
-    function removeNearestBoundaryAtCurrentTime() {
-      const frame = hoverRemoveFrame != null ? hoverRemoveFrame : nearestLiveBoundary(Math.round((video.currentTime || activeSegment().startSec) * currentVideo().videoInfo.fps));
-      if (frame == null) return;
-      const best = frame;
-      const edits = motionBoundaryEdits();
-      edits.addFrames = (edits.addFrames || []).filter((value) => Math.abs(value - best) > 2);
-      edits.removeFrames = edits.removeFrames || [];
-      edits.removeFrames.push(best);
-      saveMotionBoundaryEdits(edits);
-      saveFeedback();
-      scheduleMotionRegeneration(120);
-    }
-
-    function calibrationTargets() {
-      const fps = currentVideo().videoInfo.fps;
-      const manualFrames = new Set();
-      Object.values(feedback).forEach((entry) => {
-        if (!entry || entry.videoId !== currentVideoId) return;
-        if (entry.kind === "custom-segment") {
-          manualFrames.add(entry.startFrame);
-          manualFrames.add(entry.endFrame);
-        }
-        if (Object.prototype.hasOwnProperty.call(entry, "startFrame")) manualFrames.add(entry.startFrame);
-        if (Object.prototype.hasOwnProperty.call(entry, "endFrame")) manualFrames.add(entry.endFrame);
-      });
-      const edits = motionBoundaryEdits();
-      (edits.addFrames || []).forEach((frame) => manualFrames.add(frame));
-      const frames = Array.from(manualFrames)
-        .filter((frame) => frame > 0 && frame < currentVideo().videoInfo.frames - 1)
-        .sort((a, b) => a - b);
-      return {fps, frames};
-    }
-
-    function boundaryScore(targetFrames, predictedFrames, fps) {
-      if (!targetFrames.length || !predictedFrames.length) return -Infinity;
-      const tol = Math.max(6, Math.round(fps * 0.18));
-      const nearest = (src, dst) => src.map((frame) => {
-        let best = Infinity;
-        for (const other of dst) best = Math.min(best, Math.abs(frame - other));
-        return best;
-      });
-      const targetToPred = nearest(targetFrames, predictedFrames);
-      const predToTarget = nearest(predictedFrames, targetFrames);
-      const matchedTargets = targetToPred.filter((dist) => dist <= tol).length;
-      const matchedPreds = predToTarget.filter((dist) => dist <= tol).length;
-      const recall = matchedTargets / Math.max(1, targetFrames.length);
-      const precision = matchedPreds / Math.max(1, predictedFrames.length);
-      const f1 = (precision + recall) > 0 ? (2 * precision * recall) / (precision + recall) : 0;
-      const meanErr = targetToPred.reduce((acc, value) => acc + value, 0) / Math.max(1, targetToPred.length);
-      return f1 - meanErr / (fps * 4.0);
-    }
-
     async function calibrateSegmentationToAnnotations() {
-      const {fps, frames: targets} = calibrationTargets();
-      if (!targets.length) return;
-      setTabLoading("motion", true);
-      motionMeta.textContent = "Calibrating…";
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-      const base = segmentationConfig();
-      const model = buildMotionModel(currentVideoId);
-      const thresholdVals = [base.thresholdMult - 0.05, base.thresholdMult - 0.02, base.thresholdMult, base.thresholdMult + 0.02, base.thresholdMult + 0.05]
-        .map((v) => Math.max(0.45, Math.min(0.70, Math.round(v * 100) / 100)));
-      const beforeVals = [base.emaBeforeSec - 0.2, base.emaBeforeSec - 0.1, base.emaBeforeSec, base.emaBeforeSec + 0.1, base.emaBeforeSec + 0.2]
-        .map((v) => Math.max(0.1, Math.min(1.2, Math.round(v * 10) / 10)));
-      const afterVals = [Math.max(0, base.emaAfterSec - 0.1), base.emaAfterSec, Math.min(0.8, base.emaAfterSec + 0.1)]
-        .map((v) => Math.round(v * 10) / 10);
-      const splitVals = [base.splitThreshold - 0.08, base.splitThreshold - 0.04, base.splitThreshold, base.splitThreshold + 0.04]
-        .map((v) => Math.max(0.30, Math.min(0.70, Math.round(v * 100) / 100)));
-      const minSegVals = [Math.max(10, base.minSegFrames - 4), Math.max(10, base.minSegFrames - 2), base.minSegFrames, Math.min(30, base.minSegFrames + 2)]
-        .map((v) => Math.round(v));
-      let bestCfg = {...base};
-      let bestScore = -Infinity;
-      for (const thresholdMult of Array.from(new Set(thresholdVals))) {
-        for (const emaBeforeSec of Array.from(new Set(beforeVals))) {
-          for (const emaAfterSec of Array.from(new Set(afterVals))) {
-            for (const smoothing of ["mean", "ema", "median"]) {
-              for (const splitThreshold of Array.from(new Set(splitVals))) {
-                for (const minSegFrames of Array.from(new Set(minSegVals))) {
-                  const candidate = {...base, thresholdMult, emaBeforeSec, emaAfterSec, smoothing, splitThreshold, minSegFrames};
-                  const layout = buildMotionLayout(model, candidate);
-                  const predicted = layout.holds.map((hold) => hold.frame);
-                  const score = boundaryScore(targets, predicted, fps);
-                  if (score > bestScore) {
-                    bestScore = score;
-                    bestCfg = candidate;
-                  }
-                }
-              }
-            }
-          }
-        }
+      if (calibrationModeOpen) {
+        calibrationModeOpen = false;
+        pendingCalibrationChoices = {start: "", end: ""};
+        motionMeta.textContent = "";
+        renderCalibrationWorkspace();
+        return;
       }
-      Object.assign(base, bestCfg);
-      updateSegmentationControls();
-      regenerateBaseSegments();
-      renderTimeline();
-      if (activeDetailTab === "motion") renderMotionAsync();
-      motionMeta.textContent = "";
-      setTabLoading("motion", false);
+      calibrationModeOpen = true;
+      let nextSeg = pendingCalibrationSegmentId != null && visibleSegmentIds().includes(pendingCalibrationSegmentId)
+        ? activeSegment(pendingCalibrationSegmentId)
+        : null;
+      const queueExhausted = calibrationQueueIndex < 0 || calibrationQueueIndex >= calibrationQueue.length;
+      if (!nextSeg || !calibrationQueue.length || queueExhausted) {
+        nextSeg = seedCalibrationQueue();
+      }
+      if (!nextSeg) {
+        motionMeta.textContent = "No segment available for calibration.";
+        pendingCalibrationSegmentId = null;
+        pendingCalibrationChoices = {start: "", end: ""};
+        renderCalibrationWorkspace();
+        return;
+      }
+      pendingCalibrationSegmentId = nextSeg.id;
+      pendingCalibrationChoices = {start: "", end: ""};
+      motionMeta.textContent = "Choose one start label and one end label.";
+      if (activeDetailTab !== "motion") setDetailTab("motion", true);
+      await focusCalibrationSegment(nextSeg, false);
+      renderCalibrationWorkspace();
+    }
+
+    async function recalibrateSegmentationToAnnotations() {
+      const entries = calibrationEntries();
+      if (!entries.length) {
+        motionMeta.textContent = "No annotations yet.";
+        updateCalibrationStatus();
+        return;
+      }
+      try {
+        motionMeta.textContent = "Recalibrating…";
+        setProgressButtonState(recalibrateBoundariesButton, 4, "Preparing 4%");
+        await yieldToUI();
+        const base = segmentationConfig();
+        let candidateBatch = buildRecalibrationCandidates(base, entries);
+        let ranked = rankCandidateFits(candidateBatch);
+        let bestCfg = ranked[0]?.candidate || {...base};
+        let bestFit = ranked[0]?.fit || calibrationFitForConfig(base);
+        setProgressButtonState(recalibrateBoundariesButton, 12, "Searching 12%");
+        await yieldToUI();
+        const refinementRounds = Math.min(3, Math.max(2, Math.ceil(entries.length / 80)));
+        for (let round = 0; round < refinementRounds; round++) {
+          const topSeeds = ranked.slice(0, Math.min(3, ranked.length)).map((item) => item.candidate);
+          const nextCandidateMap = new Map();
+          topSeeds.forEach((seed) => {
+            candidateNeighborhoods(seed).forEach((candidate) => {
+              nextCandidateMap.set(segmentationCandidateKey(candidate), candidate);
+            });
+          });
+          nextCandidateMap.set(segmentationCandidateKey(bestCfg), bestCfg);
+          candidateBatch = Array.from(nextCandidateMap.values());
+          if (!candidateBatch.length) break;
+          ranked = rankCandidateFits(candidateBatch);
+          if (ranked[0] && (ranked[0].fit.fitPercent > bestFit.fitPercent || (ranked[0].fit.fitPercent === bestFit.fitPercent && ranked[0].fit.meanLoss < bestFit.meanLoss))) {
+            bestCfg = ranked[0].candidate;
+            bestFit = ranked[0].fit;
+          }
+          const progress = 12 + ((round + 1) / Math.max(1, refinementRounds)) * 72;
+          setProgressButtonState(recalibrateBoundariesButton, progress, `Refining ${Math.round(progress)}%`);
+          await yieldToUI();
+        }
+        setProgressButtonState(recalibrateBoundariesButton, 88, "Applying 88%");
+        await yieldToUI();
+        Object.assign(base, bestCfg);
+        feedback[`${currentVideoId}::segmentation-fit::latest`] = {
+          videoId: currentVideoId,
+          kind: "segmentation-fit",
+          fitVersion: CALIBRATION_SCHEMA_VERSION,
+          fitPercent: bestFit.fitPercent,
+          meanLoss: bestFit.meanLoss,
+          cfg: {...bestCfg},
+          updatedAt: Date.now(),
+        };
+        pendingCalibrationChoices = {start: "", end: ""};
+        setProgressButtonState(recalibrateBoundariesButton, 94, "Refreshing 94%");
+        await yieldToUI();
+        regenerateBaseSegments();
+        renderTimeline();
+        updateCalibrationStatus();
+        if (calibrationModeOpen) {
+          const nextSeg = seedCalibrationQueue();
+          if (nextSeg) await focusCalibrationSegment(nextSeg, false);
+        }
+        if (activeDetailTab === "motion") renderMotionAsync();
+        motionMeta.textContent = `${bestFit.fitPercent}% fit`;
+        setProgressButtonState(recalibrateBoundariesButton, 100, `Done ${bestFit.fitPercent}% fit`);
+        await yieldToUI();
+      } finally {
+        resetProgressButtonState(recalibrateBoundariesButton, "Recalibrate");
+      }
     }
 
     function setVideo(videoId) {
@@ -3788,6 +4579,7 @@
         clearTimeout(motionConfigDebounce);
         motionConfigDebounce = null;
       }
+      boundaryModelCache.clear();
       invalidateSegmentCache();
       retrievalSelection.clear();
       renameMode = false;
@@ -3803,7 +4595,7 @@
       video.volume = 0;
       video.defaultPlaybackRate = 0.5;
       video.playbackRate = 0.5;
-      captureVideo.src = currentVideo().videoUri;
+      thumbCaptureVideo.src = currentVideo().videoUri;
       video.currentTime = 0;
       retrievalGrid.innerHTML = "";
       retrievalSubtitle.textContent = "";
@@ -3811,6 +4603,11 @@
       replayToggle.checked = false;
       motionMeta.textContent = "";
       videoSelect.value = videoId;
+      calibrationModeOpen = false;
+      calibrationQueue = [];
+      calibrationQueueIndex = -1;
+      pendingCalibrationSegmentId = null;
+      pendingCalibrationChoices = {start: "", end: ""};
       updateSegmentationControls();
       renderTimeline();
       if (activeDetailTab === "motion") renderMotionAsync();
@@ -3829,9 +4626,14 @@
         return;
       }
       if (!replayToggle.checked && !timeWithinSegment(time, current)) {
-        const seg = segmentAt(time);
-        if (seg && seg.id !== selectedSegmentId) setSegment(seg.id, false);
-        else if (Math.abs(time - lastEmbeddingRedraw) >= 0.12) {
+        if (!calibrationModeOpen) {
+          const seg = segmentAt(time);
+          if (seg && seg.id !== selectedSegmentId) setSegment(seg.id, false);
+          else if (Math.abs(time - lastEmbeddingRedraw) >= 0.12) {
+            drawEmbeddingSpace();
+            lastEmbeddingRedraw = time;
+          }
+        } else if (Math.abs(time - lastEmbeddingRedraw) >= 0.12) {
           drawEmbeddingSpace();
           lastEmbeddingRedraw = time;
         }
@@ -3883,44 +4685,8 @@
       saveFeedback();
       setSegment(seg.id, false);
     };
-    document.getElementById("addSegment").onclick = () => insertSegmentAtCurrentTime();
-    document.getElementById("splitSegment").onclick = () => addSegmentAtCurrentTime();
-    document.getElementById("mergeSegment").onclick = () => {
-      const ids = visibleSegmentIds();
-      const idx = ids.indexOf(selectedSegmentId);
-      if (idx < 0 || idx >= ids.length - 1) return;
-      const current = activeSegment();
-      const next = activeSegment(ids[idx + 1]);
-      feedback[scopedKey("override", String(current.id))] = {
-        videoId: currentVideoId,
-        segmentId: current.id,
-        startFrame: current.startFrame,
-        endFrame: next.endFrame,
-      };
-      feedback[scopedKey("deleted", String(next.id))] = {videoId: currentVideoId, segmentId: next.id, deleted: true};
-      delete feedback[scopedKey("regen", String(current.id))];
-      saveFeedback();
-      setSegment(current.id, false, true);
-      scheduleAutoRegenerate();
-    };
-    document.getElementById("deleteSegment").onclick = () => {
-      feedback[scopedKey("deleted", String(selectedSegmentId))] = {videoId: currentVideoId, segmentId: selectedSegmentId, deleted: true};
-      saveFeedback();
-      const ids = visibleSegmentIds();
-      const nextId = ids.find((id) => id > selectedSegmentId) ?? ids[ids.length - 1];
-      renderTimeline();
-      if (nextId !== undefined) setSegment(nextId, true);
-    };
     document.getElementById("approveSegment").onclick = () => approveCurrentSegment();
     document.getElementById("rejectSegment").onclick = () => rejectCurrentSegment();
-    document.getElementById("startMinus5").onclick = () => tweakBoundary("startFrame", -5);
-    document.getElementById("startMinus").onclick = () => tweakBoundary("startFrame", -1);
-    document.getElementById("startPlus").onclick = () => tweakBoundary("startFrame", 1);
-    document.getElementById("startPlus5").onclick = () => tweakBoundary("startFrame", 5);
-    document.getElementById("endMinus5").onclick = () => tweakBoundary("endFrame", -5);
-    document.getElementById("endMinus").onclick = () => tweakBoundary("endFrame", -1);
-    document.getElementById("endPlus").onclick = () => tweakBoundary("endFrame", 1);
-    document.getElementById("endPlus5").onclick = () => tweakBoundary("endFrame", 5);
     retrievalThreshold.addEventListener("input", () => {
       retrievalThresholdValue.textContent = Number(retrievalThreshold.value).toFixed(1);
       rerunLastRetrieval();
@@ -3987,26 +4753,9 @@
       saveFeedback();
       setSegment(selectedSegmentId, false);
     };
-    const onSegControlInput = () => {
-      const cfg = segmentationConfig();
-      cfg.smoothing = segSmoothing.value || cfg.smoothing;
-      cfg.showUncertainty = !!showUncertaintyCurve.checked;
-      updateSegmentationControls();
-      scheduleMotionRegeneration(350);
-    };
-    segSmoothing.addEventListener("change", onSegControlInput);
-    showUncertaintyCurve.addEventListener("change", onSegControlInput);
-    document.getElementById("segThresholdMultDown").onclick = () => adjustSegmentationParam("thresholdMult", -0.02, 0.30, 1.00, 2);
-    document.getElementById("segThresholdMultUp").onclick = () => adjustSegmentationParam("thresholdMult", 0.02, 0.30, 1.00, 2);
-    document.getElementById("segWindowBeforeDown").onclick = () => adjustSegmentationParam("emaBeforeSec", -0.1, 0.0, 2.0, 1);
-    document.getElementById("segWindowBeforeUp").onclick = () => adjustSegmentationParam("emaBeforeSec", 0.1, 0.0, 2.0, 1);
-    document.getElementById("segWindowAfterDown").onclick = () => adjustSegmentationParam("emaAfterSec", -0.1, 0.0, 1.0, 1);
-    document.getElementById("segWindowAfterUp").onclick = () => adjustSegmentationParam("emaAfterSec", 0.1, 0.0, 1.0, 1);
-    document.getElementById("segSplitThresholdDown").onclick = () => adjustSegmentationParam("splitThreshold", -0.02, 0.10, 0.90, 2);
-    document.getElementById("segSplitThresholdUp").onclick = () => adjustSegmentationParam("splitThreshold", 0.02, 0.10, 0.90, 2);
-    document.getElementById("segMinFramesDown").onclick = () => adjustSegmentationParam("minSegFrames", -2, 8, 40, 0);
-    document.getElementById("segMinFramesUp").onclick = () => adjustSegmentationParam("minSegFrames", 2, 8, 40, 0);
-    document.getElementById("calibrateBoundaries").onclick = () => calibrateSegmentationToAnnotations();
+    calibrateBoundariesButton.onclick = () => calibrateSegmentationToAnnotations();
+    recalibrateBoundariesButton.onclick = () => recalibrateSegmentationToAnnotations();
+    notASignButton.onclick = () => markCurrentSegmentNotASign();
     poseToggle.addEventListener("change", () => drawPose(video.currentTime || 0));
     videoSelect.addEventListener("change", () => setVideo(videoSelect.value));
     document.getElementById("timelineZoomOut").onclick = () => {
@@ -4046,27 +4795,6 @@
       centerTimeline(time);
       video.currentTime = time;
       handlePlaybackFrame(time);
-    });
-    motionWindow.addEventListener("mousemove", (event) => {
-      const frame = motionFrameFromPointer(event);
-      const removeFrame = nearestLiveBoundary(frame);
-      hoverRemoveFrame = removeFrame;
-      hoverMotionFrame = removeFrame == null ? frame : null;
-      if (activeDetailTab === "motion") renderMotionPanel();
-    });
-    motionWindow.addEventListener("mouseleave", () => {
-      hoverMotionFrame = null;
-      hoverRemoveFrame = null;
-      if (activeDetailTab === "motion") renderMotionPanel();
-    });
-    motionWindow.addEventListener("click", (event) => {
-      if (activeDetailTab !== "motion") return;
-      if (hoverRemoveFrame != null) {
-        removeNearestBoundaryAtCurrentTime();
-        return;
-      }
-      hoverMotionFrame = motionFrameFromPointer(event);
-      addManualBoundaryAtCurrentTime();
     });
     window.addEventListener("resize", () => {
       resizeOverlay();
