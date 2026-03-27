@@ -716,35 +716,60 @@
       gap: 4px;
     }
     .annotation-choice-grid {
-      display: grid;
-      gap: 12px;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      display: flex;
+      justify-content: center;
+      padding: 4px 0 2px;
+      overflow-x: auto;
     }
-    .annotation-choice-group {
+    .combined-choice-grid {
       display: grid;
-      gap: 8px;
-      min-width: 0;
+      grid-template-columns: repeat(6, minmax(72px, 118px));
+      gap: 10px 14px;
+      align-items: stretch;
+      min-width: max-content;
     }
-    .choice-buttons {
+    .combined-choice-column {
       display: grid;
-      grid-template-columns: repeat(8, minmax(0, 1fr));
+      grid-template-rows: 1fr 1fr;
       gap: 8px;
+      align-items: center;
+    }
+    .combined-choice-column.good-column {
+      grid-template-rows: 1fr;
+      align-self: center;
     }
     .choice-button {
-      padding: 8px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      line-height: 1.2;
+      padding: 0;
+      border-radius: 12px;
+      border: 1px solid rgba(17,17,17,0.16);
+      background: rgba(255,255,255,0.9);
       min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+    }
+    .choice-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: rgba(24,36,51,0.28);
+      box-shadow: 0 14px 34px rgba(0,0,0,0.10);
     }
     .choice-button.active {
-      background: var(--accent);
-      color: #fff;
-      border-color: var(--accent);
+      border-color: rgba(24,36,51,0.44);
+      box-shadow: 0 0 0 2px rgba(24,36,51,0.16), 0 16px 34px rgba(0,0,0,0.12);
     }
     .choice-button:disabled {
-      opacity: 0.45;
+      opacity: 0.35;
       cursor: not-allowed;
+      box-shadow: none;
+    }
+    .choice-button img {
+      display: block;
+      width: 100%;
+      height: auto;
+      pointer-events: none;
     }
     .annotation-summary {
       display: flex;
@@ -758,6 +783,7 @@
       gap: 8px;
       align-items: center;
       flex-wrap: wrap;
+      justify-content: center;
     }
     @media (max-width: 1280px) {
       .grid { grid-template-columns: 1fr; }
@@ -765,9 +791,11 @@
       .scroll { max-height: none; }
     }
     @media (max-width: 960px) {
-      .timing-row,
-      .annotation-choice-grid { grid-template-columns: 1fr; }
-      .choice-buttons { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .timing-row { grid-template-columns: 1fr; }
+      .combined-choice-grid {
+        grid-template-columns: repeat(3, minmax(72px, 112px));
+        gap: 10px 12px;
+      }
     }
   </style>
 </head>
@@ -939,14 +967,7 @@
               <div class="subtle" id="annotationPrompt">Choose a segment to calibrate.</div>
             </div>
             <div class="annotation-choice-grid">
-              <div class="annotation-choice-group">
-                <div class="subtle">Start</div>
-                <div class="choice-buttons" id="startChoiceButtons"></div>
-              </div>
-              <div class="annotation-choice-group">
-                <div class="subtle">End</div>
-                <div class="choice-buttons" id="endChoiceButtons"></div>
-              </div>
+              <div class="combined-choice-grid" id="combinedChoiceButtons"></div>
             </div>
             <div class="annotation-secondary">
               <button id="notASignButton">Not a Sign</button>
@@ -996,8 +1017,8 @@
     const APP = window.__ASL_DASHBOARD_DATA__;
     const INITIAL_FEEDBACK = window.__ASL_DASHBOARD_INITIAL_FEEDBACK__ || {};
     const STORAGE_KEY = "asl-dashboard-feedback-v2";
+    const FEEDBACK_ENDPOINT = "/__asl_dashboard_feedback__";
     const CALIBRATION_SCHEMA_VERSION = 2;
-    const CALIBRATION_TAIL_PRUNE_AFTER = 1774297500000;
     const video = document.getElementById("video");
     const overlay = document.getElementById("poseOverlay");
     const ctx = overlay.getContext("2d");
@@ -1035,8 +1056,7 @@
     const annotationPrompt = document.getElementById("annotationPrompt");
     const annotationSummary = document.getElementById("annotationSummary");
     const annotationWorkspace = document.getElementById("annotationWorkspace");
-    const startChoiceButtons = document.getElementById("startChoiceButtons");
-    const endChoiceButtons = document.getElementById("endChoiceButtons");
+    const combinedChoiceButtons = document.getElementById("combinedChoiceButtons");
     const notASignButton = document.getElementById("notASignButton");
     const calibrateBoundariesButton = document.getElementById("calibrateBoundaries");
     const recalibrateBoundariesButton = document.getElementById("recalibrateBoundaries");
@@ -1045,23 +1065,8 @@
     const confusionSort = document.getElementById("confusionSort");
     const vocabSearch = document.getElementById("vocabSearch");
     const feedback = Object.assign({}, INITIAL_FEEDBACK, JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"));
-    let prunedCalibrationTail = false;
-    Object.keys(feedback).forEach((key) => {
-      const entry = feedback[key];
-      if (!entry) return;
-      if (entry.kind === "boundary-calibration" && (entry.createdAt || 0) >= CALIBRATION_TAIL_PRUNE_AFTER) {
-        delete feedback[key];
-        prunedCalibrationTail = true;
-        return;
-      }
-      if (entry.kind === "segmentation-fit" && (entry.updatedAt || 0) >= CALIBRATION_TAIL_PRUNE_AFTER) {
-        delete feedback[key];
-        prunedCalibrationTail = true;
-      }
-    });
-    if (prunedCalibrationTail) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(feedback));
-    }
+    let serverFeedbackAvailable = false;
+    let feedbackSaveDebounce = null;
     const labelColors = new Map();
     const decodedCache = new Map();
     const motionCache = new Map();
@@ -1106,7 +1111,7 @@
     const useVideoFrameCallback = typeof video.requestVideoFrameCallback === "function";
     let videoFrameCallbackPending = false;
     let pendingCalibrationSegmentId = null;
-    let pendingCalibrationChoices = {start: "", end: ""};
+    let pendingCalibrationChoiceId = "";
     let calibrationModeOpen = false;
     let calibrationQueue = [];
     let calibrationQueueIndex = -1;
@@ -1140,28 +1145,153 @@
     }
     const START_CALIBRATION_OPTIONS = [
       {id: "invalid_early_50_plus", label: "Invalid Start", mode: "early", min: 0.5, max: Infinity, ref: "prev"},
-      {id: "early_25_50", label: "Very Early", mode: "early", min: 0.25, max: 0.5, ref: "prev"},
       {id: "early_0_25", label: "Early", mode: "early", min: 0.0, max: 0.25, ref: "prev"},
       {id: "good", label: "Good", mode: "neutral"},
-      {id: "perfect", label: "Perfect", mode: "neutral"},
       {id: "late_0_25", label: "Late", mode: "late", min: 0.0, max: 0.25, ref: "current"},
-      {id: "late_25_50", label: "Very Late", mode: "late", min: 0.25, max: 0.5, ref: "current"},
-      {id: "invalid_late_50_plus", label: "Invalid Start", mode: "late", min: 0.5, max: Infinity, ref: "current"},
     ];
     const END_CALIBRATION_OPTIONS = [
       {id: "invalid_early_50_plus", label: "Invalid End", mode: "early", min: 0.5, max: Infinity, ref: "current"},
-      {id: "early_25_50", label: "Very Early", mode: "early", min: 0.25, max: 0.5, ref: "current"},
       {id: "early_0_25", label: "Early", mode: "early", min: 0.0, max: 0.25, ref: "current"},
       {id: "good", label: "Good", mode: "neutral"},
-      {id: "perfect", label: "Perfect", mode: "neutral"},
       {id: "late_0_25", label: "Late", mode: "late", min: 0.0, max: 0.25, ref: "next"},
-      {id: "late_25_50", label: "Very Late", mode: "late", min: 0.25, max: 0.5, ref: "next"},
-      {id: "invalid_late_50_plus", label: "Invalid End", mode: "late", min: 0.5, max: Infinity, ref: "next"},
+    ];
+    const CALIBRATION_IMAGE_CHOICES = [
+      {
+        id: "good",
+        image: "assets/segment_labels/good.png",
+        startChoice: "good",
+        endChoice: "good",
+        row: 0,
+        column: 0,
+      },
+      {
+        id: "early_end",
+        image: "assets/segment_labels/early_end.png",
+        startChoice: "good",
+        endChoice: "early_0_25",
+        row: 0,
+        column: 1,
+      },
+      {
+        id: "late_start",
+        image: "assets/segment_labels/late_start.png",
+        startChoice: "late_0_25",
+        endChoice: "good",
+        row: 1,
+        column: 1,
+      },
+      {
+        id: "early_start",
+        image: "assets/segment_labels/early_start.png",
+        startChoice: "early_0_25",
+        endChoice: "good",
+        row: 0,
+        column: 2,
+      },
+      {
+        id: "late_end",
+        image: "assets/segment_labels/late_end.png",
+        startChoice: "good",
+        endChoice: "late_0_25",
+        row: 1,
+        column: 2,
+      },
+      {
+        id: "early_start_early_end",
+        image: "assets/segment_labels/early_start_early_end.png",
+        startChoice: "early_0_25",
+        endChoice: "early_0_25",
+        row: 0,
+        column: 3,
+      },
+      {
+        id: "late_start_late_end",
+        image: "assets/segment_labels/late_start_late_end.png",
+        startChoice: "late_0_25",
+        endChoice: "late_0_25",
+        row: 1,
+        column: 3,
+      },
+      {
+        id: "early_start_late_end",
+        image: "assets/segment_labels/early_start_late_end.png",
+        startChoice: "early_0_25",
+        endChoice: "late_0_25",
+        row: 0,
+        column: 4,
+      },
+      {
+        id: "late_start_early_end",
+        image: "assets/segment_labels/late_start_early_end.png",
+        startChoice: "late_0_25",
+        endChoice: "early_0_25",
+        row: 1,
+        column: 4,
+      },
+      {
+        id: "inv_early_start_late_end",
+        image: "assets/segment_labels/inv_early_start_late_end.png",
+        startChoice: "invalid_early_50_plus",
+        endChoice: "late_0_25",
+        row: 0,
+        column: 5,
+      },
+      {
+        id: "inv_late_start_early_end",
+        image: "assets/segment_labels/inv_late_start_early_end.png",
+        startChoice: "late_0_25",
+        endChoice: "invalid_early_50_plus",
+        row: 1,
+        column: 5,
+      },
     ];
     function calibrationEntries(videoId = currentVideoId) {
       return Object.values(feedback)
         .filter((entry) => entry && entry.videoId === videoId && entry.kind === "boundary-calibration")
         .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    }
+    function totalCalibrationEntryCount() {
+      return Object.values(feedback).filter((entry) => entry && entry.kind === "boundary-calibration").length;
+    }
+    function feedbackEntryTimestamp(entry) {
+      return entry?.updatedAt || entry?.createdAt || entry?.timestamp || 0;
+    }
+    function mergeFeedbackEntries(source) {
+      if (!source || typeof source !== "object") return false;
+      let changed = false;
+      Object.entries(source).forEach(([key, entry]) => {
+        if (!entry || typeof entry !== "object") return;
+        const current = feedback[key];
+        if (!current || feedbackEntryTimestamp(entry) >= feedbackEntryTimestamp(current)) {
+          feedback[key] = entry;
+          changed = true;
+        }
+      });
+      return changed;
+    }
+    async function loadPersistedFeedbackFromServer() {
+      try {
+        const resp = await fetch(FEEDBACK_ENDPOINT, {cache: "no-store"});
+        if (!resp.ok) return false;
+        const remote = await resp.json();
+        serverFeedbackAvailable = true;
+        return mergeFeedbackEntries(remote);
+      } catch (_) {
+        return false;
+      }
+    }
+    function queuePersistFeedbackToServer() {
+      if (!serverFeedbackAvailable) return;
+      if (feedbackSaveDebounce) clearTimeout(feedbackSaveDebounce);
+      feedbackSaveDebounce = setTimeout(async () => {
+        try {
+          await fetch(FEEDBACK_ENDPOINT, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(feedback),
+          });
+        } catch (_) {}
+      }, 120);
     }
     function segmentCalibrationCount(segId, videoId = currentVideoId) {
       return calibrationEntries(videoId).filter((entry) => entry.segmentId === segId).length;
@@ -1191,7 +1321,11 @@
     }
     function updateCalibrationStatus() {
       if (annotationCountBadge) {
-        annotationCountBadge.textContent = `${calibrationEntries().length} annotations saved`;
+        const currentCount = calibrationEntries().length;
+        const totalCount = totalCalibrationEntryCount();
+        annotationCountBadge.textContent = totalCount !== currentCount
+          ? `${currentCount} annotations saved (${totalCount} total)`
+          : `${currentCount} annotations saved`;
       }
       if (calibrationFitBadge) {
         const fit = calibrationFitEntry();
@@ -1410,6 +1544,7 @@
       boundaryModelCache.clear();
       motionRenderCache.clear();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(feedback));
+      queuePersistFeedbackToServer();
       feedbackCount.textContent = `${Object.keys(feedback).length} feedback items`;
       updateCalibrationStatus();
     }
@@ -2850,7 +2985,34 @@
         .sort((a, b) => b.fit.fitPercent - a.fit.fitPercent || a.fit.meanLoss - b.fit.meanLoss);
     }
 
-    function calibrationCandidateScore(seg, alternativeRanges) {
+    function segmentCenterFrame(seg) {
+      return (seg.startFrame + seg.endFrame) * 0.5;
+    }
+
+    function calibrationNeighborhoodStats(seg, currentRanges) {
+      const segSpan = Math.max(10, seg.endFrame - seg.startFrame);
+      const segCenter = segmentCenterFrame(seg);
+      let unresolved = 0;
+      let satisfiedPenalty = 0;
+      let nearbyCount = 0;
+      calibrationEntries().forEach((entry) => {
+        const refStart = entry.referenceStartFrame ?? seg.startFrame;
+        const refEnd = entry.referenceEndFrame ?? seg.endFrame;
+        const refSpan = Math.max(10, refEnd - refStart);
+        const refCenter = entry.referenceCenterFrame ?? ((refStart + refEnd) * 0.5);
+        const gap = Math.max(0, Math.max(refStart - seg.endFrame, seg.startFrame - refEnd));
+        const centerDist = Math.abs(segCenter - refCenter);
+        const neighborhood = Math.max(18, segSpan * 1.8, refSpan * 1.8);
+        if (gap > neighborhood && centerDist > neighborhood) return;
+        nearbyCount += 1;
+        const loss = calibrationLossForEntry(entry, currentRanges);
+        if (loss >= 0.55) unresolved = Math.max(unresolved, loss);
+        else satisfiedPenalty += Math.max(0.1, 0.7 - loss);
+      });
+      return {unresolved, satisfiedPenalty, nearbyCount};
+    }
+
+    function calibrationCandidateScore(seg, alternativeRanges, currentRanges) {
       const span = Math.max(10, seg.endFrame - seg.startFrame);
       let variance = 0;
       alternativeRanges.forEach((ranges) => {
@@ -2863,33 +3025,48 @@
       });
       variance /= Math.max(1, alternativeRanges.length);
       const latestForSegment = latestCalibrationEntryForSegment(seg.id);
-      const latestLoss = latestForSegment ? calibrationLossForEntry(latestForSegment, visibleSegments()) : null;
-      const mismatchBoost = latestLoss == null ? 0 : Math.min(1.8, latestLoss);
-      const countPenalty = 1 / (1 + segmentCalibrationCount(seg.id) * 1.35);
+      const latestLoss = latestForSegment ? calibrationLossForEntry(latestForSegment, currentRanges) : null;
+      const mismatchBoost = latestLoss == null ? 0 : Math.min(2.0, latestLoss);
+      const {unresolved, satisfiedPenalty, nearbyCount} = calibrationNeighborhoodStats(seg, currentRanges);
+      const countPenalty = 1 / (1 + segmentCalibrationCount(seg.id) * 1.9 + nearbyCount * 0.25);
       let repeatPenalty = 1;
       if (latestLoss != null) {
-        if (latestLoss < 0.35) repeatPenalty *= 0.08;
-        else if (latestLoss < 0.75) repeatPenalty *= 0.25;
-        else if (latestLoss < 1.1) repeatPenalty *= 0.52;
+        if (latestLoss < 0.35) repeatPenalty *= 0.04;
+        else if (latestLoss < 0.75) repeatPenalty *= 0.18;
+        else if (latestLoss < 1.1) repeatPenalty *= 0.45;
       }
       const recentIds = recentCalibrationSegmentIds();
       if (recentIds.includes(seg.id) && (latestLoss == null || latestLoss < 1.2)) {
-        repeatPenalty *= 0.2;
+        repeatPenalty *= 0.1;
       }
-      const baseScore = (variance + isrUncertainty(seg) * 0.55) * countPenalty * repeatPenalty;
-      return baseScore + mismatchBoost * 0.85;
+      const baseScore = (variance + isrUncertainty(seg) * 0.35 + unresolved * 1.35 + mismatchBoost * 0.55) * countPenalty * repeatPenalty;
+      return baseScore - satisfiedPenalty * 0.75;
     }
 
     function rankedCalibrationSegments(excludedIds = new Set()) {
       const segments = visibleSegments();
       if (!segments.length) return [];
+      const currentRanges = visibleSegments();
       const alternatives = localCandidateConfigs()
         .slice(1)
         .map((cfg) => generateSegmentRangesForConfig(cfg).ranges);
-      return [...segments]
+      const ranked = [...segments]
         .filter((seg) => !excludedIds.has(seg.id))
-        .map((seg) => ({seg, score: calibrationCandidateScore(seg, alternatives)}))
+        .map((seg) => ({seg, score: calibrationCandidateScore(seg, alternatives, currentRanges)}))
         .sort((a, b) => b.score - a.score || a.seg.startFrame - b.seg.startFrame);
+      const diversified = [];
+      ranked.forEach((item) => {
+        const itemCenter = segmentCenterFrame(item.seg);
+        const itemSpan = Math.max(10, item.seg.endFrame - item.seg.startFrame);
+        const tooClose = diversified.some((chosen) => {
+          const chosenCenter = segmentCenterFrame(chosen.seg);
+          const chosenSpan = Math.max(10, chosen.seg.endFrame - chosen.seg.startFrame);
+          const minSpacing = Math.max(20, itemSpan * 1.6, chosenSpan * 1.6);
+          return Math.abs(itemCenter - chosenCenter) < minSpacing;
+        });
+        if (!tooClose || item.score > 1.75) diversified.push(item);
+      });
+      return diversified.length ? diversified : ranked;
     }
 
     function seedCalibrationQueue(excludedIds = new Set()) {
@@ -2897,7 +3074,7 @@
       calibrationQueue = ranked.map((item) => item.seg.id);
       calibrationQueueIndex = calibrationQueue.length ? 0 : -1;
       pendingCalibrationSegmentId = calibrationQueueIndex >= 0 ? calibrationQueue[calibrationQueueIndex] : null;
-      pendingCalibrationChoices = {start: "", end: ""};
+      pendingCalibrationChoiceId = "";
       return pendingCalibrationSegmentId != null ? activeSegment(pendingCalibrationSegmentId) : null;
     }
 
@@ -2909,7 +3086,7 @@
           const nextId = calibrationQueue[calibrationQueueIndex];
           if (excludedIds.has(nextId)) continue;
           pendingCalibrationSegmentId = nextId;
-          pendingCalibrationChoices = {start: "", end: ""};
+          pendingCalibrationChoiceId = "";
           return activeSegment(nextId);
         }
         const nextSeg = seedCalibrationQueue(excludedIds);
@@ -2926,15 +3103,35 @@
       return false;
     }
 
-    function renderCalibrationChoiceButtons(container, options, side, seg) {
+    function combinedCalibrationChoiceDisabled(choice, seg) {
+      return calibrationChoiceDisabled({ref: choice.startChoice === "invalid_early_50_plus" || choice.startChoice === "early_0_25" ? "prev" : "current"}, seg, "start")
+        || calibrationChoiceDisabled({ref: choice.endChoice === "late_0_25" ? "next" : "current"}, seg, "end");
+    }
+
+    function renderCalibrationChoiceButtons(container, seg) {
       container.innerHTML = "";
-      options.forEach((option) => {
+      const goodColumnIndex = CALIBRATION_IMAGE_CHOICES.find((choice) => choice.id === "good")?.column ?? 0;
+      const columnCount = Math.max(...CALIBRATION_IMAGE_CHOICES.map((choice) => choice.column)) + 1;
+      const columns = Array.from({length: columnCount}, (_, index) => {
+        const column = document.createElement("div");
+        column.className = `combined-choice-column ${index === goodColumnIndex ? "good-column" : ""}`;
+        container.appendChild(column);
+        return column;
+      });
+      CALIBRATION_IMAGE_CHOICES.forEach((choice) => {
         const button = document.createElement("button");
-        button.className = `choice-button ${pendingCalibrationChoices[side] === option.id ? "active" : ""}`;
-        button.textContent = option.label;
-        button.disabled = calibrationChoiceDisabled(option, seg, side);
-        button.onclick = () => setCalibrationChoice(side, option.id);
-        container.appendChild(button);
+        button.className = `choice-button ${pendingCalibrationChoiceId === choice.id ? "active" : ""}`;
+        button.disabled = combinedCalibrationChoiceDisabled(choice, seg);
+        button.onclick = () => setCalibrationChoice(choice.id);
+        const image = document.createElement("img");
+        image.src = choice.image;
+        image.alt = "";
+        image.draggable = false;
+        button.appendChild(image);
+        if (choice.id === "good") {
+          button.style.gridRow = "1 / span 2";
+        }
+        columns[choice.column].appendChild(button);
       });
     }
 
@@ -2945,8 +3142,7 @@
         annotationPrompt.textContent = "Press Calibrate to start the annotation queue.";
         annotationSummary.textContent = "";
         notASignButton.disabled = true;
-        renderCalibrationChoiceButtons(startChoiceButtons, START_CALIBRATION_OPTIONS, "start", null);
-        renderCalibrationChoiceButtons(endChoiceButtons, END_CALIBRATION_OPTIONS, "end", null);
+        renderCalibrationChoiceButtons(combinedChoiceButtons, null);
         updateCalibrationStatus();
         return;
       }
@@ -2955,33 +3151,28 @@
         annotationPrompt.textContent = "Choose a segment to calibrate.";
         annotationSummary.textContent = "";
         notASignButton.disabled = true;
-        renderCalibrationChoiceButtons(startChoiceButtons, START_CALIBRATION_OPTIONS, "start", null);
-        renderCalibrationChoiceButtons(endChoiceButtons, END_CALIBRATION_OPTIONS, "end", null);
+        renderCalibrationChoiceButtons(combinedChoiceButtons, null);
         updateCalibrationStatus();
         return;
       }
       const queuePos = calibrationQueueIndex >= 0 ? `${calibrationQueueIndex + 1}/${Math.max(calibrationQueue.length, calibrationQueueIndex + 1)}` : "";
       annotationPrompt.textContent = `${queuePos ? `${queuePos} · ` : ""}${seg.displayLabel} · ${formatClock(seg.startSec)} - ${formatClock(seg.endSec)}`;
       notASignButton.disabled = false;
-      const startText = pendingCalibrationChoices.start
-        ? START_CALIBRATION_OPTIONS.find((item) => item.id === pendingCalibrationChoices.start)?.label
-        : "Choose start feedback";
-      const endText = pendingCalibrationChoices.end
-        ? END_CALIBRATION_OPTIONS.find((item) => item.id === pendingCalibrationChoices.end)?.label
-        : "Choose end feedback";
-      annotationSummary.textContent = `Start: ${startText} · End: ${endText}`;
-      renderCalibrationChoiceButtons(startChoiceButtons, START_CALIBRATION_OPTIONS, "start", seg);
-      renderCalibrationChoiceButtons(endChoiceButtons, END_CALIBRATION_OPTIONS, "end", seg);
+      annotationSummary.textContent = pendingCalibrationChoiceId ? "Annotation selected." : "";
+      renderCalibrationChoiceButtons(combinedChoiceButtons, seg);
       updateCalibrationStatus();
     }
 
     async function focusCalibrationSegment(seg, preservePlayback = true) {
       if (!seg) return;
-      const shouldResume = preservePlayback && !video.paused;
+      const shouldResume = preservePlayback || replayToggle.checked || !video.paused;
       loopGuard = false;
       video.pause();
-      const targetTime = seg.startSec + 0.01;
-      setSegment(seg.id, false, true);
+      setSegment(seg.id, true, true);
+      const targetTime = Math.min(
+        Math.max(seg.startSec + 0.01, 0),
+        Math.max(seg.startSec + 0.01, seg.endSec - 0.01),
+      );
       await seekVideoTo(video, targetTime);
       centerTimeline(targetTime);
       centerMotion(targetTime);
@@ -2989,7 +3180,7 @@
       if (shouldResume) video.play().catch(() => {});
     }
 
-    function saveCalibrationAnnotation(seg) {
+    function saveCalibrationAnnotation(seg, choice) {
       const ids = visibleSegmentIds();
       const idx = ids.indexOf(seg.id);
       const prev = idx > 0 ? activeSegment(ids[idx - 1]) : null;
@@ -3005,8 +3196,9 @@
         referenceCenterFrame: Math.round((seg.startFrame + seg.endFrame) * 0.5),
         prevSpanFrames: prev ? Math.max(10, prev.endFrame - prev.startFrame) : 0,
         nextSpanFrames: next ? Math.max(10, next.endFrame - next.startFrame) : 0,
-        startChoice: pendingCalibrationChoices.start,
-        endChoice: pendingCalibrationChoices.end,
+        startChoice: choice.startChoice,
+        endChoice: choice.endChoice,
+        combinedChoice: choice.id,
         notASign: false,
         configSnapshot: {...segmentationConfig()},
       };
@@ -3033,7 +3225,7 @@
       saveFeedback();
     }
 
-    async function setCalibrationChoice(side, choiceId) {
+    async function setCalibrationChoice(choiceId) {
       if (pendingCalibrationSegmentId != null && selectedSegmentId !== pendingCalibrationSegmentId) {
         const queuedSeg = activeSegment(pendingCalibrationSegmentId);
         motionMeta.textContent = "Resyncing calibration target…";
@@ -3043,13 +3235,15 @@
       }
       const seg = activeSegment(selectedSegmentId);
       if (!seg) return;
-      pendingCalibrationChoices[side] = pendingCalibrationChoices[side] === choiceId ? "" : choiceId;
+      const choice = CALIBRATION_IMAGE_CHOICES.find((item) => item.id === choiceId);
+      if (!choice) return;
+      pendingCalibrationChoiceId = pendingCalibrationChoiceId === choiceId ? "" : choiceId;
       renderCalibrationWorkspace();
-      if (!pendingCalibrationChoices.start || !pendingCalibrationChoices.end) return;
-      saveCalibrationAnnotation(seg);
+      if (!pendingCalibrationChoiceId) return;
+      saveCalibrationAnnotation(seg, choice);
       motionMeta.textContent = "Annotation saved.";
       const nextSeg = advanceCalibrationQueue(new Set([seg.id]));
-      if (nextSeg) await focusCalibrationSegment(nextSeg, false);
+      if (nextSeg) await focusCalibrationSegment(nextSeg, true);
       renderCalibrationWorkspace();
     }
 
@@ -3066,7 +3260,7 @@
       saveNotASignAnnotation(seg);
       motionMeta.textContent = "Saved as not a sign.";
       const nextSeg = advanceCalibrationQueue(new Set([seg.id]));
-      if (nextSeg) await focusCalibrationSegment(nextSeg, false);
+      if (nextSeg) await focusCalibrationSegment(nextSeg, true);
       renderCalibrationWorkspace();
     }
 
@@ -3801,7 +3995,7 @@
       renderSegmentList();
       if (activeDetailTab === "motion") {
         if (!calibrationModeOpen) {
-          if (pendingCalibrationSegmentId !== seg.id) pendingCalibrationChoices = {start: "", end: ""};
+          if (pendingCalibrationSegmentId !== seg.id) pendingCalibrationChoiceId = "";
           pendingCalibrationSegmentId = seg.id;
         }
         renderMotionAsync();
@@ -4475,7 +4669,7 @@
     async function calibrateSegmentationToAnnotations() {
       if (calibrationModeOpen) {
         calibrationModeOpen = false;
-        pendingCalibrationChoices = {start: "", end: ""};
+        pendingCalibrationChoiceId = "";
         motionMeta.textContent = "";
         renderCalibrationWorkspace();
         return;
@@ -4491,13 +4685,13 @@
       if (!nextSeg) {
         motionMeta.textContent = "No segment available for calibration.";
         pendingCalibrationSegmentId = null;
-        pendingCalibrationChoices = {start: "", end: ""};
+        pendingCalibrationChoiceId = "";
         renderCalibrationWorkspace();
         return;
       }
       pendingCalibrationSegmentId = nextSeg.id;
-      pendingCalibrationChoices = {start: "", end: ""};
-      motionMeta.textContent = "Choose one start label and one end label.";
+      pendingCalibrationChoiceId = "";
+      motionMeta.textContent = "Choose the image that best matches the segment.";
       if (activeDetailTab !== "motion") setDetailTab("motion", true);
       await focusCalibrationSegment(nextSeg, false);
       renderCalibrationWorkspace();
@@ -4554,7 +4748,7 @@
           cfg: {...bestCfg},
           updatedAt: Date.now(),
         };
-        pendingCalibrationChoices = {start: "", end: ""};
+        pendingCalibrationChoiceId = "";
         setProgressButtonState(recalibrateBoundariesButton, 94, "Refreshing 94%");
         await yieldToUI();
         regenerateBaseSegments();
@@ -4607,7 +4801,7 @@
       calibrationQueue = [];
       calibrationQueueIndex = -1;
       pendingCalibrationSegmentId = null;
-      pendingCalibrationChoices = {start: "", end: ""};
+      pendingCalibrationChoiceId = "";
       updateSegmentationControls();
       renderTimeline();
       if (activeDetailTab === "motion") renderMotionAsync();
@@ -4825,20 +5019,26 @@
       videoSelect.appendChild(option);
     });
 
-    resizeEmbeddingCanvas();
-    updateSegmentationControls();
-    setRegenButtonState(0, "Regenerate Graph");
-    replayToggle.checked = false;
-    retrievalThresholdValue.textContent = Number(retrievalThreshold.value).toFixed(1);
-    confusionSort.value = confusionSortMode;
-    segmentSort.value = segmentSortMode;
-    vocabSearch.value = vocabSearchQuery;
-    updateRenameModeUI();
-    saveFeedback();
-    setDetailTab(activeDetailTab);
-    setVideo(currentVideoId);
-    if (useVideoFrameCallback) scheduleVideoFrame();
-    else requestAnimationFrame(animationTick);
+    async function initializeDashboard() {
+      const mergedRemote = await loadPersistedFeedbackFromServer();
+      resizeEmbeddingCanvas();
+      updateSegmentationControls();
+      setRegenButtonState(0, "Regenerate Graph");
+      replayToggle.checked = false;
+      retrievalThresholdValue.textContent = Number(retrievalThreshold.value).toFixed(1);
+      confusionSort.value = confusionSortMode;
+      segmentSort.value = segmentSortMode;
+      vocabSearch.value = vocabSearchQuery;
+      updateRenameModeUI();
+      if (mergedRemote) localStorage.setItem(STORAGE_KEY, JSON.stringify(feedback));
+      saveFeedback();
+      setDetailTab(activeDetailTab);
+      setVideo(currentVideoId);
+      if (useVideoFrameCallback) scheduleVideoFrame();
+      else requestAnimationFrame(animationTick);
+    }
+
+    initializeDashboard();
   </script>
 </body>
 </html>
