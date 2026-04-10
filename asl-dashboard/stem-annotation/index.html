@@ -66,7 +66,7 @@
       color: var(--muted);
       font-size: 13px;
     }
-    button, .pin-input {
+    button {
       appearance: none;
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -81,22 +81,6 @@
     button.primary {
       background: linear-gradient(135deg, #111111, var(--accent));
       color: #fff;
-    }
-    .pin-entry {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .pin-entry.hidden {
-      display: none;
-    }
-    .pin-input {
-      width: 76px;
-      font-size: 14px;
-      letter-spacing: 0.18em;
-      text-align: center;
-      padding: 8px 10px;
-      font-family: "Courier New", monospace;
     }
     .badge {
       padding: 8px 12px;
@@ -461,12 +445,6 @@
         <button id="loadPackBtn">Load Annotation Pack</button>
         <input type="file" id="packInput" accept=".zip,application/zip" class="hidden" />
         <span class="badge" id="packBadge">No Pack</span>
-        <div class="pin-entry" id="pinEntry">
-          <label class="subtle" for="pinInput">PIN</label>
-          <input type="password" id="pinInput" class="pin-input" maxlength="4" placeholder="0000" inputmode="numeric" autocomplete="off" />
-          <button id="loadPin" class="primary">Load</button>
-          <span class="badge" id="pinSlotBadge">No PIN</span>
-        </div>
       </div>
     </div>
 
@@ -575,12 +553,10 @@
   <script>
     const FEEDBACK_ENDPOINT = "/__stem_annotation_feedback__";
     const STORAGE_KEY = "stem-annotation-dashboard-feedback-v2";
-    const PIN_STORAGE_KEY = "stem-annotation-dashboard-pin";
+    const PACK_STORAGE_KEY = "stem-annotation-dashboard-pack-id";
     const POSITION_STORAGE_KEY = "stem-annotation-dashboard-position-v2";
     const QUEUE_SIGNATURE_KEY = "stem-annotation-dashboard-queue-signature-v1";
-    const PIN_RESET_KEY = "stem-annotation-dashboard-pin-reset-v1";
     const APP = window.STEM_ANNOTATION_ASSIGNMENTS || { pins: {}, construct_options: [] };
-    const RESET_ONCE_PINS = { "2417": "2026-04-09-interesting-scan-reset-1" };
 
     const CALIBRATION_IMAGE_CHOICES = [
       { id: "good", image: "../assets/segment_labels/good.png", startChoice: "good", endChoice: "good", row: 0, column: 0 },
@@ -625,10 +601,6 @@
       inv_late_start_early_end: "Too Short for Annotation",
     };
     const clipVideo = document.getElementById("clipVideo");
-    const pinEntry = document.getElementById("pinEntry");
-    const pinInput = document.getElementById("pinInput");
-    const loadPinBtn = document.getElementById("loadPin");
-    const pinSlotBadge = document.getElementById("pinSlotBadge");
     const loadPackBtn = document.getElementById("loadPackBtn");
     const packInput = document.getElementById("packInput");
     const packBadge = document.getElementById("packBadge");
@@ -660,10 +632,9 @@
     const boundaryLegend = document.getElementById("boundaryLegend");
 
     let feedback = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    let annotatorPin = localStorage.getItem(PIN_STORAGE_KEY) || "";
+    let annotatorPin = localStorage.getItem(PACK_STORAGE_KEY) || "";
     let savedPositions = JSON.parse(localStorage.getItem(POSITION_STORAGE_KEY) || "{}");
     let savedQueueSignatures = JSON.parse(localStorage.getItem(QUEUE_SIGNATURE_KEY) || "{}");
-    let pinResetState = JSON.parse(localStorage.getItem(PIN_RESET_KEY) || "{}");
     let queue = [];
     let queueIndex = -1;
     let pendingCalibrationChoiceId = "";
@@ -678,6 +649,10 @@
 
     function isScanModeItem(item = currentItem()) {
       return Boolean(item) && ((item.task_mode || "") === "interesting_scan" || (item.sample_subset || "") === "interesting_scan");
+    }
+
+    function isFacultyReviewItem(item = currentItem()) {
+      return Boolean(item) && ((item.task_mode || "") === "review_demo" || (item.sample_subset || "") === "review_demo");
     }
 
     function scanTimestamps(entry) {
@@ -978,22 +953,10 @@
       return (items || []).map((item) => item.item_id).join("|");
     }
 
-    function updatePinUI() {
-      if (!annotatorPin || annotatorPin.length < 4) {
-        pinEntry.classList.remove("hidden");
-        pinSlotBadge.textContent = annotatorPin.length ? "…" : "No PIN";
-        pinSlotBadge.classList.remove("active");
-      } else {
-        pinEntry.classList.add("hidden");
-        pinSlotBadge.textContent = `PIN ${annotatorPin}`;
-        pinSlotBadge.classList.add("active");
-      }
-    }
-
     function updatePackUI() {
       const slot = currentSlot();
       if (slot && loadedPackSlots[annotatorPin]) {
-        packBadge.textContent = `Pack ${annotatorPin}`;
+        packBadge.textContent = slot.annotator ? `Pack ${slot.annotator}` : (slot.packName || "Pack Loaded");
         packBadge.classList.add("active");
       } else {
         packBadge.textContent = "No Pack";
@@ -1164,8 +1127,8 @@
     function updateStatus() {
       const item = currentItem();
       const total = queue.length;
-      const done = completedCount();
-      saveProgressBadge.textContent = `${done} / ${total || 0}`;
+      const position = queueIndex >= 0 ? queueIndex + 1 : 0;
+      saveProgressBadge.textContent = `${position} / ${total || 0}`;
       prevBtn.disabled = queueIndex <= 0;
       nextBtn.disabled = queueIndex < 0 || queueIndex >= total - 1;
       const scanMode = isScanModeItem(item);
@@ -1255,14 +1218,8 @@
         updatePackUI();
         return;
       }
-      const resetVersion = RESET_ONCE_PINS[pin];
-      if (resetVersion && pinResetState[pin] !== resetVersion) {
-        deletePinFeedback(pin);
-        pinResetState[pin] = resetVersion;
-        localStorage.setItem(PIN_RESET_KEY, JSON.stringify(pinResetState));
-      }
       annotatorPin = pin;
-      localStorage.setItem(PIN_STORAGE_KEY, pin);
+      localStorage.setItem(PACK_STORAGE_KEY, pin);
       queue = slot.items || [];
       const signature = queueSignature(queue);
       const previousSignature = savedQueueSignatures[pin] || "";
@@ -1279,7 +1236,6 @@
         queueIndex = queue.length ? 0 : -1;
       }
       showContext = false;
-      updatePinUI();
       updatePackUI();
       renderCurrentItem();
     }
@@ -1322,7 +1278,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `stem_annotations_pin${annotatorPin || "unknown"}.csv`;
+      a.download = `stem_annotations_${annotatorPin || "pack"}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     }
@@ -1333,7 +1289,7 @@
       const manifestFile = zip.file("pack.json") || Object.values(zip.files).find((entry) => /(^|\/)pack\.json$/i.test(entry.name));
       if (!manifestFile) return;
       const pack = JSON.parse(await manifestFile.async("string"));
-      const pin = String(pack.pin || "");
+      const pin = String(pack.pin || pack.annotator || file.name || "");
       if (!pin) return;
       const items = (pack.items || []).map((item) => ({ ...item, _packId: pin }));
       loadedPackSlots[pin] = {
@@ -1342,20 +1298,10 @@
         zip,
         packName: file.name,
       };
-      pinInput.value = pin;
-      packBadge.textContent = `Pack ${pin}`;
+      packBadge.textContent = pack.annotator ? `Pack ${pack.annotator}` : file.name;
       packBadge.classList.add("active");
       loadPin(pin);
     }
-
-    loadPinBtn.onclick = () => {
-      const val = pinInput.value.replace(/\D/g, "").slice(0, 4);
-      pinInput.value = val;
-      loadPin(val);
-    };
-    pinInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") loadPinBtn.click();
-    });
     prevBtn.onclick = () => {
       if (queueIndex > 0) {
         queueIndex -= 1;
@@ -1478,10 +1424,8 @@
       renderBoundaryLegend();
       await loadPersistedFeedbackFromServer();
       if (annotatorPin) {
-        pinInput.value = annotatorPin;
         loadPin(annotatorPin);
       } else {
-        updatePinUI();
         updatePackUI();
         renderCurrentItem();
       }
