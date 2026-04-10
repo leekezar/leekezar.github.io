@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>STEM ASL Annotation</title>
+  <style>
+    :root {
+      --bg: #f2efe8;
+      --panel: rgba(244,241,236,0.84);
+      --panel-strong: rgba(255,255,255,0.9);
+      --text: #111111;
+      --muted: #625c55;
+      --accent: #182433;
+      --accent-soft: rgba(24,36,51,0.08);
+      --border: rgba(17,17,17,0.10);
+      --shadow: 0 20px 48px rgba(0,0,0,0.08);
+      --ok: #2d6f58;
+      --warn: #8b5a2b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 8% 0%, rgba(24,36,51,0.09), transparent 24%),
+        radial-gradient(circle at 100% 12%, rgba(244,162,97,0.10), transparent 22%),
+        linear-gradient(180deg, #f8f6f1 0%, var(--bg) 100%);
+    }
+    .page {
+      max-width: 1720px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      gap: 18px;
+    }
+    .toolbar, .motion-panel {
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+    }
+    .toolbar {
+      padding: 16px 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .toolbar .left, .toolbar .right {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .app-title {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .subtle {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    button, .pin-input {
+      appearance: none;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      background: var(--panel-strong);
+      color: var(--text);
+      font: inherit;
+    }
+    button {
+      cursor: pointer;
+    }
+    button.primary {
+      background: linear-gradient(135deg, #111111, var(--accent));
+      color: #fff;
+    }
+    .pin-entry {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pin-entry.hidden {
+      display: none;
+    }
+    .pin-input {
+      width: 76px;
+      font-size: 14px;
+      letter-spacing: 0.18em;
+      text-align: center;
+      padding: 8px 10px;
+      font-family: "Courier New", monospace;
+    }
+    .badge {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--panel-strong);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+    .badge.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-color: rgba(24,36,51,0.22);
+    }
+    .motion-panel {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+      min-width: 0;
+    }
+    .review-grid {
+      display: grid;
+      grid-template-columns: minmax(448px, 0.96fr) minmax(760px, 1.36fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .video-shell {
+      position: relative;
+      border-radius: 18px;
+      overflow: hidden;
+      background: #0b1521;
+      aspect-ratio: 16 / 9;
+      width: 100%;
+    }
+    .video-title {
+      margin: 0 0 10px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      text-align: center;
+    }
+    .source-link-row {
+      margin: -4px 0 10px;
+      text-align: center;
+    }
+    .source-link-row a {
+      color: var(--accent);
+      font-size: 12px;
+      text-decoration: underline;
+    }
+    .video-shell video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #0b1521;
+    }
+    .caption-box {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.72);
+      display: grid;
+      gap: 6px;
+    }
+    .caption-text {
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--text);
+    }
+    .annotation-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 12px;
+    }
+    .video-status-row {
+      display: flex;
+      justify-content: center;
+      margin-top: 12px;
+    }
+    .annotation-workspace {
+      display: grid;
+      gap: 12px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      background: var(--panel-strong);
+      width: 100%;
+    }
+    .annotation-workspace.hidden {
+      display: none;
+    }
+    .review-workspace {
+      display: grid;
+      gap: 12px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      background: var(--panel-strong);
+      width: 100%;
+    }
+    .review-workspace.hidden {
+      display: none;
+    }
+    .review-labels {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .review-chip {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid #000;
+      background: #fff;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .scan-workspace {
+      display: grid;
+      gap: 12px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      background: var(--panel-strong);
+      width: 100%;
+    }
+    .scan-workspace.hidden {
+      display: none;
+    }
+    .scan-button {
+      padding: 18px 20px;
+      font-size: 20px;
+      font-weight: 700;
+      border-radius: 16px;
+      border: 2px solid #000;
+      background: #fff;
+    }
+    .scan-button.active {
+      box-shadow: 0 0 0 2px #000;
+    }
+    .scan-status {
+      text-align: center;
+      font-size: 15px;
+      color: var(--muted);
+    }
+    .feedback-column {
+      display: grid;
+      gap: 12px;
+      width: 100%;
+    }
+    .annotation-prompt {
+      display: grid;
+      gap: 4px;
+      text-align: center;
+    }
+    .annotation-choice-grid {
+      display: flex;
+      justify-content: center;
+      padding: 4px 0 2px;
+      overflow-x: auto;
+    }
+    .combined-choice-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(60px, 92px));
+      gap: 8px 10px;
+      align-items: stretch;
+      min-width: max-content;
+    }
+    .combined-choice-column {
+      display: grid;
+      grid-template-rows: 1fr 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+    .combined-choice-column.good-column {
+      grid-template-rows: 1fr;
+      align-self: center;
+    }
+    .choice-button {
+      padding: 0;
+      border-radius: 12px;
+      border: 1px solid rgba(17,17,17,0.16);
+      background: rgba(255,255,255,0.9);
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: none;
+      box-shadow: none;
+    }
+    .choice-button:hover:not(:disabled) {
+      transform: none;
+      border-color: #000;
+      box-shadow: none;
+    }
+    .choice-button.active {
+      border-color: #000;
+      box-shadow: 0 0 0 2px #000;
+    }
+    .choice-button img {
+      display: block;
+      width: 100%;
+      height: auto;
+      pointer-events: none;
+    }
+    .annotation-secondary {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .construct-section {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(255,255,255,0.6);
+    }
+    .construct-section .section-title {
+      text-align: center;
+      margin-bottom: 14px;
+    }
+    .construct-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .construct-row.secondary {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--border);
+    }
+    .construct-btn {
+      padding: 8px 11px;
+      border-radius: 10px;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      background: var(--panel-strong);
+      cursor: pointer;
+      transition: none;
+    }
+    .construct-btn:hover {
+      border-color: #000;
+    }
+    .construct-btn.active {
+      background: #fff;
+      border-color: #000;
+      color: #000;
+      font-weight: 600;
+      box-shadow: 0 0 0 2px #000;
+    }
+    .annotation-secondary button.active {
+      background: #fff;
+      border-color: #000;
+      color: #000;
+      font-weight: 600;
+      box-shadow: 0 0 0 2px #000;
+    }
+    .annotation-summary {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      min-height: 18px;
+    }
+    .save-progress-badge {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel-strong);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+    .hidden {
+      display: none !important;
+    }
+    @media (max-width: 960px) {
+      .review-grid {
+        grid-template-columns: 1fr;
+      }
+      .combined-choice-grid {
+        grid-template-columns: repeat(3, minmax(64px, 96px));
+        gap: 10px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="toolbar">
+      <div class="left">
+        <h1 class="app-title">STEM ASL Annotation</h1>
+      </div>
+      <div class="right">
+        <button id="exportCsvBtn">Export CSV</button>
+        <button id="clearHistoryBtn">Clear History</button>
+        <button id="loadPackBtn">Load Annotation Pack</button>
+        <input type="file" id="packInput" accept=".zip,application/zip" class="hidden" />
+        <span class="badge" id="packBadge">No Pack</span>
+        <div class="pin-entry" id="pinEntry">
+          <label class="subtle" for="pinInput">PIN</label>
+          <input type="password" id="pinInput" class="pin-input" maxlength="4" placeholder="0000" inputmode="numeric" autocomplete="off" />
+          <button id="loadPin" class="primary">Load</button>
+          <span class="badge" id="pinSlotBadge">No PIN</span>
+        </div>
+      </div>
+    </div>
+
+    <section class="motion-panel">
+      <div class="review-grid">
+        <div>
+          <div class="video-title hidden" id="videoTitle"></div>
+          <div class="source-link-row hidden" id="sourceLinkRow">
+            <a id="sourceLink" href="#" target="_blank" rel="noopener noreferrer">Open original</a>
+          </div>
+          <div class="video-shell">
+            <video id="clipVideo" controls preload="metadata" playsinline loop></video>
+          </div>
+          <div class="caption-box hidden" id="captionBox">
+            <div class="caption-text" id="captionText"></div>
+          </div>
+          <div class="video-status-row">
+            <span class="save-progress-badge" id="saveProgressBadge">0 / 0</span>
+          </div>
+          <div class="annotation-actions">
+            <button id="prevBtn">Previous</button>
+            <button id="nextBtn">Next</button>
+            <button id="contextBtn">More Context</button>
+          </div>
+        </div>
+
+        <div class="feedback-column">
+          <div class="scan-workspace hidden" id="scanWorkspace">
+            <div class="section-title" style="margin-bottom:0;">Interesting Phenomena</div>
+            <button id="interestingBtn" class="scan-button">Interesting</button>
+            <div class="scan-status" id="scanStatus"></div>
+          </div>
+          <div class="review-workspace hidden" id="reviewWorkspace">
+            <div class="section-title" style="margin-bottom:0;">Predicted Type</div>
+            <div class="review-labels" id="reviewLabels"></div>
+          </div>
+          <div class="annotation-workspace hidden" id="annotationWorkspace">
+            <div class="annotation-prompt">
+              <div class="section-title" style="margin-bottom:0;">Boundary Feedback</div>
+              <div class="subtle" id="annotationPrompt"></div>
+            </div>
+            <div class="annotation-choice-grid">
+              <div class="combined-choice-grid" id="combinedChoiceButtons"></div>
+            </div>
+            <div class="annotation-secondary">
+              <button id="notASignButton">Not a Sign</button>
+            </div>
+            <div class="annotation-summary subtle" id="annotationSummary"></div>
+          </div>
+          <div class="construct-section hidden" id="constructSection">
+            <div class="section-title">Construct Type</div>
+            <div class="construct-row" id="constructButtons"></div>
+            <div class="construct-row secondary hidden" id="classifierSubtypeButtons"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="./assets/assignments.js"></script>
+  <script>
+    const FEEDBACK_ENDPOINT = "/__stem_annotation_feedback__";
+    const STORAGE_KEY = "stem-annotation-dashboard-feedback-v2";
+    const PIN_STORAGE_KEY = "stem-annotation-dashboard-pin";
+    const POSITION_STORAGE_KEY = "stem-annotation-dashboard-position-v2";
+    const QUEUE_SIGNATURE_KEY = "stem-annotation-dashboard-queue-signature-v1";
+    const PIN_RESET_KEY = "stem-annotation-dashboard-pin-reset-v1";
+    const APP = window.STEM_ANNOTATION_ASSIGNMENTS || { pins: {}, construct_options: [] };
+    const RESET_ONCE_PINS = { "2417": "2026-04-09-interesting-scan-reset-1" };
+
+    const CALIBRATION_IMAGE_CHOICES = [
+      { id: "good", image: "../assets/segment_labels/good.png", startChoice: "good", endChoice: "good", row: 0, column: 0 },
+      { id: "early_end", image: "../assets/segment_labels/early_end.png", startChoice: "good", endChoice: "early_0_25", row: 0, column: 1 },
+      { id: "late_start", image: "../assets/segment_labels/late_start.png", startChoice: "late_0_25", endChoice: "good", row: 1, column: 1 },
+      { id: "early_start", image: "../assets/segment_labels/early_start.png", startChoice: "early_0_25", endChoice: "good", row: 0, column: 2 },
+      { id: "late_end", image: "../assets/segment_labels/late_end.png", startChoice: "good", endChoice: "late_0_25", row: 1, column: 2 },
+      { id: "early_start_early_end", image: "../assets/segment_labels/early_start_early_end.png", startChoice: "early_0_25", endChoice: "early_0_25", row: 0, column: 3 },
+      { id: "late_start_late_end", image: "../assets/segment_labels/late_start_late_end.png", startChoice: "late_0_25", endChoice: "late_0_25", row: 1, column: 3 },
+      { id: "early_start_late_end", image: "../assets/segment_labels/early_start_late_end.png", startChoice: "early_0_25", endChoice: "late_0_25", row: 0, column: 4 },
+      { id: "late_start_early_end", image: "../assets/segment_labels/late_start_early_end.png", startChoice: "late_0_25", endChoice: "early_0_25", row: 1, column: 4 },
+      { id: "inv_early_start_late_end", image: "../assets/segment_labels/inv_early_start_late_end.png", startChoice: "invalid_early_50_plus", endChoice: "late_0_25", row: 0, column: 5 },
+      { id: "inv_late_start_early_end", image: "../assets/segment_labels/inv_late_start_early_end.png", startChoice: "late_0_25", endChoice: "invalid_early_50_plus", row: 1, column: 5 },
+    ];
+
+    function titleCaseConstruct(id) {
+      return String(id)
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (m) => m.toUpperCase());
+    }
+
+    const CLASSIFIER_SUBTYPES = ["body", "body_part", "descriptive", "instrument", "locative", "plural", "semantic"];
+    const HIDE_CONSTRUCT_FOR_BOUNDARY_CHOICES = new Set([
+      "inv_early_start_late_end",
+      "inv_late_start_early_end",
+    ]);
+    const CONSTRUCT_TYPES = (APP.construct_options || [])
+      .filter((id) => !CLASSIFIER_SUBTYPES.includes(id) && id !== "classifier" && id !== "unsure")
+      .map((id) => ({ id, label: titleCaseConstruct(id) }));
+    const MAIN_CONSTRUCT_TYPES = [...CONSTRUCT_TYPES, { id: "classifier", label: "Classifier" }, { id: "unsure", label: "Unsure" }];
+    const clipVideo = document.getElementById("clipVideo");
+    const pinEntry = document.getElementById("pinEntry");
+    const pinInput = document.getElementById("pinInput");
+    const loadPinBtn = document.getElementById("loadPin");
+    const pinSlotBadge = document.getElementById("pinSlotBadge");
+    const loadPackBtn = document.getElementById("loadPackBtn");
+    const packInput = document.getElementById("packInput");
+    const packBadge = document.getElementById("packBadge");
+    const saveProgressBadge = document.getElementById("saveProgressBadge");
+    const videoTitle = document.getElementById("videoTitle");
+    const sourceLinkRow = document.getElementById("sourceLinkRow");
+    const sourceLink = document.getElementById("sourceLink");
+    const captionBox = document.getElementById("captionBox");
+    const captionText = document.getElementById("captionText");
+    const annotationWorkspace = document.getElementById("annotationWorkspace");
+    const scanWorkspace = document.getElementById("scanWorkspace");
+    const reviewWorkspace = document.getElementById("reviewWorkspace");
+    const reviewLabels = document.getElementById("reviewLabels");
+    const interestingBtn = document.getElementById("interestingBtn");
+    const scanStatus = document.getElementById("scanStatus");
+    const annotationPrompt = document.getElementById("annotationPrompt");
+    const annotationSummary = document.getElementById("annotationSummary");
+    const constructSection = document.getElementById("constructSection");
+    const combinedChoiceButtons = document.getElementById("combinedChoiceButtons");
+    const constructButtons = document.getElementById("constructButtons");
+    const classifierSubtypeButtons = document.getElementById("classifierSubtypeButtons");
+    const notASignButton = document.getElementById("notASignButton");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const contextBtn = document.getElementById("contextBtn");
+    const exportCsvBtn = document.getElementById("exportCsvBtn");
+    const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+
+    let feedback = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    let annotatorPin = localStorage.getItem(PIN_STORAGE_KEY) || "";
+    let savedPositions = JSON.parse(localStorage.getItem(POSITION_STORAGE_KEY) || "{}");
+    let savedQueueSignatures = JSON.parse(localStorage.getItem(QUEUE_SIGNATURE_KEY) || "{}");
+    let pinResetState = JSON.parse(localStorage.getItem(PIN_RESET_KEY) || "{}");
+    let queue = [];
+    let queueIndex = -1;
+    let pendingCalibrationChoiceId = "";
+    let pendingConstructLabels = [];
+    let pendingClassifierSubtypeLabels = [];
+    let classifierExpanded = false;
+    let persistDebounce = null;
+    let showContext = false;
+    let renderToken = 0;
+    const loadedPackSlots = {};
+    const mediaUrlCache = new Map();
+
+    function isScanModeItem(item = currentItem()) {
+      return Boolean(item) && ((item.task_mode || "") === "interesting_scan" || (item.sample_subset || "") === "interesting_scan");
+    }
+
+    function isFacultyReviewItem(item = currentItem()) {
+      return Boolean(item) && ((item.task_mode || "") === "faculty_review" || (item.sample_subset || "") === "faculty_review");
+    }
+
+    function scanTimestamps(entry) {
+      return Array.isArray(entry?.interesting_timestamps) ? entry.interesting_timestamps : [];
+    }
+
+    function scanCount(entry) {
+      return scanTimestamps(entry).length;
+    }
+
+    function feedbackKey(pin, itemId) {
+      return `${pin}::${itemId}`;
+    }
+
+    function currentItem() {
+      return queue[queueIndex] || null;
+    }
+
+    function currentEntry() {
+      const item = currentItem();
+      if (!item || !annotatorPin) return null;
+      return feedback[feedbackKey(annotatorPin, item.item_id)] || null;
+    }
+
+    function currentSlot() {
+      if (!annotatorPin) return null;
+      return loadedPackSlots[annotatorPin] || APP.pins?.[annotatorPin] || null;
+    }
+
+    function uniqueOrdered(values, order = []) {
+      const requested = [];
+      const seen = new Set();
+      (values || []).forEach((value) => {
+        const v = String(value || "").trim();
+        if (!v || seen.has(v)) return;
+        seen.add(v);
+        requested.push(v);
+      });
+      if (!order.length) return requested;
+      const requestedSet = new Set(requested);
+      const ordered = order.filter((value) => requestedSet.has(value));
+      requested.forEach((value) => {
+        if (!ordered.includes(value)) ordered.push(value);
+      });
+      return ordered;
+    }
+
+    function normalizeDelimited(value) {
+      if (Array.isArray(value)) return value.map((v) => String(v || "").trim()).filter(Boolean);
+      return String(value || "")
+        .split(";")
+        .map((v) => v.trim())
+        .filter(Boolean);
+    }
+
+    function getConstructState(entry) {
+      const mainOrder = MAIN_CONSTRUCT_TYPES.map((x) => x.id);
+      const subtypeOrder = [...CLASSIFIER_SUBTYPES, "unsure"];
+      let main = normalizeDelimited(entry?.construct_labels);
+      let subtypes = normalizeDelimited(entry?.classifier_subtypes);
+      const legacyConstruct = String(entry?.construct || "").trim();
+      const legacySubtype = String(entry?.classifier_subtype || "").trim();
+      if (!main.length && legacyConstruct) {
+        main = normalizeDelimited(legacyConstruct);
+      }
+      if (!subtypes.length && legacySubtype) {
+        subtypes = normalizeDelimited(legacySubtype);
+      }
+      if (!subtypes.length && legacyConstruct && CLASSIFIER_SUBTYPES.includes(legacyConstruct)) {
+        subtypes = [legacyConstruct];
+      }
+      if (subtypes.length && !main.includes("classifier")) {
+        main.push("classifier");
+      }
+      main = uniqueOrdered(main, mainOrder);
+      subtypes = uniqueOrdered(subtypes, subtypeOrder);
+      return { main, subtypes };
+    }
+
+    function buildConstructPatch(mainLabels, subtypeLabels) {
+      const main = uniqueOrdered(mainLabels, MAIN_CONSTRUCT_TYPES.map((x) => x.id));
+      const subtypes = uniqueOrdered(subtypeLabels, [...CLASSIFIER_SUBTYPES, "unsure"]);
+      const finalMain = subtypes.length
+        ? uniqueOrdered([...main, "classifier"], MAIN_CONSTRUCT_TYPES.map((x) => x.id))
+        : main;
+      return {
+        construct: finalMain.join(";"),
+        classifier_subtype: subtypes.join(";"),
+        construct_labels: finalMain,
+        classifier_subtypes: subtypes,
+      };
+    }
+
+    function setVideoSource(videoEl, src, forcePlay = false) {
+      const wasPlaying = !videoEl.paused;
+      videoEl.pause();
+      videoEl.removeAttribute("src");
+      videoEl.load();
+      if (!src) {
+        return;
+      }
+      const needsCacheBust = !(String(src).startsWith("blob:") || String(src).startsWith("data:"));
+      const finalSrc = needsCacheBust
+        ? `${src}${src.includes("?") ? `&cb=${Date.now()}` : `?cb=${Date.now()}`}`
+        : src;
+      videoEl.src = finalSrc;
+      videoEl.load();
+      videoEl.currentTime = 0;
+      if (forcePlay || wasPlaying) {
+        videoEl.play().catch(() => {});
+      }
+    }
+
+    async function resolveMediaSrc(item, field) {
+      if (!item) return "";
+      const rel = String(item[field] || "");
+      if (!rel) return "";
+      const packId = String(item._packId || "");
+      if (!packId) return rel;
+      const cacheKey = `${packId}:${rel}`;
+      if (mediaUrlCache.has(cacheKey)) return mediaUrlCache.get(cacheKey);
+      const slot = loadedPackSlots[packId];
+      if (!slot || !slot.zip) return "";
+      const normalized = rel.replace(/^\.?\//, "").replace(/\\/g, "/");
+      const zipEntry = slot.zip.file(normalized) || slot.zip.file(`./${normalized}`) || slot.zip.file(normalized.replace(/^assets\//, ""));
+      if (!zipEntry) return "";
+      const blob = await zipEntry.async("blob");
+      const url = URL.createObjectURL(blob);
+      mediaUrlCache.set(cacheKey, url);
+      return url;
+    }
+
+    function cleanSourceTitle(dataset, rawTitle, itemId = "") {
+      const title = String(rawTitle || "").trim();
+      if (!title) return "";
+      if (dataset === "atomic_hands") {
+        const idMatch = String(itemId || "").match(/(?:^|_)\d{8}_([A-Za-z0-9_-]{11})(?:_|$)/);
+        let cleaned = title.replace(/^\d{8}\s+/, "").trim();
+        if (idMatch) {
+          const normalizedId = idMatch[1].replace(/_/g, " ");
+          if (cleaned.startsWith(normalizedId)) {
+            cleaned = cleaned.slice(normalizedId.length).trim();
+          }
+        }
+        return cleaned.replace(/^[A-Za-z0-9_-]{11}\s+/, "").trim();
+      }
+      return title;
+    }
+
+    function completedCount() {
+      return queue.filter((item) => {
+        const entry = feedback[feedbackKey(annotatorPin, item.item_id)];
+        if (isScanModeItem(item)) {
+          return Boolean(entry?.scan_completed);
+        }
+        if (isFacultyReviewItem(item)) {
+          return false;
+        }
+        const subset = String(item.sample_subset || "");
+        const constructOnlyRound = subset.startsWith("peak_valley_") || subset.startsWith("final_");
+        const combinedChoice = entry?.combined_choice || "";
+        const hasInvalidBoundary = HIDE_CONSTRUCT_FOR_BOUNDARY_CHOICES.has(combinedChoice);
+        const constructState = getConstructState(entry || {});
+        const hasConstruct = constructState.main.length > 0 || constructState.subtypes.length > 0;
+        if (constructOnlyRound) {
+          return Boolean(entry) && (Boolean(entry.not_a_sign) || hasConstruct);
+        }
+        return Boolean(entry) && (Boolean(entry.not_a_sign) || hasInvalidBoundary || (Boolean(combinedChoice) && hasConstruct));
+      }).length;
+    }
+
+    function updateConstructVisibility() {
+      if (isScanModeItem() || isFacultyReviewItem()) {
+        constructSection.classList.add("hidden");
+        return;
+      }
+      const entry = currentEntry();
+      const isNotASign = Boolean(entry?.not_a_sign);
+      constructSection.classList.toggle("hidden", isNotASign);
+    }
+
+    async function loadPersistedFeedbackFromServer() {
+      try {
+        const resp = await fetch(FEEDBACK_ENDPOINT, { cache: "no-store" });
+        if (!resp.ok) return;
+        const remote = await resp.json();
+        if (remote && typeof remote === "object") {
+          feedback = Object.assign({}, remote, feedback);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(feedback));
+        }
+      } catch (err) {
+        // local-only mode is fine
+      }
+    }
+
+    function deletePinFeedback(pin) {
+      Object.keys(feedback).forEach((key) => {
+        if (key.startsWith(`${pin}::`)) delete feedback[key];
+      });
+      delete savedPositions[pin];
+      localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(savedPositions));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(feedback));
+    }
+
+    async function clearCurrentPinHistory() {
+      if (!annotatorPin) return;
+      deletePinFeedback(annotatorPin);
+      try {
+        await fetch(FEEDBACK_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(feedback),
+        });
+      } catch (err) {
+        // local-only is acceptable
+      }
+      queueIndex = queue.length ? 0 : -1;
+      showContext = false;
+      renderCurrentItem();
+    }
+
+    function queuePersistFeedback() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(feedback));
+      clearTimeout(persistDebounce);
+      persistDebounce = setTimeout(async () => {
+        try {
+          await fetch(FEEDBACK_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(feedback),
+          });
+        } catch (err) {
+          // local-only is still acceptable
+        }
+      }, 250);
+    }
+
+    function persistQueuePosition() {
+      if (!annotatorPin) return;
+      savedPositions[annotatorPin] = queueIndex;
+      localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(savedPositions));
+    }
+
+    function queueSignature(items) {
+      return (items || []).map((item) => item.item_id).join("|");
+    }
+
+    function updatePinUI() {
+      if (!annotatorPin || annotatorPin.length < 4) {
+        pinEntry.classList.remove("hidden");
+        pinSlotBadge.textContent = annotatorPin.length ? "…" : "No PIN";
+        pinSlotBadge.classList.remove("active");
+      } else {
+        pinEntry.classList.add("hidden");
+        pinSlotBadge.textContent = `PIN ${annotatorPin}`;
+        pinSlotBadge.classList.add("active");
+      }
+    }
+
+    function updatePackUI() {
+      const slot = currentSlot();
+      if (slot && loadedPackSlots[annotatorPin]) {
+        packBadge.textContent = `Pack ${annotatorPin}`;
+        packBadge.classList.add("active");
+      } else {
+        packBadge.textContent = "No Pack";
+        packBadge.classList.remove("active");
+      }
+    }
+
+    function saveCurrentEntry(partial) {
+      const item = currentItem();
+      if (!item || !annotatorPin) return;
+      const key = feedbackKey(annotatorPin, item.item_id);
+      const existing = feedback[key] || {};
+      feedback[key] = {
+        kind: "stem-annotation",
+        annotatorPin,
+        itemId: item.item_id,
+        queueIndex: item.queue_index,
+        createdAt: existing.createdAt || Date.now(),
+        updatedAt: Date.now(),
+        ...existing,
+        ...partial,
+      };
+      queuePersistFeedback();
+      updateStatus();
+    }
+
+    function renderReviewLabels(item) {
+      reviewLabels.innerHTML = "";
+      const raw = Array.isArray(item?.review_labels)
+        ? item.review_labels
+        : String(item?.review_labels || item?.hard_reason || "")
+            .split(";")
+            .map((v) => v.trim())
+            .filter(Boolean);
+      raw.forEach((label) => {
+        const chip = document.createElement("div");
+        chip.className = "review-chip";
+        chip.textContent = titleCaseConstruct(label);
+        reviewLabels.appendChild(chip);
+      });
+    }
+
+    function renderCalibrationChoiceButtons() {
+      combinedChoiceButtons.innerHTML = "";
+      const goodColumnIndex = CALIBRATION_IMAGE_CHOICES.find((choice) => choice.id === "good")?.column ?? 0;
+      const columnCount = Math.max(...CALIBRATION_IMAGE_CHOICES.map((choice) => choice.column)) + 1;
+      const columns = Array.from({ length: columnCount }, (_, index) => {
+        const column = document.createElement("div");
+        column.className = `combined-choice-column ${index === goodColumnIndex ? "good-column" : ""}`;
+        combinedChoiceButtons.appendChild(column);
+        return column;
+      });
+      CALIBRATION_IMAGE_CHOICES.forEach((choice) => {
+        const button = document.createElement("button");
+        button.className = `choice-button ${pendingCalibrationChoiceId === choice.id ? "active" : ""}`;
+        button.onclick = () => {
+          pendingCalibrationChoiceId = choice.id;
+          const shouldHideConstruct = HIDE_CONSTRUCT_FOR_BOUNDARY_CHOICES.has(choice.id);
+          const patch = {
+            combined_choice: choice.id,
+            start_choice: choice.startChoice,
+            end_choice: choice.endChoice,
+            not_a_sign: false,
+          };
+          if (shouldHideConstruct) {
+            pendingConstructLabels = [];
+            pendingClassifierSubtypeLabels = [];
+            classifierExpanded = false;
+            patch.construct = "";
+            patch.classifier_subtype = "";
+            patch.construct_labels = [];
+            patch.classifier_subtypes = [];
+          }
+          saveCurrentEntry(patch);
+          notASignButton.classList.remove("active");
+          annotationSummary.textContent = "";
+          renderCalibrationChoiceButtons();
+          updateConstructVisibility();
+        };
+        const image = document.createElement("img");
+        image.src = choice.image;
+        image.alt = "";
+        image.draggable = false;
+        button.appendChild(image);
+        if (choice.id === "good") button.style.gridRow = "1 / span 2";
+        columns[choice.column].appendChild(button);
+      });
+    }
+
+    function renderConstructButtons() {
+      constructButtons.innerHTML = "";
+      classifierSubtypeButtons.innerHTML = "";
+      const entry = currentEntry();
+      const entryState = getConstructState(entry || {});
+      const activeMain = pendingConstructLabels.length ? pendingConstructLabels : entryState.main;
+      const activeSubtypes = pendingClassifierSubtypeLabels.length ? pendingClassifierSubtypeLabels : entryState.subtypes;
+      const activeMainSet = new Set(activeMain);
+      const activeSubtypeSet = new Set(activeSubtypes);
+      MAIN_CONSTRUCT_TYPES.forEach(({ id, label }) => {
+        const btn = document.createElement("button");
+        btn.className = "construct-btn" + (activeMainSet.has(id) ? " active" : "");
+        btn.textContent = label;
+        btn.onclick = () => {
+          const nextMain = new Set(activeMainSet);
+          const nextSubtypes = new Set(activeSubtypeSet);
+          if (id === "classifier") {
+            if (nextMain.has("classifier")) {
+              nextMain.delete("classifier");
+              nextSubtypes.clear();
+              classifierExpanded = false;
+            } else {
+              nextMain.add("classifier");
+              classifierExpanded = true;
+            }
+            pendingConstructLabels = [...nextMain];
+            pendingClassifierSubtypeLabels = [...nextSubtypes];
+            saveCurrentEntry(buildConstructPatch([...nextMain], [...nextSubtypes]));
+            renderConstructButtons();
+            return;
+          }
+          if (nextMain.has(id)) {
+            nextMain.delete(id);
+          } else {
+            nextMain.add(id);
+          }
+          pendingConstructLabels = [...nextMain];
+          pendingClassifierSubtypeLabels = [...nextSubtypes];
+          saveCurrentEntry(buildConstructPatch([...nextMain], [...nextSubtypes]));
+          annotationSummary.textContent = "";
+          renderConstructButtons();
+        };
+        constructButtons.appendChild(btn);
+      });
+      const showSubtypeButtons = classifierExpanded || activeMainSet.has("classifier");
+      classifierSubtypeButtons.classList.toggle("hidden", !showSubtypeButtons);
+      if (showSubtypeButtons) {
+        CLASSIFIER_SUBTYPES.forEach((id) => {
+          const btn = document.createElement("button");
+          btn.className = "construct-btn" + (activeSubtypeSet.has(id) ? " active" : "");
+          btn.textContent = titleCaseConstruct(id);
+          btn.onclick = () => {
+            const nextMain = new Set(activeMainSet);
+            const nextSubtypes = new Set(activeSubtypeSet);
+            nextMain.add("classifier");
+            if (nextSubtypes.has(id)) {
+              nextSubtypes.delete(id);
+            } else {
+              nextSubtypes.add(id);
+            }
+            pendingConstructLabels = [...nextMain];
+            pendingClassifierSubtypeLabels = [...nextSubtypes];
+            saveCurrentEntry(buildConstructPatch([...nextMain], [...nextSubtypes]));
+            annotationSummary.textContent = "";
+            classifierExpanded = true;
+            renderConstructButtons();
+          };
+          classifierSubtypeButtons.appendChild(btn);
+        });
+        const unsureBtn = document.createElement("button");
+        unsureBtn.className = "construct-btn" + (activeSubtypeSet.has("unsure") ? " active" : "");
+        unsureBtn.textContent = "Classifier Unsure";
+        unsureBtn.onclick = () => {
+          const nextMain = new Set(activeMainSet);
+          const nextSubtypes = new Set(activeSubtypeSet);
+          nextMain.add("classifier");
+          if (nextSubtypes.has("unsure")) {
+            nextSubtypes.delete("unsure");
+          } else {
+            nextSubtypes.add("unsure");
+          }
+          pendingConstructLabels = [...nextMain];
+          pendingClassifierSubtypeLabels = [...nextSubtypes];
+          saveCurrentEntry(buildConstructPatch([...nextMain], [...nextSubtypes]));
+          annotationSummary.textContent = "";
+          classifierExpanded = true;
+          renderConstructButtons();
+        };
+        classifierSubtypeButtons.appendChild(unsureBtn);
+      }
+    }
+
+    function updateStatus() {
+      const item = currentItem();
+      const total = queue.length;
+      const reviewMode = isFacultyReviewItem(item);
+      const done = completedCount();
+      saveProgressBadge.textContent = reviewMode ? `${Math.max(queueIndex + 1, 0)} / ${total || 0}` : `${done} / ${total || 0}`;
+      prevBtn.disabled = queueIndex <= 0;
+      nextBtn.disabled = queueIndex < 0 || queueIndex >= total - 1;
+      const scanMode = isScanModeItem(item);
+      const reviewModeItem = isFacultyReviewItem(item);
+      contextBtn.disabled = scanMode || !item || !item.context_video;
+      contextBtn.textContent = item && showContext && item.context_video ? "Original Segment" : "More Context";
+      contextBtn.classList.toggle("primary", Boolean(item && showContext && item.context_video));
+      contextBtn.classList.toggle("hidden", scanMode);
+      exportCsvBtn.classList.toggle("hidden", reviewModeItem);
+      clearHistoryBtn.classList.toggle("hidden", reviewModeItem);
+    }
+
+    async function renderCurrentItem() {
+      const token = ++renderToken;
+      const item = currentItem();
+      persistQueuePosition();
+      if (!item) {
+        annotationWorkspace.classList.add("hidden");
+        scanWorkspace.classList.add("hidden");
+        reviewWorkspace.classList.add("hidden");
+        constructSection.classList.add("hidden");
+        setVideoSource(clipVideo, "");
+        clipVideo.loop = false;
+        videoTitle.textContent = "";
+        videoTitle.classList.add("hidden");
+        sourceLinkRow.classList.add("hidden");
+        sourceLink.removeAttribute("href");
+        captionBox.classList.add("hidden");
+        captionText.textContent = "";
+        annotationPrompt.textContent = "";
+        annotationSummary.textContent = "";
+        updateStatus();
+        return;
+      }
+      const scanMode = isScanModeItem(item);
+      const reviewMode = isFacultyReviewItem(item);
+      annotationWorkspace.classList.toggle("hidden", scanMode || reviewMode);
+      scanWorkspace.classList.toggle("hidden", !scanMode);
+      reviewWorkspace.classList.toggle("hidden", !reviewMode);
+      clipVideo.loop = !scanMode;
+      const mediaField = showContext && item.context_video ? "context_video" : "video";
+      const resolvedSrc = await resolveMediaSrc(item, mediaField);
+      if (token !== renderToken) return;
+      setVideoSource(clipVideo, resolvedSrc || item[mediaField]);
+      const titleText = item.display_title || cleanSourceTitle(item.dataset, item.source_title || item.article || "", item.item_id);
+      const captionBody = item.caption_text || "";
+      videoTitle.textContent = titleText;
+      videoTitle.classList.toggle("hidden", !titleText);
+      if (item.source_url) {
+        sourceLink.href = item.source_url;
+        sourceLink.textContent = item.source_url_label || "Open original";
+        sourceLinkRow.classList.remove("hidden");
+      } else {
+        sourceLink.removeAttribute("href");
+        sourceLink.textContent = "Open original";
+        sourceLinkRow.classList.add("hidden");
+      }
+      captionText.textContent = captionBody;
+      captionBox.classList.toggle("hidden", !captionBody);
+      const entry = currentEntry();
+      pendingCalibrationChoiceId = entry?.combined_choice || "";
+      const constructState = getConstructState(entry || {});
+      pendingConstructLabels = [...constructState.main];
+      pendingClassifierSubtypeLabels = [...constructState.subtypes];
+      classifierExpanded = pendingConstructLabels.includes("classifier");
+      notASignButton.classList.toggle("active", Boolean(entry?.not_a_sign));
+      annotationPrompt.textContent = "";
+      annotationSummary.textContent = entry && (entry.not_a_sign || entry.combined_choice || entry.construct)
+        ? ""
+        : "";
+      notASignButton.disabled = false;
+      if (scanMode) {
+        const hits = scanCount(entry);
+        scanStatus.textContent = `${hits} / 5 captured`;
+      } else if (reviewMode) {
+        renderReviewLabels(item);
+      } else {
+        renderCalibrationChoiceButtons();
+        renderConstructButtons();
+      }
+      updateConstructVisibility();
+      updateStatus();
+    }
+
+    function loadPin(pin) {
+      const slot = loadedPackSlots[pin] || APP.pins?.[pin];
+      if (!slot) {
+        annotationPrompt.textContent = "";
+        updatePackUI();
+        return;
+      }
+      const resetVersion = RESET_ONCE_PINS[pin];
+      if (resetVersion && pinResetState[pin] !== resetVersion) {
+        deletePinFeedback(pin);
+        pinResetState[pin] = resetVersion;
+        localStorage.setItem(PIN_RESET_KEY, JSON.stringify(pinResetState));
+      }
+      annotatorPin = pin;
+      localStorage.setItem(PIN_STORAGE_KEY, pin);
+      queue = slot.items || [];
+      const signature = queueSignature(queue);
+      const previousSignature = savedQueueSignatures[pin] || "";
+      if (signature !== previousSignature) {
+        savedPositions[pin] = 0;
+        savedQueueSignatures[pin] = signature;
+        localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(savedPositions));
+        localStorage.setItem(QUEUE_SIGNATURE_KEY, JSON.stringify(savedQueueSignatures));
+      }
+      const savedIndex = Number(savedPositions[pin]);
+      if (queue.length && Number.isInteger(savedIndex) && savedIndex >= 0 && savedIndex < queue.length) {
+        queueIndex = savedIndex;
+      } else {
+        queueIndex = queue.length ? 0 : -1;
+      }
+      showContext = false;
+      updatePinUI();
+      updatePackUI();
+      renderCurrentItem();
+    }
+
+    function exportRows() {
+      return queue.map((item) => {
+        const entry = feedback[feedbackKey(annotatorPin, item.item_id)] || {};
+        return {
+          annotator_pin: annotatorPin,
+          item_id: item.item_id,
+          queue_index: item.queue_index,
+          shared_iaa: item.shared_iaa,
+          task_mode: item.task_mode || "",
+          combined_choice: entry.combined_choice || "",
+          start_choice: entry.start_choice || "",
+          end_choice: entry.end_choice || "",
+          not_a_sign: Boolean(entry.not_a_sign),
+          construct: getConstructState(entry).main.join(";"),
+          classifier_subtype: getConstructState(entry).subtypes.join(";"),
+          construct_labels: getConstructState(entry).main.join(";"),
+          classifier_subtypes: getConstructState(entry).subtypes.join(";"),
+          interesting_count: scanCount(entry),
+          interesting_timestamps: scanTimestamps(entry).join(";"),
+          scan_completed: Boolean(entry.scan_completed),
+          scan_completed_reason: entry.scan_completed_reason || "",
+          created_at: entry.createdAt || "",
+          updated_at: entry.updatedAt || "",
+        };
+      });
+    }
+
+    function exportCsv() {
+      const rows = exportRows();
+      if (!rows.length) return;
+      const headers = Object.keys(rows[0]);
+      const csv = [headers.join(",")].concat(
+        rows.map((row) => headers.map((header) => `"${String(row[header] ?? "").replace(/"/g, '""')}"`).join(","))
+      ).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `stem_annotations_pin${annotatorPin || "unknown"}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function loadPackFile(file) {
+      if (!file) return;
+      const zip = await JSZip.loadAsync(file);
+      const manifestFile = zip.file("pack.json") || Object.values(zip.files).find((entry) => /(^|\/)pack\.json$/i.test(entry.name));
+      if (!manifestFile) return;
+      const pack = JSON.parse(await manifestFile.async("string"));
+      const pin = String(pack.pin || "");
+      if (!pin) return;
+      const items = (pack.items || []).map((item) => ({ ...item, _packId: pin }));
+      loadedPackSlots[pin] = {
+        annotator: pack.annotator || "",
+        items,
+        zip,
+        packName: file.name,
+      };
+      pinInput.value = pin;
+      packBadge.textContent = `Pack ${pin}`;
+      packBadge.classList.add("active");
+      loadPin(pin);
+    }
+
+    loadPinBtn.onclick = () => {
+      const val = pinInput.value.replace(/\D/g, "").slice(0, 4);
+      pinInput.value = val;
+      loadPin(val);
+    };
+    pinInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") loadPinBtn.click();
+    });
+    prevBtn.onclick = () => {
+      if (queueIndex > 0) {
+        queueIndex -= 1;
+        showContext = false;
+        renderCurrentItem();
+      }
+    };
+    nextBtn.onclick = () => {
+      if (queueIndex >= 0 && queueIndex < queue.length - 1) {
+        queueIndex += 1;
+        showContext = false;
+        renderCurrentItem();
+      }
+    };
+    contextBtn.onclick = () => {
+      const item = currentItem();
+      if (!item || !item.context_video) return;
+      showContext = !showContext;
+      (async () => {
+        const field = showContext ? "context_video" : "video";
+        const resolvedSrc = await resolveMediaSrc(item, field);
+        setVideoSource(clipVideo, resolvedSrc || item[field], true);
+        annotationSummary.textContent = "";
+        updateStatus();
+      })();
+    };
+    interestingBtn.onclick = () => {
+      const item = currentItem();
+      if (!item || !isScanModeItem(item)) return;
+      const entry = currentEntry() || {};
+      const timestamps = scanTimestamps(entry).slice();
+      timestamps.push(Number(clipVideo.currentTime || 0).toFixed(3));
+      const completed = timestamps.length >= 5;
+      saveCurrentEntry({
+        interesting_timestamps: timestamps,
+        scan_completed: completed,
+        scan_completed_reason: completed ? "hit_limit" : "",
+      });
+      if (!completed) {
+        scanStatus.textContent = `${timestamps.length} / 5 captured`;
+        updateStatus();
+        return;
+      }
+      if (queueIndex >= 0 && queueIndex < queue.length - 1) {
+        queueIndex += 1;
+        showContext = false;
+        renderCurrentItem();
+      } else {
+        scanStatus.textContent = `${timestamps.length} / 5 captured`;
+        updateStatus();
+      }
+    };
+    notASignButton.onclick = () => {
+      saveCurrentEntry({
+        combined_choice: "",
+        start_choice: "",
+        end_choice: "",
+        not_a_sign: true,
+        construct: "",
+        classifier_subtype: "",
+        construct_labels: [],
+        classifier_subtypes: [],
+      });
+      pendingCalibrationChoiceId = "";
+      pendingConstructLabels = [];
+      pendingClassifierSubtypeLabels = [];
+      notASignButton.classList.add("active");
+      annotationSummary.textContent = "";
+      renderCalibrationChoiceButtons();
+      renderConstructButtons();
+      updateConstructVisibility();
+    };
+    exportCsvBtn.onclick = exportCsv;
+    loadPackBtn.onclick = () => {
+      packInput.value = "";
+      packInput.click();
+    };
+    packInput.onchange = async (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      await loadPackFile(file);
+    };
+    clearHistoryBtn.onclick = () => {
+      clearCurrentPinHistory();
+    };
+    clipVideo.addEventListener("ended", () => {
+      const item = currentItem();
+      if (!item || !isScanModeItem(item)) return;
+      const entry = currentEntry() || {};
+      if (!entry.scan_completed) {
+        saveCurrentEntry({
+          scan_completed: true,
+          scan_completed_reason: scanCount(entry) > 0 ? "video_ended_with_hits" : "video_ended_no_hits",
+        });
+      }
+      if (queueIndex >= 0 && queueIndex < queue.length - 1) {
+        queueIndex += 1;
+        showContext = false;
+        renderCurrentItem();
+      } else {
+        renderCurrentItem();
+      }
+    });
+
+    (async function init() {
+      await loadPersistedFeedbackFromServer();
+      if (annotatorPin) {
+        pinInput.value = annotatorPin;
+        loadPin(annotatorPin);
+      } else {
+        updatePinUI();
+        updatePackUI();
+        renderCurrentItem();
+      }
+    })();
+  </script>
+</body>
+</html>
