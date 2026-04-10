@@ -359,6 +359,84 @@
     .hidden {
       display: none !important;
     }
+    .help-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.42);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 1000;
+    }
+    .help-dialog {
+      width: min(980px, 100%);
+      max-height: min(88vh, 1100px);
+      overflow: auto;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.18);
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+    }
+    .help-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .help-header .section-title {
+      margin: 0;
+    }
+    .help-copy {
+      display: grid;
+      gap: 10px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .help-copy ol {
+      margin: 0;
+      padding-left: 20px;
+      display: grid;
+      gap: 8px;
+    }
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+    .legend-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px;
+      background: rgba(255,255,255,0.82);
+      display: grid;
+      gap: 8px;
+    }
+    .legend-card img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 10px;
+    }
+    .legend-card .subtle {
+      font-size: 12px;
+      text-align: center;
+    }
+    .definition-list {
+      display: grid;
+      gap: 10px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .definition-list p {
+      margin: 0;
+    }
+    .definition-list strong {
+      font-weight: 700;
+    }
     @media (max-width: 960px) {
       .review-grid {
         grid-template-columns: 1fr;
@@ -379,6 +457,7 @@
       <div class="right">
         <button id="exportCsvBtn">Export CSV</button>
         <button id="clearHistoryBtn">Clear History</button>
+        <button id="helpBtn">Help</button>
         <button id="loadPackBtn">Load Annotation Pack</button>
         <input type="file" id="packInput" accept=".zip,application/zip" class="hidden" />
         <span class="badge" id="packBadge">No Pack</span>
@@ -443,6 +522,54 @@
     </section>
   </div>
 
+  <div class="help-modal hidden" id="helpModal" aria-hidden="true">
+    <div class="help-dialog" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <div class="help-header">
+        <div class="section-title" id="helpTitle">Help</div>
+        <button id="closeHelpBtn">Close</button>
+      </div>
+      <div class="help-copy">
+        <ol>
+          <li>Select the boundary option that best matches the clip, or "Not a sign" (see definitions below).</li>
+          <li>"More context" will show 2 seconds before and after the segment. You can also open the full context in a new tab by clicking "Open on [Youtube/Wiki]".</li>
+          <li>If a sign is shown, select which type it is (see definitions below) or "unsure".</li>
+          <li>If multiple signs are shown, or the left and right hands are showing different sign types, you can select multiple types.</li>
+          <li>If the sign type is "classifier", select which type of classifier (see definitions below) or "unsure".</li>
+        </ol>
+      </div>
+      <div>
+        <div class="section-title">Boundary Feedback Legend</div>
+        <div class="legend-grid" id="boundaryLegend"></div>
+      </div>
+      <div>
+        <div class="section-title">Construct Definitions</div>
+        <div class="definition-list">
+          <p><strong>Lexical Sign</strong> — an established, conventional sign</p>
+          <p><strong>Fingerspelling</strong> — a combination of manual alphabet letters to represent a written/spoken word, acronym, name, or abbreviation</p>
+          <p><strong>Loansign</strong> — a borrowed form, typically from fingerspelling/written language contact, that has become entrenched enough to function as a lexical item.</p>
+          <p><strong>Name Sign</strong> — a sign used as a person, place, or entity name to refer to a particular individual,place, or entity</p>
+          <p><strong>Number Sign</strong> — a sign whose primary function is to express a numerical value or quantify a noun.</p>
+          <p><strong>Compound</strong> — a single lexical item formed from two lexical that function together as one word.</p>
+          <p><strong>Gesture</strong> — a non-lexical, imagistic communicative movement that is not treated as an established lexical sign.</p>
+          <p><strong>Neologism</strong> — a newly created sign for a new or newly salient concept, often not yet fully stabilized or standardized across signers.</p>
+          <p><strong>Classifier</strong> — a productive sign/construction in which handshape and movement/location schematically represent a referent class, its shape, handling, spatial relation, or enactment, rather than naming it with a fixed lexical sign.</p>
+        </div>
+      </div>
+      <div>
+        <div class="section-title">Classifier Subtypes</div>
+        <div class="definition-list">
+          <p><strong>Body</strong> — a classifier in which the signer’s body represents and enacts the referent’s action. Example: “puts arm around friend”</p>
+          <p><strong>Body Part</strong> — a classifier in which a specific body part of the signer represents the corresponding body part of the referent doing the action. Example: “taps foot”</p>
+          <p><strong>Descriptive</strong> — a classifier used to describe the visible properties of a referent, especially size, shape, or appearance. Example: “curly hair” (aka Size and Shape Specifiers)</p>
+          <p><strong>Instrument</strong> — a classifier showing how an object is manipulated or used, usually by the hands. Example: “turning a steering wheel”</p>
+          <p><strong>Locative</strong> — a classifier showing where an object is located, and often also how it moves in space. Example: “leaf drifting to the ground”</p>
+          <p><strong>Plural</strong> — a classifier marking multiple referents, whether the number is exact or non-exact. Example: “long line of people”</p>
+          <p><strong>Semantic</strong> — a classifier whose handshape stands for a semantic class of referents, such as person, animal, or vehicle. Example: “person walking quickly”</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="./assets/assignments.js"></script>
   <script>
@@ -484,6 +611,19 @@
       .filter((id) => !CLASSIFIER_SUBTYPES.includes(id) && id !== "classifier" && id !== "unsure")
       .map((id) => ({ id, label: titleCaseConstruct(id) }));
     const MAIN_CONSTRUCT_TYPES = [...CONSTRUCT_TYPES, { id: "classifier", label: "Classifier" }, { id: "unsure", label: "Unsure" }];
+    const BOUNDARY_LABELS = {
+      good: "Good",
+      early_end: "Early End",
+      late_start: "Late Start",
+      early_start: "Early Start",
+      late_end: "Late End",
+      early_start_early_end: "Early Start + Early End",
+      late_start_late_end: "Late Start + Late End",
+      early_start_late_end: "Early Start + Late End",
+      late_start_early_end: "Late Start + Early End",
+      inv_early_start_late_end: "Multiple Signs",
+      inv_late_start_early_end: "Too Short for Annotation",
+    };
     const clipVideo = document.getElementById("clipVideo");
     const pinEntry = document.getElementById("pinEntry");
     const pinInput = document.getElementById("pinInput");
@@ -514,6 +654,10 @@
     const contextBtn = document.getElementById("contextBtn");
     const exportCsvBtn = document.getElementById("exportCsvBtn");
     const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+    const helpBtn = document.getElementById("helpBtn");
+    const helpModal = document.getElementById("helpModal");
+    const closeHelpBtn = document.getElementById("closeHelpBtn");
+    const boundaryLegend = document.getElementById("boundaryLegend");
 
     let feedback = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     let annotatorPin = localStorage.getItem(PIN_STORAGE_KEY) || "";
@@ -556,6 +700,42 @@
       const item = currentItem();
       if (!item || !annotatorPin) return null;
       return feedback[feedbackKey(annotatorPin, item.item_id)] || null;
+    }
+
+    function quoteUrlPart(value) {
+      return encodeURIComponent(String(value || ""));
+    }
+
+    function parseAtomicHandsVideoId(value) {
+      const match = String(value || "").match(/(?:^|_)\d{8}_([A-Za-z0-9_-]{11})(?:_|$)/);
+      return match ? match[1] : "";
+    }
+
+    function parseWikiArticleId(value) {
+      const match = String(value || "").match(/(?:^|_)\d+-(\d+)_\d+_\d+(?:_|$)/);
+      return match ? match[1] : "";
+    }
+
+    function fallbackSourceMeta(item) {
+      const rawTitle = item.display_title || cleanSourceTitle(item.dataset, item.source_title || item.article || "", item.item_id);
+      if (item.dataset === "atomic_hands") {
+        const videoId = parseAtomicHandsVideoId(item.parent_video_id || item.item_id || "");
+        return {
+          url: videoId ? `https://www.youtube.com/watch?v=${videoId}` : "",
+          label: videoId ? "Open on YouTube" : "",
+          title: rawTitle,
+        };
+      }
+      if (item.dataset === "asl_stem_wiki") {
+        const articleId = parseWikiArticleId(item.parent_video_id || item.item_id || "");
+        const targetName = item.article || rawTitle || "";
+        return {
+          url: articleId && targetName ? `https://aslgames.azurewebsites.net/wiki/?targetArticle=${articleId}&targetName=${quoteUrlPart(targetName)}` : "",
+          label: articleId && targetName ? "Open on Wiki" : "",
+          title: rawTitle,
+        };
+      }
+      return { url: "", label: "", title: rawTitle };
     }
 
     function currentSlot() {
@@ -625,6 +805,23 @@
         construct_labels: finalMain,
         classifier_subtypes: subtypes,
       };
+    }
+
+    function renderBoundaryLegend() {
+      boundaryLegend.innerHTML = "";
+      CALIBRATION_IMAGE_CHOICES.forEach((choice) => {
+        const card = document.createElement("div");
+        card.className = "legend-card";
+        const img = document.createElement("img");
+        img.src = choice.image;
+        img.alt = BOUNDARY_LABELS[choice.id] || choice.id;
+        const label = document.createElement("div");
+        label.className = "subtle";
+        label.textContent = BOUNDARY_LABELS[choice.id] || choice.id;
+        card.appendChild(img);
+        card.appendChild(label);
+        boundaryLegend.appendChild(card);
+      });
     }
 
     function setVideoSource(videoEl, src, forcePlay = false) {
@@ -836,6 +1033,8 @@
       CALIBRATION_IMAGE_CHOICES.forEach((choice) => {
         const button = document.createElement("button");
         button.className = `choice-button ${pendingCalibrationChoiceId === choice.id ? "active" : ""}`;
+        button.title = BOUNDARY_LABELS[choice.id] || choice.id;
+        button.setAttribute("aria-label", BOUNDARY_LABELS[choice.id] || choice.id);
         button.onclick = () => {
           pendingCalibrationChoiceId = choice.id;
           const shouldHideConstruct = HIDE_CONSTRUCT_FOR_BOUNDARY_CHOICES.has(choice.id);
@@ -1011,9 +1210,13 @@
       const captionBody = item.caption_text || "";
       videoTitle.textContent = titleText;
       videoTitle.classList.toggle("hidden", !titleText);
-      if (item.source_url) {
-        sourceLink.href = item.source_url;
-        sourceLink.textContent = item.source_url_label || "Open original";
+      const sourceMeta = item.source_url ? {
+        url: item.source_url,
+        label: item.source_url_label || "Open original",
+      } : fallbackSourceMeta(item);
+      if (sourceMeta.url) {
+        sourceLink.href = sourceMeta.url;
+        sourceLink.textContent = sourceMeta.label || "Open original";
         sourceLinkRow.classList.remove("hidden");
       } else {
         sourceLink.removeAttribute("href");
@@ -1226,6 +1429,20 @@
       updateConstructVisibility();
     };
     exportCsvBtn.onclick = exportCsv;
+    helpBtn.onclick = () => {
+      helpModal.classList.remove("hidden");
+      helpModal.setAttribute("aria-hidden", "false");
+    };
+    closeHelpBtn.onclick = () => {
+      helpModal.classList.add("hidden");
+      helpModal.setAttribute("aria-hidden", "true");
+    };
+    helpModal.onclick = (event) => {
+      if (event.target === helpModal) {
+        helpModal.classList.add("hidden");
+        helpModal.setAttribute("aria-hidden", "true");
+      }
+    };
     loadPackBtn.onclick = () => {
       packInput.value = "";
       packInput.click();
@@ -1258,6 +1475,7 @@
     });
 
     (async function init() {
+      renderBoundaryLegend();
       await loadPersistedFeedbackFromServer();
       if (annotatorPin) {
         pinInput.value = annotatorPin;
