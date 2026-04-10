@@ -197,32 +197,6 @@
     .annotation-workspace.hidden {
       display: none;
     }
-    .review-workspace {
-      display: grid;
-      gap: 12px;
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 18px;
-      background: var(--panel-strong);
-      width: 100%;
-    }
-    .review-workspace.hidden {
-      display: none;
-    }
-    .review-labels {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .review-chip {
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid #000;
-      background: #fff;
-      font-size: 13px;
-      font-weight: 600;
-    }
     .scan-workspace {
       display: grid;
       gap: 12px;
@@ -446,10 +420,6 @@
             <button id="interestingBtn" class="scan-button">Interesting</button>
             <div class="scan-status" id="scanStatus"></div>
           </div>
-          <div class="review-workspace hidden" id="reviewWorkspace">
-            <div class="section-title" style="margin-bottom:0;">Predicted Type</div>
-            <div class="review-labels" id="reviewLabels"></div>
-          </div>
           <div class="annotation-workspace hidden" id="annotationWorkspace">
             <div class="annotation-prompt">
               <div class="section-title" style="margin-bottom:0;">Boundary Feedback</div>
@@ -530,8 +500,6 @@
     const captionText = document.getElementById("captionText");
     const annotationWorkspace = document.getElementById("annotationWorkspace");
     const scanWorkspace = document.getElementById("scanWorkspace");
-    const reviewWorkspace = document.getElementById("reviewWorkspace");
-    const reviewLabels = document.getElementById("reviewLabels");
     const interestingBtn = document.getElementById("interestingBtn");
     const scanStatus = document.getElementById("scanStatus");
     const annotationPrompt = document.getElementById("annotationPrompt");
@@ -566,10 +534,6 @@
 
     function isScanModeItem(item = currentItem()) {
       return Boolean(item) && ((item.task_mode || "") === "interesting_scan" || (item.sample_subset || "") === "interesting_scan");
-    }
-
-    function isFacultyReviewItem(item = currentItem()) {
-      return Boolean(item) && ((item.task_mode || "") === "faculty_review" || (item.sample_subset || "") === "faculty_review");
     }
 
     function scanTimestamps(entry) {
@@ -859,22 +823,6 @@
       updateStatus();
     }
 
-    function renderReviewLabels(item) {
-      reviewLabels.innerHTML = "";
-      const raw = Array.isArray(item?.review_labels)
-        ? item.review_labels
-        : String(item?.review_labels || item?.hard_reason || "")
-            .split(";")
-            .map((v) => v.trim())
-            .filter(Boolean);
-      raw.forEach((label) => {
-        const chip = document.createElement("div");
-        chip.className = "review-chip";
-        chip.textContent = titleCaseConstruct(label);
-        reviewLabels.appendChild(chip);
-      });
-    }
-
     function renderCalibrationChoiceButtons() {
       combinedChoiceButtons.innerHTML = "";
       const goodColumnIndex = CALIBRATION_IMAGE_CHOICES.find((choice) => choice.id === "good")?.column ?? 0;
@@ -1017,19 +965,17 @@
     function updateStatus() {
       const item = currentItem();
       const total = queue.length;
-      const reviewMode = isFacultyReviewItem(item);
       const done = completedCount();
-      saveProgressBadge.textContent = reviewMode ? `${Math.max(queueIndex + 1, 0)} / ${total || 0}` : `${done} / ${total || 0}`;
+      saveProgressBadge.textContent = `${done} / ${total || 0}`;
       prevBtn.disabled = queueIndex <= 0;
       nextBtn.disabled = queueIndex < 0 || queueIndex >= total - 1;
       const scanMode = isScanModeItem(item);
-      const reviewModeItem = isFacultyReviewItem(item);
       contextBtn.disabled = scanMode || !item || !item.context_video;
       contextBtn.textContent = item && showContext && item.context_video ? "Original Segment" : "More Context";
       contextBtn.classList.toggle("primary", Boolean(item && showContext && item.context_video));
       contextBtn.classList.toggle("hidden", scanMode);
-      exportCsvBtn.classList.toggle("hidden", reviewModeItem);
-      clearHistoryBtn.classList.toggle("hidden", reviewModeItem);
+      exportCsvBtn.classList.remove("hidden");
+      clearHistoryBtn.classList.remove("hidden");
     }
 
     async function renderCurrentItem() {
@@ -1039,7 +985,6 @@
       if (!item) {
         annotationWorkspace.classList.add("hidden");
         scanWorkspace.classList.add("hidden");
-        reviewWorkspace.classList.add("hidden");
         constructSection.classList.add("hidden");
         setVideoSource(clipVideo, "");
         clipVideo.loop = false;
@@ -1055,10 +1000,8 @@
         return;
       }
       const scanMode = isScanModeItem(item);
-      const reviewMode = isFacultyReviewItem(item);
-      annotationWorkspace.classList.toggle("hidden", scanMode || reviewMode);
+      annotationWorkspace.classList.toggle("hidden", scanMode);
       scanWorkspace.classList.toggle("hidden", !scanMode);
-      reviewWorkspace.classList.toggle("hidden", !reviewMode);
       clipVideo.loop = !scanMode;
       const mediaField = showContext && item.context_video ? "context_video" : "video";
       const resolvedSrc = await resolveMediaSrc(item, mediaField);
@@ -1094,8 +1037,6 @@
       if (scanMode) {
         const hits = scanCount(entry);
         scanStatus.textContent = `${hits} / 5 captured`;
-      } else if (reviewMode) {
-        renderReviewLabels(item);
       } else {
         renderCalibrationChoiceButtons();
         renderConstructButtons();
