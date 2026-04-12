@@ -151,6 +151,11 @@
       display: grid;
       gap: 6px;
     }
+    .caption-timestamp {
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+    }
     .caption-text {
       font-size: 13px;
       line-height: 1.45;
@@ -430,6 +435,79 @@
         gap: 10px 10px;
       }
     }
+    .help-example-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .help-example-btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 6px 12px;
+      background: var(--panel);
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .help-example-btn:hover {
+      background: var(--accent-soft);
+    }
+    .example-popup {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 1100;
+    }
+    .example-popup-dialog {
+      background: #111;
+      border-radius: 18px;
+      box-shadow: 0 28px 72px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      overflow: hidden;
+      max-width: min(900px, 96vw);
+      width: 100%;
+    }
+    .example-popup-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: #1a1a1a;
+    }
+    .example-popup-title {
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+    .example-popup-close {
+      appearance: none;
+      background: rgba(255,255,255,0.12);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      padding: 6px 12px;
+    }
+    .example-popup-close:hover {
+      background: rgba(255,255,255,0.22);
+    }
+    .example-popup video {
+      width: 100%;
+      display: block;
+      background: #000;
+    }
   </style>
 </head>
 <body>
@@ -439,6 +517,9 @@
         <h1 class="app-title">STEM ASL Annotation</h1>
       </div>
       <div class="right">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:8px 4px;">
+          <input type="checkbox" id="replayCheckbox"> Replay
+        </label>
         <button id="exportCsvBtn">Export CSV</button>
         <button id="clearHistoryBtn">Clear History</button>
         <button id="helpBtn">Help</button>
@@ -456,9 +537,10 @@
             <a id="sourceLink" href="#" target="_blank" rel="noopener noreferrer">Open original</a>
           </div>
           <div class="video-shell">
-            <video id="clipVideo" controls preload="metadata" playsinline loop></video>
+            <video id="clipVideo" controls preload="metadata" playsinline></video>
           </div>
           <div class="caption-box hidden" id="captionBox">
+            <div class="caption-timestamp subtle hidden" id="captionTimestamp"></div>
             <div class="caption-text" id="captionText"></div>
           </div>
           <div class="video-status-row">
@@ -534,8 +616,8 @@
         </div>
       </div>
       <div>
-        <div class="section-title">Classifier Subtypes</div>
-        <div class="definition-list">
+        <div class=”section-title”>Classifier Subtypes</div>
+        <div class=”definition-list”>
           <p><strong>Body</strong> — a classifier in which the signer’s body represents and enacts the referent’s action. Example: “puts arm around friend”</p>
           <p><strong>Body Part</strong> — a classifier in which a specific body part of the signer represents the corresponding body part of the referent doing the action. Example: “taps foot”</p>
           <p><strong>Descriptive</strong> — a classifier used to describe the visible properties of a referent, especially size, shape, or appearance. Example: “curly hair” (aka Size and Shape Specifiers)</p>
@@ -545,10 +627,52 @@
           <p><strong>Semantic</strong> — a classifier whose handshape stands for a semantic class of referents, such as person, animal, or vehicle. Example: “person walking quickly”</p>
         </div>
       </div>
+      <div>
+        <div class=”section-title”>Examples: Boundary Feedback</div>
+        <p class=”subtle” style=”margin:0 0 8px;”>Click any label to see annotated example clips.</p>
+        <div class=”help-example-grid”>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/seg_good.mp4’,’Good’)”>Good</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/seg_early_start.mp4’,’Early Start’)”>Early Start</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/seg_late_start.mp4’,’Late Start’)”>Late Start</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/seg_early_end.mp4’,’Early End’)”>Early End</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/seg_late_end.mp4’,’Late End’)”>Late End</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/seg_early_start_early_end.mp4’,’Early Start + Early End’)”>Early Start + Early End</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/seg_early_start_late_end.mp4’,’Early Start + Late End’)”>Early Start + Late End</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/seg_late_start_early_end.mp4’,’Late Start + Early End’)”>Late Start + Early End</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/seg_late_start_late_end.mp4’,’Late Start + Late End’)”>Late Start + Late End</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/seg_inv_early_start_late_end.mp4’,’Multiple Signs’)”>Multiple Signs</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/seg_inv_late_start_early_end.mp4’,’Too Short for Annotation’)”>Too Short for Annotation</button>
+        </div>
+      </div>
+      <div>
+        <div class=”section-title”>Examples: Construct Types</div>
+        <p class=”subtle” style=”margin:0 0 8px;”>Click any type to see annotated example clips.</p>
+        <div class=”help-example-grid”>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/construct_lexical_sign.mp4’,’Lexical Sign’)”>Lexical Sign</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/construct_classifier.mp4’,’Classifier’)”>Classifier</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/construct_fingerspelling.mp4’,’Fingerspelling’)”>Fingerspelling</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/construct_neologism.mp4’,’Neologism’)”>Neologism</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/construct_compound.mp4’,’Compound’)”>Compound</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/construct_gesture.mp4’,’Gesture’)”>Gesture</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/construct_name_sign.mp4’,’Name Sign’)”>Name Sign</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/construct_number_sign.mp4’,’Number Sign’)”>Number Sign</button>
+          <button class=”help-example-btn” onclick=”openExamplePopup(‘assets/examples/construct_loansign.mp4’,’Loansign’)”>Loansign</button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <div class=”example-popup hidden” id=”examplePopup” aria-hidden=”true”>
+    <div class=”example-popup-dialog” role=”dialog” aria-modal=”true” aria-labelledby=”examplePopupTitle”>
+      <div class=”example-popup-header”>
+        <span class=”example-popup-title” id=”examplePopupTitle”></span>
+        <button class=”example-popup-close” id=”closeExamplePopupBtn”>Close</button>
+      </div>
+      <video id=”examplePopupVideo” controls autoplay loop playsinline></video>
+    </div>
+  </div>
+
+  <script src=”https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js”></script>
   <script src="./assets/assignments.js"></script>
   <script>
     const FEEDBACK_ENDPOINT = "/__stem_annotation_feedback__";
@@ -556,6 +680,9 @@
     const PACK_STORAGE_KEY = "stem-annotation-dashboard-pack-id";
     const POSITION_STORAGE_KEY = "stem-annotation-dashboard-position-v2";
     const QUEUE_SIGNATURE_KEY = "stem-annotation-dashboard-queue-signature-v1";
+    const REPLAY_KEY = "stem-annotation-replay-v1";
+    const IDB_NAME = "stem-annotation-packs-v1";
+    const IDB_STORE = "packs";
     const APP = window.STEM_ANNOTATION_ASSIGNMENTS || { pins: {}, construct_options: [] };
 
     const CALIBRATION_IMAGE_CHOICES = [
@@ -601,6 +728,8 @@
       inv_late_start_early_end: "Too Short for Annotation",
     };
     const clipVideo = document.getElementById("clipVideo");
+    const replayCheckbox = document.getElementById("replayCheckbox");
+    const captionTimestamp = document.getElementById("captionTimestamp");
     const loadPackBtn = document.getElementById("loadPackBtn");
     const packInput = document.getElementById("packInput");
     const packBadge = document.getElementById("packBadge");
@@ -630,6 +759,53 @@
     const helpModal = document.getElementById("helpModal");
     const closeHelpBtn = document.getElementById("closeHelpBtn");
     const boundaryLegend = document.getElementById("boundaryLegend");
+
+    let replayEnabled = localStorage.getItem(REPLAY_KEY) === "true";
+    replayCheckbox.checked = replayEnabled;
+    replayCheckbox.onchange = () => {
+      replayEnabled = replayCheckbox.checked;
+      localStorage.setItem(REPLAY_KEY, replayEnabled);
+      const scanMode = isScanModeItem();
+      clipVideo.loop = !scanMode && replayEnabled;
+    };
+
+    function fmtTime(sec) {
+      const s = Number(sec) || 0;
+      const m = Math.floor(s / 60);
+      const r = (s % 60).toFixed(2).padStart(5, "0");
+      return `${m}:${r}`;
+    }
+
+    // IndexedDB helpers for persisting the loaded ZIP across refreshes
+    function _openPackDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = (e) => e.target.result.createObjectStore(IDB_STORE);
+        req.onsuccess = (e) => resolve(e.target.result);
+        req.onerror = (e) => reject(e.target.error);
+      });
+    }
+    async function savePackToIDB(pin, blob, fileName) {
+      try {
+        const db = await _openPackDB();
+        await new Promise((resolve) => {
+          const tx = db.transaction(IDB_STORE, "readwrite");
+          tx.objectStore(IDB_STORE).put({ blob, fileName }, pin);
+          tx.oncomplete = resolve;
+          tx.onerror = resolve;
+        });
+      } catch (_) {}
+    }
+    async function loadPackFromIDB(pin) {
+      try {
+        const db = await _openPackDB();
+        return await new Promise((resolve) => {
+          const req = db.transaction(IDB_STORE, "readonly").objectStore(IDB_STORE).get(pin);
+          req.onsuccess = (e) => resolve(e.target.result || null);
+          req.onerror = () => resolve(null);
+        });
+      } catch (_) { return null; }
+    }
 
     let feedback = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     let annotatorPin = localStorage.getItem(PACK_STORAGE_KEY) || "";
@@ -1164,11 +1340,11 @@
       const scanMode = isScanModeItem(item);
       annotationWorkspace.classList.toggle("hidden", scanMode);
       scanWorkspace.classList.toggle("hidden", !scanMode);
-      clipVideo.loop = !scanMode;
+      clipVideo.loop = !scanMode && replayEnabled;
       const mediaField = showContext && item.context_video ? "context_video" : "video";
       const resolvedSrc = await resolveMediaSrc(item, mediaField);
       if (token !== renderToken) return;
-      setVideoSource(clipVideo, resolvedSrc || item[mediaField]);
+      setVideoSource(clipVideo, resolvedSrc || item[mediaField], !scanMode && replayEnabled);
       const titleText = item.display_title || cleanSourceTitle(item.dataset, item.source_title || item.article || "", item.item_id);
       const captionBody = item.caption_text || "";
       videoTitle.textContent = titleText;
@@ -1187,7 +1363,12 @@
         sourceLinkRow.classList.add("hidden");
       }
       captionText.textContent = captionBody;
-      captionBox.classList.toggle("hidden", !captionBody);
+      const tsLabel = (item.start_sec != null && item.end_sec != null)
+        ? `${fmtTime(item.start_sec)} – ${fmtTime(item.end_sec)}`
+        : "";
+      captionTimestamp.textContent = tsLabel;
+      captionTimestamp.classList.toggle("hidden", !tsLabel);
+      captionBox.classList.toggle("hidden", !captionBody && !tsLabel);
       const entry = currentEntry();
       pendingCalibrationChoiceId = entry?.combined_choice || "";
       const constructState = getConstructState(entry || {});
@@ -1300,6 +1481,8 @@
       };
       packBadge.textContent = pack.annotator ? `Pack ${pack.annotator}` : file.name;
       packBadge.classList.add("active");
+      // Persist ZIP to IndexedDB so it survives page refresh
+      await savePackToIDB(pin, file, file.name);
       loadPin(pin);
     }
     prevBtn.onclick = () => {
@@ -1389,6 +1572,33 @@
         helpModal.setAttribute("aria-hidden", "true");
       }
     };
+    const examplePopup = document.getElementById("examplePopup");
+    const examplePopupVideo = document.getElementById("examplePopupVideo");
+    const examplePopupTitle = document.getElementById("examplePopupTitle");
+    const closeExamplePopupBtn = document.getElementById("closeExamplePopupBtn");
+    window.openExamplePopup = function openExamplePopup(src, title) {
+      examplePopupTitle.textContent = title || "";
+      examplePopupVideo.src = src;
+      examplePopupVideo.currentTime = 0;
+      examplePopupVideo.play().catch(() => {});
+      examplePopup.classList.remove("hidden");
+      examplePopup.setAttribute("aria-hidden", "false");
+    };
+    function closeExamplePopup() {
+      examplePopupVideo.pause();
+      examplePopupVideo.src = "";
+      examplePopup.classList.add("hidden");
+      examplePopup.setAttribute("aria-hidden", "true");
+    }
+    closeExamplePopupBtn.onclick = closeExamplePopup;
+    examplePopup.onclick = (event) => {
+      if (event.target === examplePopup) closeExamplePopup();
+    };
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !examplePopup.classList.contains("hidden")) {
+        closeExamplePopup();
+      }
+    });
     loadPackBtn.onclick = () => {
       packInput.value = "";
       packInput.click();
@@ -1423,6 +1633,15 @@
     (async function init() {
       renderBoundaryLegend();
       await loadPersistedFeedbackFromServer();
+      if (annotatorPin && !loadedPackSlots[annotatorPin]) {
+        // Try to restore the pack ZIP from IndexedDB (survives page refresh)
+        const stored = await loadPackFromIDB(annotatorPin);
+        if (stored && stored.blob) {
+          const restoredFile = new File([stored.blob], stored.fileName || "pack.zip", { type: "application/zip" });
+          await loadPackFile(restoredFile);
+          return;
+        }
+      }
       if (annotatorPin) {
         loadPin(annotatorPin);
       } else {
