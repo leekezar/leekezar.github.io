@@ -757,15 +757,17 @@
         req.onerror = (e) => reject(e.target.error);
       });
     }
-    async function savePackToIDB(pin, blob, fileName) {
+    function savePackToIDB(pin, blob, fileName) {
+      // Fire-and-forget: do not await so a slow/failed write never blocks the UI
       try {
-        const db = await _openPackDB();
-        await new Promise((resolve) => {
-          const tx = db.transaction(IDB_STORE, "readwrite");
-          tx.objectStore(IDB_STORE).put({ blob, fileName }, pin);
-          tx.oncomplete = resolve;
-          tx.onerror = resolve;
-        });
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = (e) => e.target.result.createObjectStore(IDB_STORE);
+        req.onsuccess = (e) => {
+          try {
+            const tx = e.target.result.transaction(IDB_STORE, "readwrite");
+            tx.objectStore(IDB_STORE).put({ blob, fileName }, pin);
+          } catch (_) {}
+        };
       } catch (_) {}
     }
     async function loadPackFromIDB(pin) {
@@ -934,7 +936,7 @@
       if (!examplePopup || !examplePopupVideo || !examplePopupTitle) return;
       examplePopupTitle.textContent = title || "";
       examplePopupVideo.src = src;
-      examplePopupVideo.currentTime = 0;
+      examplePopupVideo.load();
       examplePopupVideo.play().catch(() => {});
       examplePopup.classList.remove("hidden");
       examplePopup.setAttribute("aria-hidden", "false");
@@ -1621,12 +1623,14 @@
       await loadPersistedFeedbackFromServer();
       if (annotatorPin && !loadedPackSlots[annotatorPin]) {
         // Try to restore the pack ZIP from IndexedDB (survives page refresh)
-        const stored = await loadPackFromIDB(annotatorPin);
-        if (stored && stored.blob) {
-          const restoredFile = new File([stored.blob], stored.fileName || "pack.zip", { type: "application/zip" });
-          await loadPackFile(restoredFile);
-          return;
-        }
+        try {
+          const stored = await loadPackFromIDB(annotatorPin);
+          if (stored && stored.blob) {
+            const restoredFile = new File([stored.blob], stored.fileName || "pack.zip", { type: "application/zip" });
+            await loadPackFile(restoredFile);
+            return;
+          }
+        } catch (_) {}
       }
       if (annotatorPin) {
         loadPin(annotatorPin);
