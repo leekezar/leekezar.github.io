@@ -15,6 +15,11 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent
 FEEDBACK_PATH = ROOT / "asl-dashboard" / "artifacts" / "calibration_feedback.json"
+STEM_ANNOTATION_FEEDBACK_PATH = ROOT / "asl-dashboard" / "stem-annotation" / "artifacts" / "stem_annotation_feedback.json"
+FEEDBACK_ENDPOINTS = {
+    "/__asl_dashboard_feedback__": FEEDBACK_PATH,
+    "/__stem_annotation_feedback__": STEM_ANNOTATION_FEEDBACK_PATH,
+}
 
 
 class DashboardHandler(SimpleHTTPRequestHandler):
@@ -29,22 +34,32 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(encoded)))
-        self.send_header("Cache-Control", "no-store")
+        self._send_no_cache_headers()
         self.end_headers()
         self.wfile.write(encoded)
 
+    def _send_no_cache_headers(self) -> None:
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+
+    def end_headers(self) -> None:
+        self._send_no_cache_headers()
+        super().end_headers()
+
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path == "/__asl_dashboard_feedback__":
-          if FEEDBACK_PATH.exists():
-              try:
-                  payload = json.loads(FEEDBACK_PATH.read_text(encoding="utf-8"))
-              except Exception:
-                  payload = {}
-          else:
-              payload = {}
-          self._send_json(payload)
-          return
+        if parsed.path in FEEDBACK_ENDPOINTS:
+            feedback_path = FEEDBACK_ENDPOINTS[parsed.path]
+            if feedback_path.exists():
+                try:
+                    payload = json.loads(feedback_path.read_text(encoding="utf-8"))
+                except Exception:
+                    payload = {}
+            else:
+                payload = {}
+            self._send_json(payload)
+            return
         try:
             super().do_GET()
         except BrokenPipeError:
@@ -54,10 +69,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
     def do_HEAD(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path == "/__asl_dashboard_feedback__":
+        if parsed.path in FEEDBACK_ENDPOINTS:
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Cache-Control", "no-store")
+            self._send_no_cache_headers()
             self.end_headers()
             return
         try:
@@ -69,9 +84,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path != "/__asl_dashboard_feedback__":
+        if parsed.path not in FEEDBACK_ENDPOINTS:
             self.send_error(HTTPStatus.NOT_FOUND, "Not found")
             return
+        feedback_path = FEEDBACK_ENDPOINTS[parsed.path]
         try:
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
@@ -84,9 +100,9 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         except Exception as exc:
             self._send_json({"ok": False, "error": str(exc)}, HTTPStatus.BAD_REQUEST)
             return
-        FEEDBACK_PATH.parent.mkdir(parents=True, exist_ok=True)
-        FEEDBACK_PATH.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
-        self._send_json({"ok": True, "path": str(FEEDBACK_PATH.relative_to(ROOT))})
+        feedback_path.parent.mkdir(parents=True, exist_ok=True)
+        feedback_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        self._send_json({"ok": True, "path": str(feedback_path.relative_to(ROOT))})
 
     def copyfile(self, source, outputfile):
         try:
@@ -148,6 +164,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                             self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
                             self.send_header("Content-Length", str(end - start + 1))
                             self.send_header("Last-Modified", self.date_time_string(fs.st_mtime))
+                            self._send_no_cache_headers()
                             self.end_headers()
                             return f
                 self.send_error(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
@@ -158,6 +175,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self.send_header("Content-Length", str(size))
             self.send_header("Last-Modified", self.date_time_string(fs.st_mtime))
             self.send_header("Accept-Ranges", "bytes")
+            self._send_no_cache_headers()
             self.end_headers()
             return f
         except Exception:
@@ -171,7 +189,7 @@ def main() -> None:
     args = parser.parse_args()
     server = ThreadingHTTPServer(("127.0.0.1", args.port), DashboardHandler)
     print(f"Serving on http://127.0.0.1:{args.port}")
-    print(f"Feedback file: {FEEDBACK_PATH}")
+    print(f"Feedback files: {FEEDBACK_PATH} | {STEM_ANNOTATION_FEEDBACK_PATH}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

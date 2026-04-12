@@ -785,6 +785,117 @@
       flex-wrap: wrap;
       justify-content: center;
     }
+    .pin-entry { display: flex; align-items: center; gap: 8px; }
+    .pin-input {
+      width: 76px;
+      font-size: 14px;
+      letter-spacing: 0.18em;
+      text-align: center;
+      border-radius: 12px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      background: var(--panel-strong);
+      font-family: "Courier New", monospace;
+    }
+    .construct-section {
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+    .construct-section-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    .construct-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .construct-btn {
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      background: var(--panel-strong);
+      cursor: pointer;
+      transition: background 120ms, border-color 120ms;
+    }
+    .construct-btn:hover { border-color: rgba(24,36,51,0.28); }
+    .construct-btn.active {
+      background: var(--accent-soft);
+      border-color: rgba(24,36,51,0.30);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .construct-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .sim-section {
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+      display: grid;
+      gap: 10px;
+    }
+    .sim-section-label {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .sim-clip-shell {
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #0b1521;
+      aspect-ratio: 16 / 9;
+      max-width: 360px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .sim-clip-shell video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .sim-clip-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.3);
+      font-size: 13px;
+    }
+    .sim-rating-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      align-items: center;
+    }
+    .sim-rating-label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .sim-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--panel-strong);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 120ms, border-color 120ms;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .sim-btn:hover { border-color: rgba(24,36,51,0.28); }
+    .sim-btn.active {
+      background: var(--accent-soft);
+      border-color: rgba(24,36,51,0.30);
+      color: var(--accent);
+    }
     @media (max-width: 1280px) {
       .grid { grid-template-columns: 1fr; }
       .predictions-layout { grid-template-columns: 1fr; }
@@ -806,9 +917,15 @@
         <h1 class="app-title">ASL Annotation Dashboard</h1>
       </div>
       <div class="right">
+        <button id="exportConstructsCsv">Export constructs CSV</button>
         <button id="exportFeedback">Export feedback</button>
         <button id="clearFeedback">Clear feedback</button>
         <span class="badge" id="feedbackCount">0 feedback items</span>
+        <div class="pin-entry">
+          <label class="subtle" for="annotatorPin">PIN</label>
+          <input type="password" id="annotatorPin" class="pin-input" maxlength="4" placeholder="0000" inputmode="numeric" autocomplete="off" />
+          <span class="badge" id="pinSlotBadge">No PIN</span>
+        </div>
       </div>
     </div>
 
@@ -865,30 +982,12 @@
               </div>
             </div>
           </div>
-          <div class="current-card">
-            <div class="seg-nav">
-              <div></div>
-              <div class="timeline-tools">
-                <label class="subtle" for="segmentSort">Sort</label>
-                <select id="segmentSort">
-                  <option value="desc">Most uncertain</option>
-                  <option value="asc">Least uncertain</option>
-                </select>
-              </div>
-            </div>
-            <div class="segment-list" id="segmentList"></div>
-          </div>
         </div>
       </section>
 
       <section class="detail-tabs">
-      <div class="tab-bar">
-        <button class="tab-button active" data-tab="predictions">Predictions</button>
-        <button class="tab-button" data-tab="search">Search Results</button>
-        <button class="tab-button" data-tab="motion">Segmentation Calibration</button>
-      </div>
 
-      <div class="tab-page active" data-tab-page="predictions">
+      <div class="tab-page" data-tab-page="predictions" style="display:none">
         <div class="loading-overlay"><div class="spinner"></div><div class="subtle">Updating predictions…</div></div>
         <div class="pred-toolbar">
           <div class="left">
@@ -915,7 +1014,7 @@
         </div>
       </div>
 
-      <div class="tab-page" data-tab-page="search">
+      <div class="tab-page" data-tab-page="search" style="display:none">
         <div class="loading-overlay"><div class="spinner"></div><div class="subtle">Loading search results…</div></div>
         <section class="retrieval">
           <div style="display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap;">
@@ -950,6 +1049,7 @@
               <h2 class="section-title" style="margin-bottom:4px;">Segmentation Calibration</h2>
             </div>
             <div class="annotation-actions">
+              <button id="labelConstructs">Label Constructs</button>
               <button id="calibrateBoundaries">Calibrate</button>
               <button id="recalibrateBoundaries">Recalibrate</button>
             </div>
@@ -971,6 +1071,26 @@
             </div>
             <div class="annotation-secondary">
               <button id="notASignButton">Not a Sign</button>
+            </div>
+            <div class="construct-section" id="constructSection">
+              <div class="construct-section-label">Construct type</div>
+              <div class="construct-row" id="constructButtons"></div>
+            </div>
+            <div class="sim-section" id="simSection">
+              <div class="sim-section-label">Sign match — how similar is this comparison clip to the current segment?</div>
+              <div class="sim-clip-shell">
+                <video id="comparisonVideo" controls preload="metadata" muted playsinline></video>
+                <div class="sim-clip-placeholder" id="simClipPlaceholder">Comparison clip (TBD)</div>
+              </div>
+              <div class="sim-rating-row">
+                <span class="sim-rating-label">Different</span>
+                <button class="sim-btn" data-rating="1">1</button>
+                <button class="sim-btn" data-rating="2">2</button>
+                <button class="sim-btn" data-rating="3">3</button>
+                <button class="sim-btn" data-rating="4">4</button>
+                <button class="sim-btn" data-rating="5">5</button>
+                <span class="sim-rating-label">Identical</span>
+              </div>
             </div>
             <div class="annotation-summary subtle" id="annotationSummary"></div>
           </div>
@@ -1019,6 +1139,19 @@
     const STORAGE_KEY = "asl-dashboard-feedback-v2";
     const FEEDBACK_ENDPOINT = "/__asl_dashboard_feedback__";
     const CALIBRATION_SCHEMA_VERSION = 2;
+    const PIN_STORAGE_KEY = "asl-dashboard-annotator-pin";
+    const CONSTRUCT_TYPES = [
+      {id: "lexical_sign",    label: "Lexical Sign"},
+      {id: "fingerspelling",  label: "Fingerspelling"},
+      {id: "classifier",      label: "Classifier"},
+      {id: "name_sign",       label: "Name Sign"},
+      {id: "number_sign",     label: "Number Sign"},
+      {id: "compound",        label: "Compound"},
+      {id: "gesture",         label: "Gesture"},
+      {id: "loan_sign",       label: "Loan Sign"},
+      {id: "innovation",      label: "Innovation"},
+      {id: "unknown",         label: "Unknown"},
+    ];
     const video = document.getElementById("video");
     const overlay = document.getElementById("poseOverlay");
     const ctx = overlay.getContext("2d");
@@ -1084,7 +1217,7 @@
     let currentVideoId = APP.videoOrder[0];
     let selectedSegmentId = 0;
     let selectedFeedbackKey = "";
-    let activeDetailTab = "predictions";
+    let activeDetailTab = "motion";
     let confusionSortMode = "desc";
     let segmentSortMode = "desc";
     let vocabSearchQuery = "";
@@ -1115,6 +1248,11 @@
     let calibrationModeOpen = false;
     let calibrationQueue = [];
     let calibrationQueueIndex = -1;
+    let annotatorPin = localStorage.getItem(PIN_STORAGE_KEY) || "";
+    let constructLabelMode = false;
+    let constructQueue = [];
+    let constructQueueIndex = -1;
+    let pendingConstructId = "";
     const HAND_PATCH_EDGES = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20]];
     const captureCanvas = document.createElement("canvas");
     const thumbCaptureVideo = document.createElement("video");
@@ -1425,6 +1563,7 @@
     }
 
     function renderSegmentList() {
+      if (!segmentList) return;
       segmentList.innerHTML = "";
       const segments = [...visibleSegments()].sort((a, b) => {
         const diff = isrUncertainty(b) - isrUncertainty(a);
@@ -3160,6 +3299,7 @@
       notASignButton.disabled = false;
       annotationSummary.textContent = pendingCalibrationChoiceId ? "Annotation selected." : "";
       renderCalibrationChoiceButtons(combinedChoiceButtons, seg);
+      renderConstructButtons();
       updateCalibrationStatus();
     }
 
@@ -3224,6 +3364,180 @@
       };
       saveFeedback();
     }
+
+    // ── Construct annotation ───────────────────────────────────────────────────
+
+    function constructAnnotationKey(videoId, segId) {
+      return `${videoId}::construct-annotation::${segId}`;
+    }
+
+    function constructAnnotationFor(videoId, segId) {
+      return feedback[constructAnnotationKey(videoId, segId)] || null;
+    }
+
+    function saveConstructAnnotation(segId, construct) {
+      const key = constructAnnotationKey(currentVideoId, segId);
+      const existing = feedback[key];
+      feedback[key] = {
+        kind: "construct-annotation",
+        videoId: currentVideoId,
+        segmentId: segId,
+        annotatorPin,
+        construct,
+        createdAt: existing?.createdAt || Date.now(),
+        updatedAt: Date.now(),
+      };
+      saveFeedback();
+    }
+
+    // TODO: replace with PIN-indexed pre-made subset once assignment files exist
+    function buildConstructQueue() {
+      const all = [];
+      for (const videoId of APP.videoOrder) {
+        const vid = APP.videos[videoId];
+        const segs = [...(vid.segments || [])].sort((a, b) => a.startFrame - b.startFrame);
+        for (const seg of segs) all.push({videoId, segId: seg.id});
+      }
+      return all;
+    }
+
+    function seedConstructQueue() {
+      const all = buildConstructQueue();
+      const unannotated = all.filter(({videoId, segId}) => !constructAnnotationFor(videoId, segId));
+      constructQueue = unannotated.length ? unannotated : all;
+      constructQueueIndex = constructQueue.length ? 0 : -1;
+      return constructQueue[0] || null;
+    }
+
+    function advanceConstructQueue() {
+      constructQueueIndex += 1;
+      if (constructQueueIndex < constructQueue.length) return constructQueue[constructQueueIndex];
+      return seedConstructQueue();
+    }
+
+    function updatePinUI() {
+      const badge = document.getElementById("pinSlotBadge");
+      if (!badge) return;
+      if (!annotatorPin || annotatorPin.length < 4) {
+        badge.textContent = annotatorPin.length ? "…" : "No PIN";
+        badge.classList.remove("active");
+      } else {
+        badge.textContent = `PIN ${annotatorPin}`;
+        badge.classList.add("active");
+      }
+    }
+
+    function renderConstructButtons() {
+      const container = document.getElementById("constructButtons");
+      if (!container) return;
+      container.innerHTML = "";
+      const existing = constructAnnotationFor(currentVideoId, selectedSegmentId);
+      const activeId = pendingConstructId || existing?.construct || "";
+      CONSTRUCT_TYPES.forEach(({id, label}) => {
+        const btn = document.createElement("button");
+        btn.className = "construct-btn" + (activeId === id ? " active" : "");
+        btn.textContent = label;
+        btn.onclick = () => handleConstructSelect(id);
+        container.appendChild(btn);
+      });
+    }
+
+    async function handleConstructSelect(constructId) {
+      const seg = activeSegment(selectedSegmentId);
+      if (!seg) return;
+      pendingConstructId = constructId;
+      saveConstructAnnotation(seg.id, constructId);
+      renderConstructButtons();
+      motionMeta.textContent = `Construct saved: ${constructId}.`;
+      if (constructLabelMode) {
+        const next = advanceConstructQueue();
+        pendingConstructId = "";
+        if (!next) {
+          motionMeta.textContent = "All assigned items annotated!";
+          renderConstructButtons();
+          return;
+        }
+        if (next.videoId !== currentVideoId) {
+          setVideo(next.videoId);
+          await new Promise(r => setTimeout(r, 80));
+        }
+        const nextSeg = activeSegment(next.segId);
+        if (nextSeg) await focusCalibrationSegment(nextSeg, true);
+        renderConstructButtons();
+      }
+    }
+
+    async function startConstructLabelMode() {
+      if (!annotatorPin || annotatorPin.length < 4) {
+        motionMeta.textContent = "Enter a 4-digit PIN first.";
+        document.getElementById("annotatorPin")?.focus();
+        return;
+      }
+      constructLabelMode = true;
+      const labelBtn = document.getElementById("labelConstructs");
+      if (labelBtn) labelBtn.classList.add("primary");
+      annotationWorkspace.classList.remove("hidden");
+      const first = seedConstructQueue();
+      if (!first) {
+        motionMeta.textContent = "No items to annotate.";
+        return;
+      }
+      const total = constructQueue.length;
+      motionMeta.textContent = `${total} items in queue (PIN ${annotatorPin}).`;
+      if (first.videoId !== currentVideoId) setVideo(first.videoId);
+      const seg = activeSegment(first.segId);
+      if (seg) await focusCalibrationSegment(seg, false);
+      renderConstructButtons();
+    }
+
+    // ── Sign-match similarity annotation ──────────────────────────────────────
+
+    function simAnnotationKey(videoId, segId) {
+      return `${videoId}::sim-annotation::${segId}`;
+    }
+
+    function simAnnotationFor(videoId, segId) {
+      return feedback[simAnnotationKey(videoId, segId)] || null;
+    }
+
+    function saveSimAnnotation(segId, rating) {
+      const key = simAnnotationKey(currentVideoId, segId);
+      const existing = feedback[key];
+      feedback[key] = {
+        kind: "sim-annotation",
+        videoId: currentVideoId,
+        segmentId: segId,
+        annotatorPin,
+        // TODO: store comparison clip ID once pre-made subsets are wired up
+        comparisonClipId: null,
+        rating,
+        createdAt: existing?.createdAt || Date.now(),
+        updatedAt: Date.now(),
+      };
+      saveFeedback();
+    }
+
+    function renderSimButtons() {
+      const existing = simAnnotationFor(currentVideoId, selectedSegmentId);
+      const activeRating = existing?.rating ?? 0;
+      document.querySelectorAll(".sim-btn").forEach((btn) => {
+        const r = Number(btn.dataset.rating);
+        btn.classList.toggle("active", r === activeRating);
+      });
+    }
+
+    document.querySelectorAll(".sim-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const seg = activeSegment(selectedSegmentId);
+        if (!seg) return;
+        const rating = Number(btn.dataset.rating);
+        saveSimAnnotation(seg.id, rating);
+        renderSimButtons();
+        motionMeta.textContent = `Similarity saved: ${rating}/5.`;
+      });
+    });
+
+    // ──────────────────────────────────────────────────────────────────────────
 
     async function setCalibrationChoice(choiceId) {
       if (pendingCalibrationSegmentId != null && selectedSegmentId !== pendingCalibrationSegmentId) {
@@ -4002,6 +4316,11 @@
       }
       drawEmbeddingSpace();
       lastEmbeddingRedraw = video.currentTime || seg.startSec;
+      if (!constructLabelMode) {
+        pendingConstructId = "";
+        renderConstructButtons();
+      }
+      renderSimButtons();
     }
 
     function retrievalThresholdValueNum() {
@@ -4889,7 +5208,7 @@
       confusionSortMode = confusionSort.value || "desc";
       if (activeDetailTab === "predictions") setSegment(selectedSegmentId, false);
     });
-    segmentSort.addEventListener("change", () => {
+    if (segmentSort) segmentSort.addEventListener("change", () => {
       segmentSortMode = segmentSort.value || "desc";
       renderSegmentList();
     });
@@ -4950,6 +5269,44 @@
     calibrateBoundariesButton.onclick = () => calibrateSegmentationToAnnotations();
     recalibrateBoundariesButton.onclick = () => recalibrateSegmentationToAnnotations();
     notASignButton.onclick = () => markCurrentSegmentNotASign();
+    document.getElementById("labelConstructs").onclick = () => startConstructLabelMode();
+    document.getElementById("annotatorPin").addEventListener("input", (e) => {
+      const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+      e.target.value = val;
+      annotatorPin = val;
+      localStorage.setItem(PIN_STORAGE_KEY, val);
+      updatePinUI();
+    });
+    document.getElementById("exportConstructsCsv").onclick = () => {
+      const rows = [["item_id","video_id","segment_id","annotator_pin","boundary","construct","sim_rating","sim_comparison_clip","created_at","updated_at"]];
+      // collect all segment keys touched by any annotation kind
+      const segKeys = new Set();
+      Object.values(feedback).forEach((entry) => {
+        if (!entry || !entry.videoId || entry.segmentId == null) return;
+        if (["construct-annotation","sim-annotation","boundary-calibration"].includes(entry.kind))
+          segKeys.add(`${entry.videoId}::${entry.segmentId}`);
+      });
+      segKeys.forEach((k) => {
+        const [videoId, segId] = k.split("::");
+        const c = feedback[constructAnnotationKey(videoId, segId)];
+        const s = feedback[simAnnotationKey(videoId, segId)];
+        // latest boundary annotation for this segment
+        const bEntries = Object.values(feedback).filter(e => e && e.kind === "boundary-calibration" && e.videoId === videoId && String(e.segmentId) === segId);
+        const b = bEntries.sort((a, z) => (z.createdAt||0) - (a.createdAt||0))[0];
+        const itemId = `${videoId}__seg${segId}`;
+        const pin = (c || s || b)?.annotatorPin || annotatorPin || "";
+        const boundary = b ? (b.notASign ? "not_a_sign" : b.combinedChoice || "") : "";
+        rows.push([itemId, videoId, segId, pin, boundary, c?.construct || "", s?.rating ?? "", s?.comparisonClipId || "", (c||s||b)?.createdAt || "", Math.max(c?.updatedAt||0, s?.updatedAt||0, b?.createdAt||0) || ""]);
+      });
+      const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], {type: "text/csv"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `annotations_pin${annotatorPin || "unknown"}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
     poseToggle.addEventListener("change", () => drawPose(video.currentTime || 0));
     videoSelect.addEventListener("change", () => setVideo(videoSelect.value));
     document.getElementById("timelineZoomOut").onclick = () => {
@@ -5020,6 +5377,9 @@
     });
 
     async function initializeDashboard() {
+      const pinInput = document.getElementById("annotatorPin");
+      if (pinInput) pinInput.value = annotatorPin;
+      updatePinUI();
       const mergedRemote = await loadPersistedFeedbackFromServer();
       resizeEmbeddingCanvas();
       updateSegmentationControls();
@@ -5027,7 +5387,7 @@
       replayToggle.checked = false;
       retrievalThresholdValue.textContent = Number(retrievalThreshold.value).toFixed(1);
       confusionSort.value = confusionSortMode;
-      segmentSort.value = segmentSortMode;
+      if (segmentSort) segmentSort.value = segmentSortMode;
       vocabSearch.value = vocabSearchQuery;
       updateRenameModeUI();
       if (mergedRemote) localStorage.setItem(STORAGE_KEY, JSON.stringify(feedback));
