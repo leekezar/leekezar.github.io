@@ -727,6 +727,10 @@
     const helpModal = document.getElementById("helpModal");
     const closeHelpBtn = document.getElementById("closeHelpBtn");
     const boundaryLegend = document.getElementById("boundaryLegend");
+    const examplePopup = document.getElementById("examplePopup");
+    const examplePopupVideo = document.getElementById("examplePopupVideo");
+    const examplePopupTitle = document.getElementById("examplePopupTitle");
+    const closeExamplePopupBtn = document.getElementById("closeExamplePopupBtn");
 
     let replayEnabled = localStorage.getItem(REPLAY_KEY) === "true";
     replayCheckbox.checked = replayEnabled;
@@ -924,6 +928,23 @@
         construct_labels: finalMain,
         classifier_subtypes: subtypes,
       };
+    }
+
+    function openExamplePopup(src, title) {
+      if (!examplePopup || !examplePopupVideo || !examplePopupTitle) return;
+      examplePopupTitle.textContent = title || "";
+      examplePopupVideo.src = src;
+      examplePopupVideo.currentTime = 0;
+      examplePopupVideo.play().catch(() => {});
+      examplePopup.classList.remove("hidden");
+      examplePopup.setAttribute("aria-hidden", "false");
+    }
+    function closeExamplePopup() {
+      if (!examplePopup || !examplePopupVideo) return;
+      examplePopupVideo.pause();
+      examplePopupVideo.src = "";
+      examplePopup.classList.add("hidden");
+      examplePopup.setAttribute("aria-hidden", "true");
     }
 
     function renderBoundaryLegend() {
@@ -1546,34 +1567,17 @@
         helpModal.setAttribute("aria-hidden", "true");
       }
     };
-    const examplePopup = document.getElementById("examplePopup");
-    const examplePopupVideo = document.getElementById("examplePopupVideo");
-    const examplePopupTitle = document.getElementById("examplePopupTitle");
-    const closeExamplePopupBtn = document.getElementById("closeExamplePopupBtn");
-    function openExamplePopup(src, title) {
-      examplePopupTitle.textContent = title || "";
-      examplePopupVideo.src = src;
-      examplePopupVideo.currentTime = 0;
-      examplePopupVideo.play().catch(() => {});
-      examplePopup.classList.remove("hidden");
-      examplePopup.setAttribute("aria-hidden", "false");
+    if (closeExamplePopupBtn) closeExamplePopupBtn.onclick = closeExamplePopup;
+    if (examplePopup) {
+      examplePopup.onclick = (event) => {
+        if (event.target === examplePopup) closeExamplePopup();
+      };
     }
-    function closeExamplePopup() {
-      examplePopupVideo.pause();
-      examplePopupVideo.src = "";
-      examplePopup.classList.add("hidden");
-      examplePopup.setAttribute("aria-hidden", "true");
-    }
-    closeExamplePopupBtn.onclick = closeExamplePopup;
-    examplePopup.onclick = (event) => {
-      if (event.target === examplePopup) closeExamplePopup();
-    };
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !examplePopup.classList.contains("hidden")) {
+      if (examplePopup && e.key === "Escape" && !examplePopup.classList.contains("hidden")) {
         closeExamplePopup();
       }
     });
-    // Event delegation: catch clicks on any .help-example-btn inside the help dialog
     helpModal.addEventListener("click", (e) => {
       const btn = e.target.closest(".help-example-btn");
       if (!btn) return;
