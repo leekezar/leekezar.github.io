@@ -674,7 +674,6 @@
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="./assets/assignments.js"></script>
   <script>
-    const FEEDBACK_ENDPOINT = "/__stem_annotation_feedback__";
     const STORAGE_KEY = "stem-annotation-dashboard-feedback-v2";
     const PACK_STORAGE_KEY = "stem-annotation-dashboard-pack-id";
     const POSITION_STORAGE_KEY = "stem-annotation-dashboard-position-v2";
@@ -789,7 +788,7 @@
     let pendingConstructLabels = [];
     let pendingClassifierSubtypeLabels = [];
     let classifierExpanded = false;
-    let persistDebounce = null;
+
     let showContext = false;
     let renderToken = 0;
     const loadedPackSlots = {};
@@ -1058,20 +1057,6 @@
       constructSection.classList.toggle("hidden", isNotASign);
     }
 
-    async function loadPersistedFeedbackFromServer() {
-      try {
-        const resp = await fetch(FEEDBACK_ENDPOINT, { cache: "no-store" });
-        if (!resp.ok) return;
-        const remote = await resp.json();
-        if (remote && typeof remote === "object") {
-          feedback = Object.assign({}, remote, feedback);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(feedback));
-        }
-      } catch (err) {
-        // local-only mode is fine
-      }
-    }
-
     function deletePinFeedback(pin) {
       Object.keys(feedback).forEach((key) => {
         if (key.startsWith(`${pin}::`)) delete feedback[key];
@@ -1081,18 +1066,9 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(feedback));
     }
 
-    async function clearCurrentPinHistory() {
+    function clearCurrentPinHistory() {
       if (!annotatorPin) return;
       deletePinFeedback(annotatorPin);
-      try {
-        await fetch(FEEDBACK_ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(feedback),
-        });
-      } catch (err) {
-        // local-only is acceptable
-      }
       queueIndex = queue.length ? 0 : -1;
       showContext = false;
       renderCurrentItem();
@@ -1100,18 +1076,6 @@
 
     function queuePersistFeedback() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(feedback));
-      clearTimeout(persistDebounce);
-      persistDebounce = setTimeout(async () => {
-        try {
-          await fetch(FEEDBACK_ENDPOINT, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(feedback),
-          });
-        } catch (err) {
-          // local-only is still acceptable
-        }
-      }, 250);
     }
 
     function persistQueuePosition() {
@@ -1623,9 +1587,8 @@
       saveCurrentEntry({ note: noteTextarea.value });
     };
 
-    (async function init() {
+    (function init() {
       renderBoundaryLegend();
-      await loadPersistedFeedbackFromServer();
       if (annotatorPin) {
         loadPin(annotatorPin);
       } else {
