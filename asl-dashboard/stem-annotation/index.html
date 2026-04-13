@@ -337,6 +337,33 @@
       flex-wrap: wrap;
       min-height: 18px;
     }
+    .note-section {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(255,255,255,0.6);
+    }
+    .note-section .section-title {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .note-textarea {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel);
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+      padding: 8px 10px;
+      resize: vertical;
+      min-height: 60px;
+    }
+    .note-textarea:focus {
+      outline: none;
+      border-color: #000;
+    }
     .save-progress-badge {
       padding: 8px 12px;
       border-radius: 999px;
@@ -577,6 +604,10 @@
             <div class="construct-row" id="constructButtons"></div>
             <div class="construct-row secondary hidden" id="classifierSubtypeButtons"></div>
           </div>
+          <div class="note-section hidden" id="noteSection">
+            <div class="section-title">Note</div>
+            <textarea class="note-textarea" id="noteTextarea" placeholder="Optional note about this clip..."></textarea>
+          </div>
         </div>
       </div>
     </section>
@@ -729,6 +760,8 @@
     const examplePopupVideo = document.getElementById("examplePopupVideo");
     const examplePopupTitle = document.getElementById("examplePopupTitle");
     const closeExamplePopupBtn = document.getElementById("closeExamplePopupBtn");
+    const noteSection = document.getElementById("noteSection");
+    const noteTextarea = document.getElementById("noteTextarea");
 
     let replayEnabled = localStorage.getItem(REPLAY_KEY) === "true";
     replayCheckbox.checked = replayEnabled;
@@ -1296,6 +1329,8 @@
         captionText.textContent = "";
         annotationPrompt.textContent = "";
         annotationSummary.textContent = "";
+        noteTextarea.value = "";
+        noteSection.classList.add("hidden");
         updateStatus();
         return;
       }
@@ -1351,6 +1386,8 @@
         renderConstructButtons();
       }
       updateConstructVisibility();
+      noteTextarea.value = entry?.note || "";
+      noteSection.classList.toggle("hidden", scanMode);
       updateStatus();
     }
 
@@ -1406,6 +1443,7 @@
           scan_completed_reason: entry.scan_completed_reason || "",
           created_at: entry.createdAt || "",
           updated_at: entry.updatedAt || "",
+          note: entry.note || "",
         };
       });
     }
@@ -1580,6 +1618,10 @@
         renderCurrentItem();
       }
     });
+
+    noteTextarea.oninput = () => {
+      saveCurrentEntry({ note: noteTextarea.value });
+    };
 
     (async function init() {
       renderBoundaryLegend();
