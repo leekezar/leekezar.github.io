@@ -1054,6 +1054,9 @@
     let thumbnailQueue = Promise.resolve();
 
     function currentVideo() { return APP.videos[currentVideoId]; }
+    function resolvedMediaUri(uri) {
+      return new URL(uri, document.baseURI).toString();
+    }
     function segmentationConfig(videoId = currentVideoId) {
       if (!segmentationConfigByVideo.has(videoId)) {
         segmentationConfigByVideo.set(videoId, {
@@ -1607,8 +1610,9 @@
       }
       wrapEl.classList.add("loading");
       thumbnailQueue = thumbnailQueue.then(async () => {
-        if (thumbCaptureVideo.src !== currentVideo().videoUri) {
-          thumbCaptureVideo.src = currentVideo().videoUri;
+        const mediaUri = resolvedMediaUri(currentVideo().videoUri);
+        if (thumbCaptureVideo.src !== mediaUri) {
+          thumbCaptureVideo.src = mediaUri;
           thumbCaptureVideo.load();
         }
         if (thumbCaptureVideo.readyState < 1) {
@@ -3096,7 +3100,7 @@
         ensureRetrievalThumbnail(seg, thumb, preview);
         const hover = document.createElement("video");
         hover.className = "thumb-video";
-        hover.src = currentVideo().videoUri;
+        hover.src = resolvedMediaUri(currentVideo().videoUri);
         hover.muted = true;
         hover.playsInline = true;
         hover.preload = "metadata";
@@ -3798,13 +3802,15 @@
       lastEmbeddingRedraw = -1;
       lastMotionCenter = -1;
       videoFrameCallbackPending = false;
-      video.src = currentVideo().videoUri;
+      const mediaUri = resolvedMediaUri(currentVideo().videoUri);
+      video.src = mediaUri;
       video.muted = true;
       video.volume = 0;
       video.defaultPlaybackRate = 0.5;
       video.playbackRate = 0.5;
-      captureVideo.src = currentVideo().videoUri;
-      video.currentTime = 0;
+      video.load();
+      captureVideo.src = mediaUri;
+      captureVideo.load();
       retrievalGrid.innerHTML = "";
       retrievalSubtitle.textContent = "";
       retrievalSummary.textContent = "";
