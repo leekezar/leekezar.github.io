@@ -989,6 +989,15 @@
       }
     }
 
+    function mediaMimeTypeForPath(path) {
+      const normalized = String(path || "").toLowerCase();
+      if (normalized.endsWith(".mp4")) return "video/mp4";
+      if (normalized.endsWith(".webm")) return "video/webm";
+      if (normalized.endsWith(".mov")) return "video/quicktime";
+      if (normalized.endsWith(".m4v")) return "video/x-m4v";
+      return "application/octet-stream";
+    }
+
     async function resolveMediaSrc(item, field) {
       if (!item) return "";
       const rel = String(item[field] || "");
@@ -1002,7 +1011,8 @@
       const normalized = rel.replace(/^\.?\//, "").replace(/\\/g, "/");
       const zipEntry = slot.zip.file(normalized) || slot.zip.file(`./${normalized}`) || slot.zip.file(normalized.replace(/^assets\//, ""));
       if (!zipEntry) return "";
-      const blob = await zipEntry.async("blob");
+      const buffer = await zipEntry.async("arraybuffer");
+      const blob = new Blob([buffer], { type: mediaMimeTypeForPath(normalized) });
       const url = URL.createObjectURL(blob);
       mediaUrlCache.set(cacheKey, url);
       return url;
