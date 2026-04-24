@@ -3809,8 +3809,8 @@
       video.defaultPlaybackRate = 0.5;
       video.playbackRate = 0.5;
       video.load();
-      captureVideo.src = mediaUri;
-      captureVideo.load();
+      thumbCaptureVideo.src = mediaUri;
+      video.currentTime = 0;
       retrievalGrid.innerHTML = "";
       retrievalSubtitle.textContent = "";
       retrievalSummary.textContent = "";
