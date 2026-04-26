@@ -545,7 +545,7 @@
       </div>
       <div class="right">
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:8px 4px;">
-          <input type="checkbox" id="replayCheckbox"> Replay
+          <input type="checkbox" id="autoplayCheckbox"> Autoplay
         </label>
         <button id="exportCsvBtn">Export CSV</button>
         <button id="clearHistoryBtn">Clear History</button>
@@ -563,8 +563,13 @@
           <div class="source-link-row hidden" id="sourceLinkRow">
             <a id="sourceLink" href="#" target="_blank" rel="noopener noreferrer">Open original</a>
           </div>
+          <div class="video-title">Clip</div>
           <div class="video-shell">
             <video id="clipVideo" controls preload="metadata" playsinline></video>
+          </div>
+          <div class="video-title hidden" id="contextVideoTitle">Full Context</div>
+          <div class="video-shell hidden" id="contextVideoShell">
+            <video id="contextVideo" controls preload="metadata" playsinline></video>
           </div>
           <div class="caption-box hidden" id="captionBox">
             <div class="caption-timestamp subtle hidden" id="captionTimestamp"></div>
@@ -576,7 +581,6 @@
           <div class="annotation-actions">
             <button id="prevBtn">Previous</button>
             <button id="nextBtn">Next</button>
-            <button id="contextBtn">More Context</button>
           </div>
         </div>
 
@@ -678,7 +682,7 @@
     const PACK_STORAGE_KEY = "stem-annotation-dashboard-pack-id";
     const POSITION_STORAGE_KEY = "stem-annotation-dashboard-position-v2";
     const QUEUE_SIGNATURE_KEY = "stem-annotation-dashboard-queue-signature-v1";
-    const REPLAY_KEY = "stem-annotation-replay-v1";
+    const AUTOPLAY_KEY = "stem-annotation-autoplay-v1";
     const APP = window.STEM_ANNOTATION_ASSIGNMENTS || { pins: {}, construct_options: [] };
 
     const CALIBRATION_IMAGE_CHOICES = [
@@ -724,7 +728,10 @@
       inv_late_start_early_end: "Too Short for Annotation",
     };
     const clipVideo = document.getElementById("clipVideo");
-    const replayCheckbox = document.getElementById("replayCheckbox");
+    const contextVideo = document.getElementById("contextVideo");
+    const autoplayCheckbox = document.getElementById("autoplayCheckbox");
+    const contextVideoShell = document.getElementById("contextVideoShell");
+    const contextVideoTitle = document.getElementById("contextVideoTitle");
     const captionTimestamp = document.getElementById("captionTimestamp");
     const loadPackBtn = document.getElementById("loadPackBtn");
     const packInput = document.getElementById("packInput");
@@ -748,7 +755,6 @@
     const notASignButton = document.getElementById("notASignButton");
     const prevBtn = document.getElementById("prevBtn");
     const nextBtn = document.getElementById("nextBtn");
-    const contextBtn = document.getElementById("contextBtn");
     const exportCsvBtn = document.getElementById("exportCsvBtn");
     const clearHistoryBtn = document.getElementById("clearHistoryBtn");
     const helpBtn = document.getElementById("helpBtn");
@@ -762,13 +768,15 @@
     const noteSection = document.getElementById("noteSection");
     const noteTextarea = document.getElementById("noteTextarea");
 
-    let replayEnabled = localStorage.getItem(REPLAY_KEY) === "true";
-    replayCheckbox.checked = replayEnabled;
-    replayCheckbox.onchange = () => {
-      replayEnabled = replayCheckbox.checked;
-      localStorage.setItem(REPLAY_KEY, replayEnabled);
-      const scanMode = isScanModeItem();
-      clipVideo.loop = !scanMode && replayEnabled;
+    let autoplayEnabled = localStorage.getItem(AUTOPLAY_KEY) === "true";
+    let autoplayTimer = null;
+    let autoplayToken = 0;
+    autoplayCheckbox.checked = autoplayEnabled;
+    autoplayCheckbox.onchange = () => {
+      autoplayEnabled = autoplayCheckbox.checked;
+      localStorage.setItem(AUTOPLAY_KEY, autoplayEnabled);
+      if (!autoplayEnabled) cancelAutoplaySequence();
+      else scheduleAutoplaySequence();
     };
 
     function fmtTime(sec) {
@@ -789,10 +797,39 @@
     let pendingClassifierSubtypeLabels = [];
     let classifierExpanded = false;
 
-    let showContext = false;
     let renderToken = 0;
     const loadedPackSlots = {};
     const mediaUrlCache = new Map();
+
+    function cancelAutoplaySequence() {
+      autoplayToken += 1;
+      if (autoplayTimer) {
+        clearTimeout(autoplayTimer);
+        autoplayTimer = null;
+      }
+      clipVideo.onended = null;
+      contextVideo.onended = null;
+    }
+
+    function scheduleAutoplaySequence() {
+      cancelAutoplaySequence();
+      const item = currentItem();
+      if (!autoplayEnabled || !item || isScanModeItem(item)) return;
+      const token = autoplayToken;
+      clipVideo.currentTime = 0;
+      contextVideo.currentTime = 0;
+      clipVideo.onended = () => {
+        if (token !== autoplayToken) return;
+        if (!item.context_video) return;
+        autoplayTimer = setTimeout(() => {
+          if (token !== autoplayToken) return;
+          contextVideo.currentTime = 0;
+          contextVideo.play().catch(() => {});
+        }, 1000);
+      };
+      contextVideo.onended = null;
+      clipVideo.play().catch(() => {});
+    }
 
     function isScanModeItem(item = currentItem()) {
       return Boolean(item) && ((item.task_mode || "") === "interesting_scan" || (item.sample_subset || "") === "interesting_scan");
@@ -1080,7 +1117,6 @@
       if (!annotatorPin) return;
       deletePinFeedback(annotatorPin);
       queueIndex = queue.length ? 0 : -1;
-      showContext = false;
       renderCurrentItem();
     }
 
@@ -1276,11 +1312,6 @@
       saveProgressBadge.textContent = `${position} / ${total || 0}`;
       prevBtn.disabled = queueIndex <= 0;
       nextBtn.disabled = queueIndex < 0 || queueIndex >= total - 1;
-      const scanMode = isScanModeItem(item);
-      contextBtn.disabled = scanMode || !item || !item.context_video;
-      contextBtn.textContent = item && showContext && item.context_video ? "Original Segment" : "More Context";
-      contextBtn.classList.toggle("primary", Boolean(item && showContext && item.context_video));
-      contextBtn.classList.toggle("hidden", scanMode);
       exportCsvBtn.classList.remove("hidden");
       clearHistoryBtn.classList.remove("hidden");
     }
@@ -1289,12 +1320,15 @@
       const token = ++renderToken;
       const item = currentItem();
       persistQueuePosition();
+      cancelAutoplaySequence();
       if (!item) {
         annotationWorkspace.classList.add("hidden");
         scanWorkspace.classList.add("hidden");
         constructSection.classList.add("hidden");
         setVideoSource(clipVideo, "");
-        clipVideo.loop = false;
+        setVideoSource(contextVideo, "");
+        contextVideoShell.classList.add("hidden");
+        contextVideoTitle.classList.add("hidden");
         videoTitle.textContent = "";
         videoTitle.classList.add("hidden");
         sourceLinkRow.classList.add("hidden");
@@ -1311,11 +1345,14 @@
       const scanMode = isScanModeItem(item);
       annotationWorkspace.classList.toggle("hidden", scanMode);
       scanWorkspace.classList.toggle("hidden", !scanMode);
-      clipVideo.loop = !scanMode && replayEnabled;
-      const mediaField = showContext && item.context_video ? "context_video" : "video";
-      const resolvedSrc = await resolveMediaSrc(item, mediaField);
+      const resolvedClipSrc = await resolveMediaSrc(item, "video");
+      const resolvedContextSrc = item.context_video ? await resolveMediaSrc(item, "context_video") : "";
       if (token !== renderToken) return;
-      setVideoSource(clipVideo, resolvedSrc || item[mediaField], !scanMode && replayEnabled);
+      setVideoSource(clipVideo, resolvedClipSrc || item.video, false);
+      const hasContext = Boolean(item.context_video);
+      setVideoSource(contextVideo, hasContext ? (resolvedContextSrc || item.context_video) : "", false);
+      contextVideoShell.classList.toggle("hidden", !hasContext);
+      contextVideoTitle.classList.toggle("hidden", !hasContext);
       const titleText = item.display_title || cleanSourceTitle(item.dataset, item.source_title || item.article || "", item.item_id);
       const captionBody = item.caption_text || "";
       videoTitle.textContent = titleText;
@@ -1363,6 +1400,7 @@
       noteTextarea.value = entry?.note || "";
       noteSection.classList.toggle("hidden", scanMode);
       updateStatus();
+      scheduleAutoplaySequence();
     }
 
     function loadPin(pin) {
@@ -1389,7 +1427,6 @@
       } else {
         queueIndex = queue.length ? 0 : -1;
       }
-      showContext = false;
       updatePackUI();
       renderCurrentItem();
     }
@@ -1460,28 +1497,14 @@
     prevBtn.onclick = () => {
       if (queueIndex > 0) {
         queueIndex -= 1;
-        showContext = false;
         renderCurrentItem();
       }
     };
     nextBtn.onclick = () => {
       if (queueIndex >= 0 && queueIndex < queue.length - 1) {
         queueIndex += 1;
-        showContext = false;
         renderCurrentItem();
       }
-    };
-    contextBtn.onclick = () => {
-      const item = currentItem();
-      if (!item || !item.context_video) return;
-      showContext = !showContext;
-      (async () => {
-        const field = showContext ? "context_video" : "video";
-        const resolvedSrc = await resolveMediaSrc(item, field);
-        setVideoSource(clipVideo, resolvedSrc || item[field], true);
-        annotationSummary.textContent = "";
-        updateStatus();
-      })();
     };
     interestingBtn.onclick = () => {
       const item = currentItem();
@@ -1502,7 +1525,6 @@
       }
       if (queueIndex >= 0 && queueIndex < queue.length - 1) {
         queueIndex += 1;
-        showContext = false;
         renderCurrentItem();
       } else {
         scanStatus.textContent = `${timestamps.length} / 5 captured`;
@@ -1586,7 +1608,6 @@
       }
       if (queueIndex >= 0 && queueIndex < queue.length - 1) {
         queueIndex += 1;
-        showContext = false;
         renderCurrentItem();
       } else {
         renderCurrentItem();
