@@ -1150,6 +1150,15 @@
       contextEndLaterBtn.disabled = !(Number.isFinite(duration) && duration > 0) || windowState.localEnd >= duration;
     }
 
+    function moveContextToTrimStart(item = currentItem(), pause = true) {
+      if (!item || !item.context_video || contextPanel.classList.contains("hidden")) return;
+      const windowState = getContextWindow(item);
+      stopContextPlaybackWatcher();
+      if (pause) contextVideo.pause();
+      contextPlaybackClamp = { start: windowState.localStart, end: windowState.localEnd };
+      contextVideo.currentTime = windowState.localStart;
+    }
+
     function adjustContextBoundary(which, direction) {
       const item = currentItem();
       if (!item || contextPanel.classList.contains("hidden")) return;
@@ -1172,7 +1181,7 @@
       }
       const nextWindow = { absoluteStart: nextStart, absoluteEnd: nextEnd };
       saveContextWindow(item, nextWindow);
-      enforceContextTrimBounds();
+      moveContextToTrimStart(item, true);
       updateContextAdjustUI();
     }
 
@@ -1193,9 +1202,24 @@
     function playContextWindow(item = currentItem()) {
       if (!item || !item.context_video || contextPanel.classList.contains("hidden")) return;
       const windowState = getContextWindow(item);
+      const tolerance = getContextTrimTolerance(item);
+      stopContextPlaybackWatcher();
+      contextVideo.pause();
       contextPlaybackClamp = { start: windowState.localStart, end: windowState.localEnd };
-      contextVideo.currentTime = windowState.localStart;
-      contextVideo.play().catch(() => {});
+      const targetStart = windowState.localStart;
+      const beginPlayback = () => {
+        contextVideo.play().catch(() => {});
+      };
+      const onSeeked = () => {
+        contextVideo.removeEventListener("seeked", onSeeked);
+        beginPlayback();
+      };
+      if (Math.abs((Number(contextVideo.currentTime) || 0) - targetStart) <= tolerance) {
+        beginPlayback();
+        return;
+      }
+      contextVideo.addEventListener("seeked", onSeeked);
+      contextVideo.currentTime = targetStart;
     }
 
     function scheduleAutoplaySequence(force = false) {
