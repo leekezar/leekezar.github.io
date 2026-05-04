@@ -2068,9 +2068,6 @@
       enforceContextTrimBounds();
       updateContextAdjustUI();
     });
-    contextVideo.addEventListener("seeking", () => {
-      enforceContextTrimBounds();
-    });
     contextVideo.addEventListener("play", () => {
       const clamp = getContextWindow(currentItem());
       contextPlaybackClamp = { start: clamp.localStart, end: clamp.localEnd };
