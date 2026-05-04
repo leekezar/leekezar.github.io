@@ -991,6 +991,7 @@
     let contextTrimState = JSON.parse(localStorage.getItem(CONTEXT_TRIM_STORAGE_KEY) || "{}");
     let contextPlaybackClamp = { start: 0, end: 0 };
     let contextPlaybackWatcher = 0;
+    let contextRestartQueued = false;
 
     function cancelAutoplaySequence() {
       autoplayToken += 1;
@@ -1116,9 +1117,8 @@
         if (contextVideo.paused || contextVideo.ended) return;
         const clamp = getContextWindow(item);
         const tolerance = getContextTrimTolerance(item);
-        if (contextVideo.currentTime >= Math.max(clamp.localStart, clamp.localEnd - tolerance)) {
+        if (contextVideo.currentTime >= clamp.localEnd - tolerance) {
           contextVideo.pause();
-          contextVideo.currentTime = Math.max(clamp.localStart, clamp.localEnd - tolerance);
           return;
         }
         if (typeof contextVideo.requestVideoFrameCallback === "function") {
@@ -1154,6 +1154,7 @@
       if (!item || !item.context_video || contextPanel.classList.contains("hidden")) return;
       const windowState = getContextWindow(item);
       stopContextPlaybackWatcher();
+      contextRestartQueued = false;
       if (pause) contextVideo.pause();
       contextPlaybackClamp = { start: windowState.localStart, end: windowState.localEnd };
       contextVideo.currentTime = windowState.localStart;
@@ -1202,24 +1203,12 @@
     function playContextWindow(item = currentItem()) {
       if (!item || !item.context_video || contextPanel.classList.contains("hidden")) return;
       const windowState = getContextWindow(item);
-      const tolerance = getContextTrimTolerance(item);
       stopContextPlaybackWatcher();
+      contextRestartQueued = false;
       contextVideo.pause();
       contextPlaybackClamp = { start: windowState.localStart, end: windowState.localEnd };
-      const targetStart = windowState.localStart;
-      const beginPlayback = () => {
-        contextVideo.play().catch(() => {});
-      };
-      const onSeeked = () => {
-        contextVideo.removeEventListener("seeked", onSeeked);
-        beginPlayback();
-      };
-      if (Math.abs((Number(contextVideo.currentTime) || 0) - targetStart) <= tolerance) {
-        beginPlayback();
-        return;
-      }
-      contextVideo.addEventListener("seeked", onSeeked);
-      contextVideo.currentTime = targetStart;
+      contextVideo.currentTime = windowState.localStart;
+      contextVideo.play().catch(() => {});
     }
 
     function scheduleAutoplaySequence(force = false) {
@@ -2056,8 +2045,25 @@
       const clamp = getContextWindow(currentItem());
       contextPlaybackClamp = { start: clamp.localStart, end: clamp.localEnd };
       const tolerance = getContextTrimTolerance(currentItem());
-      if (contextVideo.currentTime < clamp.localStart || contextVideo.currentTime >= Math.max(clamp.localStart, clamp.localEnd - tolerance)) {
+      if (contextRestartQueued) {
+        contextRestartQueued = false;
+        return;
+      }
+      if (contextVideo.currentTime < clamp.localStart) {
         contextVideo.currentTime = clamp.localStart;
+        return;
+      }
+      if (contextVideo.currentTime >= clamp.localEnd - tolerance) {
+        contextRestartQueued = true;
+        contextVideo.pause();
+        contextVideo.currentTime = clamp.localStart;
+        requestAnimationFrame(() => {
+          if (!contextRestartQueued) return;
+          contextVideo.play().catch(() => {
+            contextRestartQueued = false;
+          });
+        });
+        return;
       }
       startContextPlaybackWatcher();
     });
