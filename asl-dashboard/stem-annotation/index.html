@@ -991,7 +991,7 @@
     let contextTrimState = JSON.parse(localStorage.getItem(CONTEXT_TRIM_STORAGE_KEY) || "{}");
     let contextPlaybackClamp = { start: 0, end: 0 };
     let contextPlaybackWatcher = 0;
-    let contextRestartQueued = false;
+    let contextRestartInFlight = false;
 
     function cancelAutoplaySequence() {
       autoplayToken += 1;
@@ -1107,6 +1107,34 @@
       contextPlaybackWatcher += 1;
     }
 
+    function seekVideoTo(videoEl, timeSec) {
+      return new Promise((resolve) => {
+        const target = Math.max(0, Number(timeSec) || 0);
+        if (Math.abs((videoEl.currentTime || 0) - target) < 1e-3 && videoEl.readyState >= 2) {
+          resolve();
+          return;
+        }
+        let settled = false;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          videoEl.removeEventListener("seeked", onSeeked);
+          clearTimeout(fallbackTimer);
+          resolve();
+        };
+        const onSeeked = () => {
+          if (typeof videoEl.requestVideoFrameCallback === "function") {
+            videoEl.requestVideoFrameCallback(() => finish());
+          } else {
+            requestAnimationFrame(finish);
+          }
+        };
+        videoEl.addEventListener("seeked", onSeeked, { once: true });
+        const fallbackTimer = setTimeout(finish, 900);
+        videoEl.currentTime = target;
+      });
+    }
+
     function startContextPlaybackWatcher() {
       const item = currentItem();
       if (!item || contextPanel.classList.contains("hidden")) return;
@@ -1154,10 +1182,10 @@
       if (!item || !item.context_video || contextPanel.classList.contains("hidden")) return;
       const windowState = getContextWindow(item);
       stopContextPlaybackWatcher();
-      contextRestartQueued = false;
+      contextRestartInFlight = false;
       if (pause) contextVideo.pause();
       contextPlaybackClamp = { start: windowState.localStart, end: windowState.localEnd };
-      contextVideo.currentTime = windowState.localStart;
+      seekVideoTo(contextVideo, windowState.localStart);
     }
 
     function adjustContextBoundary(which, direction) {
@@ -1204,11 +1232,13 @@
       if (!item || !item.context_video || contextPanel.classList.contains("hidden")) return;
       const windowState = getContextWindow(item);
       stopContextPlaybackWatcher();
-      contextRestartQueued = false;
+      contextRestartInFlight = false;
       contextVideo.pause();
       contextPlaybackClamp = { start: windowState.localStart, end: windowState.localEnd };
-      contextVideo.currentTime = windowState.localStart;
-      contextVideo.play().catch(() => {});
+      seekVideoTo(contextVideo, windowState.localStart).then(() => {
+        if (!currentItem() || currentItem().item_id !== item.item_id) return;
+        contextVideo.play().catch(() => {});
+      });
     }
 
     function scheduleAutoplaySequence(force = false) {
@@ -2045,22 +2075,25 @@
       const clamp = getContextWindow(currentItem());
       contextPlaybackClamp = { start: clamp.localStart, end: clamp.localEnd };
       const tolerance = getContextTrimTolerance(currentItem());
-      if (contextRestartQueued) {
-        contextRestartQueued = false;
+      if (contextRestartInFlight) {
         return;
       }
       if (contextVideo.currentTime < clamp.localStart) {
-        contextVideo.currentTime = clamp.localStart;
+        contextRestartInFlight = true;
+        contextVideo.pause();
+        seekVideoTo(contextVideo, clamp.localStart).then(() => {
+          contextRestartInFlight = false;
+          contextVideo.play().catch(() => {});
+        });
         return;
       }
       if (contextVideo.currentTime >= clamp.localEnd - tolerance) {
-        contextRestartQueued = true;
+        contextRestartInFlight = true;
         contextVideo.pause();
-        contextVideo.currentTime = clamp.localStart;
-        requestAnimationFrame(() => {
-          if (!contextRestartQueued) return;
+        seekVideoTo(contextVideo, clamp.localStart).then(() => {
+          contextRestartInFlight = false;
           contextVideo.play().catch(() => {
-            contextRestartQueued = false;
+            contextRestartInFlight = false;
           });
         });
         return;
