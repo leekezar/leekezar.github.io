@@ -990,6 +990,7 @@
     const SPLIT_STORAGE_KEY = "stem-annotation-panel-split-v1";
     let contextTrimState = JSON.parse(localStorage.getItem(CONTEXT_TRIM_STORAGE_KEY) || "{}");
     let contextPlaybackClamp = { start: 0, end: 0 };
+    let contextPlaybackWatcher = 0;
 
     function cancelAutoplaySequence() {
       autoplayToken += 1;
@@ -1081,15 +1082,52 @@
       });
     }
 
+    function getContextTrimTolerance(item = currentItem()) {
+      return Math.max(0.001, 0.5 / inferFramesPerSecond(item, contextVideo));
+    }
+
     function enforceContextTrimBounds() {
       const item = currentItem();
       if (!item || contextPanel.classList.contains("hidden")) return;
       const windowState = getContextWindow(item);
       contextPlaybackClamp = { start: windowState.localStart, end: windowState.localEnd };
       if (!Number.isFinite(contextVideo.currentTime)) return;
-      if (contextVideo.currentTime < windowState.localStart || contextVideo.currentTime > windowState.localEnd) {
+      const tolerance = getContextTrimTolerance(item);
+      if (contextVideo.currentTime < windowState.localStart) {
         contextVideo.currentTime = windowState.localStart;
+        return;
       }
+      if (contextVideo.currentTime > windowState.localEnd) {
+        contextVideo.currentTime = Math.max(windowState.localStart, windowState.localEnd - tolerance);
+      }
+    }
+
+    function stopContextPlaybackWatcher() {
+      contextPlaybackWatcher += 1;
+    }
+
+    function startContextPlaybackWatcher() {
+      const item = currentItem();
+      if (!item || contextPanel.classList.contains("hidden")) return;
+      stopContextPlaybackWatcher();
+      const token = contextPlaybackWatcher;
+      const tick = () => {
+        if (token !== contextPlaybackWatcher) return;
+        if (contextVideo.paused || contextVideo.ended) return;
+        const clamp = getContextWindow(item);
+        const tolerance = getContextTrimTolerance(item);
+        if (contextVideo.currentTime >= Math.max(clamp.localStart, clamp.localEnd - tolerance)) {
+          contextVideo.pause();
+          contextVideo.currentTime = Math.max(clamp.localStart, clamp.localEnd - tolerance);
+          return;
+        }
+        if (typeof contextVideo.requestVideoFrameCallback === "function") {
+          contextVideo.requestVideoFrameCallback(() => tick());
+        } else {
+          requestAnimationFrame(() => tick());
+        }
+      };
+      tick();
     }
 
     function updateContextAdjustUI() {
@@ -1146,8 +1184,9 @@
       videoEl.currentTime = nextTime;
       if (videoEl === contextVideo) {
         const clamp = getContextWindow(item);
+        const tolerance = getContextTrimTolerance(item);
         if (videoEl.currentTime < clamp.localStart) videoEl.currentTime = clamp.localStart;
-        if (videoEl.currentTime > clamp.localEnd) videoEl.currentTime = clamp.localEnd;
+        if (videoEl.currentTime > clamp.localEnd) videoEl.currentTime = Math.max(clamp.localStart, clamp.localEnd - tolerance);
       }
     }
 
@@ -1986,20 +2025,20 @@
       enforceContextTrimBounds();
       updateContextAdjustUI();
     });
+    contextVideo.addEventListener("seeking", () => {
+      enforceContextTrimBounds();
+    });
     contextVideo.addEventListener("play", () => {
       const clamp = getContextWindow(currentItem());
       contextPlaybackClamp = { start: clamp.localStart, end: clamp.localEnd };
-      if (contextVideo.currentTime < clamp.localStart || contextVideo.currentTime > clamp.localEnd) {
+      const tolerance = getContextTrimTolerance(currentItem());
+      if (contextVideo.currentTime < clamp.localStart || contextVideo.currentTime >= Math.max(clamp.localStart, clamp.localEnd - tolerance)) {
         contextVideo.currentTime = clamp.localStart;
       }
+      startContextPlaybackWatcher();
     });
-    contextVideo.addEventListener("timeupdate", () => {
-      if (!Number.isFinite(contextPlaybackClamp.end) || contextPlaybackClamp.end <= 0) return;
-      if (contextVideo.currentTime >= Math.max(contextPlaybackClamp.start, contextPlaybackClamp.end - 0.001)) {
-        contextVideo.pause();
-        contextVideo.currentTime = contextPlaybackClamp.end;
-      }
-    });
+    contextVideo.addEventListener("pause", stopContextPlaybackWatcher);
+    contextVideo.addEventListener("ended", stopContextPlaybackWatcher);
 
     (() => {
       const savedSplit = localStorage.getItem(SPLIT_STORAGE_KEY);
