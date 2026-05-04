@@ -17,6 +17,7 @@
       --shadow: 0 20px 48px rgba(0,0,0,0.08);
       --ok: #2d6f58;
       --warn: #8b5a2b;
+      --media-pane-width: 58%;
     }
     * { box-sizing: border-box; }
     body {
@@ -103,9 +104,47 @@
     }
     .review-grid {
       display: grid;
-      grid-template-columns: minmax(448px, 0.96fr) minmax(760px, 1.36fr);
-      gap: 18px;
+      grid-template-columns: minmax(0, var(--media-pane-width)) 12px minmax(260px, 1fr);
+      gap: 0;
       align-items: start;
+    }
+    .media-column, .feedback-column {
+      min-width: 0;
+    }
+    .media-column {
+      padding-right: 12px;
+      display: grid;
+      gap: 12px;
+    }
+    .panel-splitter {
+      width: 12px;
+      align-self: stretch;
+      cursor: col-resize;
+      position: relative;
+      touch-action: none;
+    }
+    .panel-splitter::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      margin: 6px 2px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(17,17,17,0.10), rgba(17,17,17,0.18));
+    }
+    .panel-splitter::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 4px;
+      height: 52px;
+      transform: translate(-50%, -50%);
+      border-radius: 999px;
+      background: rgba(24,36,51,0.22);
+    }
+    .panel-splitter:hover::after,
+    .panel-splitter.active::after {
+      background: rgba(24,36,51,0.42);
     }
     .section-title {
       margin: 0 0 10px;
@@ -121,26 +160,111 @@
       width: 100%;
     }
     .video-title {
-      margin: 0 0 10px;
+      margin: 0;
       font-size: 14px;
       font-weight: 700;
       color: var(--text);
-      text-align: center;
+      text-align: left;
+    }
+    .title-utility-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
     }
     .source-link-row {
-      margin: -4px 0 10px;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      min-width: 0;
     }
     .source-link-row a {
       color: var(--accent);
       font-size: 12px;
       text-decoration: underline;
     }
+    .media-inline-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .checkbox-inline {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 4px 0;
+      white-space: nowrap;
+    }
+    .video-panel {
+      display: grid;
+      gap: 8px;
+    }
+    .video-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .transport-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .transport-button {
+      padding: 7px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
     .video-shell video {
       width: 100%;
       height: 100%;
       display: block;
       background: #0b1521;
+    }
+    .context-adjust-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.68);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+    .context-boundary-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .boundary-step-btn {
+      min-width: 30px;
+      padding: 6px 8px;
+      border-radius: 9px;
+      font-size: 12px;
+    }
+    .context-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 72px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(24,36,51,0.08);
+      border: 1px solid rgba(24,36,51,0.12);
     }
     .caption-box {
       margin-top: 12px;
@@ -218,6 +342,7 @@
       display: grid;
       gap: 12px;
       width: 100%;
+      padding-left: 12px;
     }
     .annotation-prompt {
       display: grid;
@@ -232,8 +357,8 @@
     }
     .combined-choice-grid {
       display: grid;
-      grid-template-columns: repeat(6, minmax(60px, 92px));
-      gap: 8px 10px;
+      grid-template-columns: repeat(6, minmax(48px, 84px));
+      gap: 6px 8px;
       align-items: stretch;
       min-width: max-content;
     }
@@ -294,7 +419,7 @@
     }
     .construct-row {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       flex-wrap: wrap;
       justify-content: center;
     }
@@ -304,13 +429,14 @@
       border-top: 1px dashed var(--border);
     }
     .construct-btn {
-      padding: 8px 11px;
+      padding: 6px 8px;
       border-radius: 10px;
-      font-size: 13px;
+      font-size: 12px;
       border: 1px solid var(--border);
       background: var(--panel-strong);
       cursor: pointer;
       transition: none;
+      white-space: nowrap;
     }
     .construct-btn:hover {
       border-color: #000;
@@ -457,9 +583,18 @@
       .review-grid {
         grid-template-columns: 1fr;
       }
+      .panel-splitter {
+        display: none;
+      }
+      .media-column {
+        padding-right: 0;
+      }
+      .feedback-column {
+        padding-left: 0;
+      }
       .combined-choice-grid {
-        grid-template-columns: repeat(3, minmax(64px, 96px));
-        gap: 10px 10px;
+        grid-template-columns: repeat(3, minmax(52px, 88px));
+        gap: 8px 8px;
       }
     }
     .help-example-grid {
@@ -544,9 +679,6 @@
         <h1 class="app-title">STEM ASL Annotation</h1>
       </div>
       <div class="right">
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:8px 4px;">
-          <input type="checkbox" id="autoplayCheckbox"> Autoplay
-        </label>
         <button id="exportCsvBtn">Export CSV</button>
         <button id="clearHistoryBtn">Clear History</button>
         <button id="helpBtn">Help</button>
@@ -558,18 +690,55 @@
 
     <section class="motion-panel">
       <div class="review-grid">
-        <div>
-          <div class="video-title hidden" id="videoTitle"></div>
-          <div class="source-link-row hidden" id="sourceLinkRow">
-            <a id="sourceLink" href="#" target="_blank" rel="noopener noreferrer">Open original</a>
+        <div class="media-column">
+          <div class="title-utility-row">
+            <div class="video-title hidden" id="videoTitle"></div>
+            <div class="source-link-row hidden" id="sourceLinkRow">
+              <a id="sourceLink" href="#" target="_blank" rel="noopener noreferrer">Open original</a>
+            </div>
+            <div class="media-inline-controls">
+              <label class="checkbox-inline">
+                <input type="checkbox" id="autoplayCheckbox"> Autoplay
+              </label>
+              <button id="replaySequenceBtn" type="button">Replay</button>
+            </div>
           </div>
-          <div class="video-title">Clip</div>
-          <div class="video-shell">
-            <video id="clipVideo" controls preload="metadata" playsinline></video>
+          <div class="video-panel">
+            <div class="video-header-row">
+              <div class="video-title">Clip</div>
+              <div class="transport-controls">
+                <button id="clipStepBackBtn" class="transport-button" type="button">◀ Frame</button>
+                <button id="clipStepForwardBtn" class="transport-button" type="button">Frame ▶</button>
+              </div>
+            </div>
+            <div class="video-shell">
+              <video id="clipVideo" controls preload="metadata" playsinline></video>
+            </div>
           </div>
-          <div class="video-title hidden" id="contextVideoTitle">Full Context</div>
-          <div class="video-shell hidden" id="contextVideoShell">
-            <video id="contextVideo" controls preload="metadata" playsinline></video>
+          <div class="video-panel hidden" id="contextPanel">
+            <div class="video-header-row">
+              <div class="video-title" id="contextVideoTitle">Full Context</div>
+              <div class="transport-controls">
+                <button id="contextStepBackBtn" class="transport-button" type="button">◀ Frame</button>
+                <button id="contextStepForwardBtn" class="transport-button" type="button">Frame ▶</button>
+              </div>
+            </div>
+            <div class="video-shell" id="contextVideoShell">
+              <video id="contextVideo" controls preload="metadata" playsinline></video>
+            </div>
+            <div class="context-adjust-row" id="contextAdjustRow">
+              <div class="context-boundary-group">
+                <button id="contextStartEarlierBtn" class="boundary-step-btn" type="button">&lt;</button>
+                <span class="context-chip" id="contextStartChip">0:00.00</span>
+                <button id="contextStartLaterBtn" class="boundary-step-btn" type="button">&gt;</button>
+              </div>
+              <span class="context-chip" id="contextFrameChip">0 fr</span>
+              <div class="context-boundary-group">
+                <button id="contextEndEarlierBtn" class="boundary-step-btn" type="button">&lt;</button>
+                <span class="context-chip" id="contextEndChip">0:00.00</span>
+                <button id="contextEndLaterBtn" class="boundary-step-btn" type="button">&gt;</button>
+              </div>
+            </div>
           </div>
           <div class="caption-box hidden" id="captionBox">
             <div class="caption-timestamp subtle hidden" id="captionTimestamp"></div>
@@ -583,6 +752,7 @@
             <button id="nextBtn">Next</button>
           </div>
         </div>
+        <div class="panel-splitter" id="panelSplitter" aria-hidden="true"></div>
 
         <div class="feedback-column">
           <div class="scan-workspace hidden" id="scanWorkspace">
@@ -626,7 +796,7 @@
       <div class="help-copy">
         <ol>
           <li>Select the boundary option that best matches the clip, or "Not a sign" (see definitions below).</li>
-          <li>"More context" will show 2 seconds before and after the segment. You can also open the full context in a new tab by clicking "Open on [Youtube/Wiki]".</li>
+          <li>The clip is shown above the larger context window. Use the context controls to replay, step frames, or narrow the context boundaries.</li>
           <li>If a sign is shown, select which type it is (see definitions below) or "unsure".</li>
           <li>If multiple signs are shown, or the left and right hands are showing different sign types, you can select multiple types.</li>
           <li>If the sign type is "classifier", select which type of classifier (see definitions below) or "unsure".</li>
@@ -730,8 +900,22 @@
     const clipVideo = document.getElementById("clipVideo");
     const contextVideo = document.getElementById("contextVideo");
     const autoplayCheckbox = document.getElementById("autoplayCheckbox");
+    const replaySequenceBtn = document.getElementById("replaySequenceBtn");
+    const clipStepBackBtn = document.getElementById("clipStepBackBtn");
+    const clipStepForwardBtn = document.getElementById("clipStepForwardBtn");
+    const contextStepBackBtn = document.getElementById("contextStepBackBtn");
+    const contextStepForwardBtn = document.getElementById("contextStepForwardBtn");
+    const contextPanel = document.getElementById("contextPanel");
     const contextVideoShell = document.getElementById("contextVideoShell");
     const contextVideoTitle = document.getElementById("contextVideoTitle");
+    const contextAdjustRow = document.getElementById("contextAdjustRow");
+    const contextStartChip = document.getElementById("contextStartChip");
+    const contextFrameChip = document.getElementById("contextFrameChip");
+    const contextEndChip = document.getElementById("contextEndChip");
+    const contextStartEarlierBtn = document.getElementById("contextStartEarlierBtn");
+    const contextStartLaterBtn = document.getElementById("contextStartLaterBtn");
+    const contextEndEarlierBtn = document.getElementById("contextEndEarlierBtn");
+    const contextEndLaterBtn = document.getElementById("contextEndLaterBtn");
     const captionTimestamp = document.getElementById("captionTimestamp");
     const loadPackBtn = document.getElementById("loadPackBtn");
     const packInput = document.getElementById("packInput");
@@ -767,6 +951,8 @@
     const closeExamplePopupBtn = document.getElementById("closeExamplePopupBtn");
     const noteSection = document.getElementById("noteSection");
     const noteTextarea = document.getElementById("noteTextarea");
+    const reviewGrid = document.querySelector(".review-grid");
+    const panelSplitter = document.getElementById("panelSplitter");
 
     let autoplayEnabled = localStorage.getItem(AUTOPLAY_KEY) === "true";
     let autoplayTimer = null;
@@ -800,6 +986,10 @@
     let renderToken = 0;
     const loadedPackSlots = {};
     const mediaUrlCache = new Map();
+    const CONTEXT_TRIM_STORAGE_KEY = "stem-annotation-context-trims-v1";
+    const SPLIT_STORAGE_KEY = "stem-annotation-panel-split-v1";
+    let contextTrimState = JSON.parse(localStorage.getItem(CONTEXT_TRIM_STORAGE_KEY) || "{}");
+    let contextPlaybackClamp = { start: 0, end: 0 };
 
     function cancelAutoplaySequence() {
       autoplayToken += 1;
@@ -811,20 +1001,176 @@
       contextVideo.onended = null;
     }
 
-    function scheduleAutoplaySequence() {
+    function inferFramesPerSecond(item, videoEl = clipVideo) {
+      const direct = Number(item?.fps);
+      if (Number.isFinite(direct) && direct > 0) return direct;
+      const startFrame = Number(item?.start_frame);
+      const endFrame = Number(item?.end_frame);
+      const startSec = Number(item?.start_sec);
+      const endSec = Number(item?.end_sec);
+      if (Number.isFinite(startFrame) && Number.isFinite(endFrame) && Number.isFinite(startSec) && Number.isFinite(endSec) && endSec > startSec) {
+        const fps = Math.abs(endFrame - startFrame) / (endSec - startSec);
+        if (Number.isFinite(fps) && fps > 1) return fps;
+      }
+      const duration = Number(videoEl?.duration);
+      if (Number.isFinite(duration) && duration > 0 && duration < 1) return 30;
+      return 30;
+    }
+
+    function contextTrimKey(item = currentItem()) {
+      return item ? String(item.item_id || "") : "";
+    }
+
+    function getDefaultContextWindow(item = currentItem()) {
+      const clipStart = Number(item?.start_sec);
+      const clipEnd = Number(item?.end_sec);
+      const clipDuration = Math.max(0, clipEnd - clipStart);
+      const mediaDuration = Number(contextVideo.duration);
+      const hasMediaDuration = Number.isFinite(mediaDuration) && mediaDuration > 0;
+      let defaultStart = 0;
+      let defaultEnd = hasMediaDuration ? mediaDuration : Math.max(clipDuration + 4, 0);
+      if (Number.isFinite(clipStart) && Number.isFinite(clipEnd)) {
+        defaultStart = Math.max(0, clipStart - 2);
+        const expectedEnd = clipEnd + 2;
+        if (hasMediaDuration) {
+          defaultEnd = defaultStart + mediaDuration;
+        } else {
+          defaultEnd = expectedEnd;
+        }
+      }
+      return { start: defaultStart, end: defaultEnd };
+    }
+
+    function getContextWindow(item = currentItem()) {
+      const key = contextTrimKey(item);
+      const defaults = getDefaultContextWindow(item);
+      const mediaDuration = Number(contextVideo.duration);
+      const entry = currentEntry();
+      const trim = (key && contextTrimState[key]) || (entry ? {
+        start: entry.context_trim_start_sec,
+        end: entry.context_trim_end_sec,
+      } : null);
+      let absoluteStart = Number.isFinite(Number(trim?.start)) ? Number(trim.start) : defaults.start;
+      let absoluteEnd = Number.isFinite(Number(trim?.end)) ? Number(trim.end) : defaults.end;
+      if (absoluteEnd < absoluteStart) {
+        absoluteEnd = absoluteStart;
+      }
+      let localStart = 0;
+      let localEnd = mediaDuration;
+      if (Number.isFinite(mediaDuration) && mediaDuration > 0) {
+        localStart = Math.max(0, Math.min(mediaDuration, absoluteStart - defaults.start));
+        localEnd = Math.max(localStart, Math.min(mediaDuration, absoluteEnd - defaults.start));
+      }
+      return {
+        absoluteStart,
+        absoluteEnd,
+        localStart,
+        localEnd,
+        baseStart: defaults.start,
+      };
+    }
+
+    function saveContextWindow(item, nextWindow) {
+      const key = contextTrimKey(item);
+      if (!key) return;
+      contextTrimState[key] = { start: nextWindow.absoluteStart, end: nextWindow.absoluteEnd };
+      localStorage.setItem(CONTEXT_TRIM_STORAGE_KEY, JSON.stringify(contextTrimState));
+      saveCurrentEntry({
+        context_trim_start_sec: Number(nextWindow.absoluteStart.toFixed(3)),
+        context_trim_end_sec: Number(nextWindow.absoluteEnd.toFixed(3)),
+      });
+    }
+
+    function enforceContextTrimBounds() {
+      const item = currentItem();
+      if (!item || contextPanel.classList.contains("hidden")) return;
+      const windowState = getContextWindow(item);
+      contextPlaybackClamp = { start: windowState.localStart, end: windowState.localEnd };
+      if (!Number.isFinite(contextVideo.currentTime)) return;
+      if (contextVideo.currentTime < windowState.localStart || contextVideo.currentTime > windowState.localEnd) {
+        contextVideo.currentTime = windowState.localStart;
+      }
+    }
+
+    function updateContextAdjustUI() {
+      const item = currentItem();
+      const hasContext = Boolean(item?.context_video) && !contextPanel.classList.contains("hidden");
+      contextAdjustRow.classList.toggle("hidden", !hasContext);
+      if (!hasContext) return;
+      const windowState = getContextWindow(item);
+      const fps = inferFramesPerSecond(item, contextVideo);
+      const frameCount = Math.max(0, Math.round((windowState.absoluteEnd - windowState.absoluteStart) * fps));
+      contextStartChip.textContent = fmtTime(windowState.absoluteStart);
+      contextEndChip.textContent = fmtTime(windowState.absoluteEnd);
+      contextFrameChip.textContent = `${frameCount} fr`;
+      const step = 1 / fps;
+      const minSpan = step;
+      contextStartEarlierBtn.disabled = windowState.localStart <= 0;
+      contextStartLaterBtn.disabled = windowState.absoluteStart + minSpan >= windowState.absoluteEnd;
+      const duration = Number(contextVideo.duration);
+      contextEndEarlierBtn.disabled = windowState.absoluteEnd - minSpan <= windowState.absoluteStart;
+      contextEndLaterBtn.disabled = !(Number.isFinite(duration) && duration > 0) || windowState.localEnd >= duration;
+    }
+
+    function adjustContextBoundary(which, direction) {
+      const item = currentItem();
+      if (!item || contextPanel.classList.contains("hidden")) return;
+      const fps = inferFramesPerSecond(item, contextVideo);
+      const step = 1 / fps;
+      const duration = Number(contextVideo.duration);
+      const durationIsValid = Number.isFinite(duration) && duration > 0;
+      const windowState = getContextWindow(item);
+      let nextStart = windowState.absoluteStart;
+      let nextEnd = windowState.absoluteEnd;
+      if (which === "start") {
+        nextStart += direction * step;
+        nextStart = Math.max(windowState.baseStart, nextStart);
+        nextStart = Math.min(nextStart, nextEnd - step);
+      } else {
+        nextEnd += direction * step;
+        const maxEnd = durationIsValid ? windowState.baseStart + duration : nextEnd;
+        nextEnd = Math.min(maxEnd, nextEnd);
+        nextEnd = Math.max(nextEnd, nextStart + step);
+      }
+      const nextWindow = { absoluteStart: nextStart, absoluteEnd: nextEnd };
+      saveContextWindow(item, nextWindow);
+      enforceContextTrimBounds();
+      updateContextAdjustUI();
+    }
+
+    function stepVideoByFrame(videoEl, item, direction) {
+      if (!videoEl || !Number.isFinite(videoEl.duration)) return;
+      const fps = inferFramesPerSecond(item, videoEl);
+      const nextTime = Math.max(0, Math.min(videoEl.duration, (Number(videoEl.currentTime) || 0) + direction * (1 / fps)));
+      videoEl.pause();
+      videoEl.currentTime = nextTime;
+      if (videoEl === contextVideo) {
+        const clamp = getContextWindow(item);
+        if (videoEl.currentTime < clamp.localStart) videoEl.currentTime = clamp.localStart;
+        if (videoEl.currentTime > clamp.localEnd) videoEl.currentTime = clamp.localEnd;
+      }
+    }
+
+    function playContextWindow(item = currentItem()) {
+      if (!item || !item.context_video || contextPanel.classList.contains("hidden")) return;
+      const windowState = getContextWindow(item);
+      contextPlaybackClamp = { start: windowState.localStart, end: windowState.localEnd };
+      contextVideo.currentTime = windowState.localStart;
+      contextVideo.play().catch(() => {});
+    }
+
+    function scheduleAutoplaySequence(force = false) {
       cancelAutoplaySequence();
       const item = currentItem();
-      if (!autoplayEnabled || !item || isScanModeItem(item)) return;
+      if ((!autoplayEnabled && !force) || !item || isScanModeItem(item)) return;
       const token = autoplayToken;
       clipVideo.currentTime = 0;
-      contextVideo.currentTime = 0;
       clipVideo.onended = () => {
         if (token !== autoplayToken) return;
         if (!item.context_video) return;
         autoplayTimer = setTimeout(() => {
           if (token !== autoplayToken) return;
-          contextVideo.currentTime = 0;
-          contextVideo.play().catch(() => {});
+          playContextWindow(item);
         }, 1000);
       };
       contextVideo.onended = null;
@@ -1116,6 +1462,10 @@
     function clearCurrentPinHistory() {
       if (!annotatorPin) return;
       deletePinFeedback(annotatorPin);
+      queue.forEach((item) => {
+        delete contextTrimState[String(item.item_id || "")];
+      });
+      localStorage.setItem(CONTEXT_TRIM_STORAGE_KEY, JSON.stringify(contextTrimState));
       queueIndex = queue.length ? 0 : -1;
       renderCurrentItem();
     }
@@ -1327,8 +1677,7 @@
         constructSection.classList.add("hidden");
         setVideoSource(clipVideo, "");
         setVideoSource(contextVideo, "");
-        contextVideoShell.classList.add("hidden");
-        contextVideoTitle.classList.add("hidden");
+        contextPanel.classList.add("hidden");
         videoTitle.textContent = "";
         videoTitle.classList.add("hidden");
         sourceLinkRow.classList.add("hidden");
@@ -1351,8 +1700,7 @@
       setVideoSource(clipVideo, resolvedClipSrc || item.video, false);
       const hasContext = Boolean(item.context_video);
       setVideoSource(contextVideo, hasContext ? (resolvedContextSrc || item.context_video) : "", false);
-      contextVideoShell.classList.toggle("hidden", !hasContext);
-      contextVideoTitle.classList.toggle("hidden", !hasContext);
+      contextPanel.classList.toggle("hidden", !hasContext);
       const titleText = item.display_title || cleanSourceTitle(item.dataset, item.source_title || item.article || "", item.item_id);
       const captionBody = item.caption_text || "";
       videoTitle.textContent = titleText;
@@ -1400,6 +1748,8 @@
       noteTextarea.value = entry?.note || "";
       noteSection.classList.toggle("hidden", scanMode);
       updateStatus();
+      enforceContextTrimBounds();
+      updateContextAdjustUI();
       scheduleAutoplaySequence();
     }
 
@@ -1452,6 +1802,8 @@
           interesting_timestamps: scanTimestamps(entry).join(";"),
           scan_completed: Boolean(entry.scan_completed),
           scan_completed_reason: entry.scan_completed_reason || "",
+          context_trim_start_sec: entry.context_trim_start_sec ?? "",
+          context_trim_end_sec: entry.context_trim_end_sec ?? "",
           created_at: entry.createdAt || "",
           updated_at: entry.updatedAt || "",
           note: entry.note || "",
@@ -1617,6 +1969,73 @@
     noteTextarea.oninput = () => {
       saveCurrentEntry({ note: noteTextarea.value });
     };
+
+    replaySequenceBtn.onclick = () => {
+      scheduleAutoplaySequence(true);
+    };
+    clipStepBackBtn.onclick = () => stepVideoByFrame(clipVideo, currentItem(), -1);
+    clipStepForwardBtn.onclick = () => stepVideoByFrame(clipVideo, currentItem(), 1);
+    contextStepBackBtn.onclick = () => stepVideoByFrame(contextVideo, currentItem(), -1);
+    contextStepForwardBtn.onclick = () => stepVideoByFrame(contextVideo, currentItem(), 1);
+    contextStartEarlierBtn.onclick = () => adjustContextBoundary("start", -1);
+    contextStartLaterBtn.onclick = () => adjustContextBoundary("start", 1);
+    contextEndEarlierBtn.onclick = () => adjustContextBoundary("end", -1);
+    contextEndLaterBtn.onclick = () => adjustContextBoundary("end", 1);
+
+    contextVideo.addEventListener("loadedmetadata", () => {
+      enforceContextTrimBounds();
+      updateContextAdjustUI();
+    });
+    contextVideo.addEventListener("play", () => {
+      const clamp = getContextWindow(currentItem());
+      contextPlaybackClamp = { start: clamp.localStart, end: clamp.localEnd };
+      if (contextVideo.currentTime < clamp.localStart || contextVideo.currentTime > clamp.localEnd) {
+        contextVideo.currentTime = clamp.localStart;
+      }
+    });
+    contextVideo.addEventListener("timeupdate", () => {
+      if (!Number.isFinite(contextPlaybackClamp.end) || contextPlaybackClamp.end <= 0) return;
+      if (contextVideo.currentTime >= Math.max(contextPlaybackClamp.start, contextPlaybackClamp.end - 0.001)) {
+        contextVideo.pause();
+        contextVideo.currentTime = contextPlaybackClamp.end;
+      }
+    });
+
+    (() => {
+      const savedSplit = localStorage.getItem(SPLIT_STORAGE_KEY);
+      if (savedSplit) reviewGrid.style.setProperty("--media-pane-width", savedSplit);
+      let dragging = false;
+      const stopDrag = () => {
+        if (!dragging) return;
+        dragging = false;
+        panelSplitter.classList.remove("active");
+        document.body.style.userSelect = "";
+      };
+      const moveDrag = (clientX) => {
+        const rect = reviewGrid.getBoundingClientRect();
+        const minLeft = 320;
+        const minRight = 220;
+        const maxLeft = rect.width - minRight - 12;
+        const nextLeft = Math.max(minLeft, Math.min(maxLeft, clientX - rect.left));
+        const percent = `${((nextLeft / rect.width) * 100).toFixed(2)}%`;
+        reviewGrid.style.setProperty("--media-pane-width", percent);
+        localStorage.setItem(SPLIT_STORAGE_KEY, percent);
+      };
+      panelSplitter.addEventListener("pointerdown", (event) => {
+        if (window.innerWidth <= 960) return;
+        dragging = true;
+        panelSplitter.classList.add("active");
+        panelSplitter.setPointerCapture(event.pointerId);
+        document.body.style.userSelect = "none";
+      });
+      panelSplitter.addEventListener("pointermove", (event) => {
+        if (!dragging) return;
+        moveDrag(event.clientX);
+      });
+      panelSplitter.addEventListener("pointerup", stopDrag);
+      panelSplitter.addEventListener("pointercancel", stopDrag);
+      window.addEventListener("pointerup", stopDrag);
+    })();
 
     (function init() {
       renderBoundaryLegend();
