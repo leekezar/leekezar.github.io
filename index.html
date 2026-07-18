@@ -50,10 +50,10 @@
             <section class="intro-copy" style="margin-top:0;">
                 <p>
                     Today, artificial intelligence (AI) technologies are radically transforming the ways we communicate, learn, and work.
-                    However, these resources are not accessible to sign language users, including many deaf and hard-of-hearing (DHH) people.
-                    Therefore, I seek to collaboratively build technologies that center DHH signers.
+                    However, these resources are not always accessible to sign language users, including many deaf and hard-of-hearing (DHH) people.
+                    In collaboration with DHH people, including students, researchers, and users of AI, my agenda is to close these accessibility gaps with <span class="expandable concept highlight" id="sltech">ASL-inclusive technologies</span>.
 
-                    My prior work has focused on the basic skills associated with <span class="expandable concept highlight" id="perception">acquiring</span>, <span class="expandable concept highlight" id="comprehension">understanding</span>, and <span class="expandable concept highlight" id="producing">producing</span> American Sign Language.
+                    My technical work has focused on the basic skills associated with automatic <span class="expandable concept highlight" id="perception">recognition</span>, <span class="expandable concept highlight" id="understand">understanding</span>, and <span class="expandable concept highlight" id="producing">production</span> of American Sign Language (ASL).
                     What kinds of knowledge gaps do state-of-the-art AI models have while processing ASL data?
                     How can <span class="expandable concept highlight" id="ling">linguistic</span> perspectives, such as theories of <span class="expandable concept highlight" id="phonology">phonology</span> and <span class="expandable concept highlight" id="semantics">lexical semantics</span>, help close those gaps?
                     What can AI models do to advance our understanding of ASL linguistics, or empower DHH people?
@@ -63,15 +63,18 @@
         <section class="super concept expansion" id="ling">
             <p>
                 <span class="highlight-noexpand">Sign Language Linguistics</span><br>
-                Sign languages are full natural languages with their own internal structure. My research focuses on the linguistic organization of ASL signs, especially how <span class="expandable concept highlight" id="phonology">form</span> (phonology) and <span class="expandable concept highlight" id="semantics">meaning</span> (semantics) are patterned across the lexicon, and how those patterns can be documented, analyzed, and later used in <span class="super expandable concept highlight" id="understanding">SL technologies</span>.
+                Sign languages are full natural languages with their own internal structure. My research focuses on the linguistic organization of ASL signs, especially how <span class="expandable concept highlight" id="phonology">form</span> (phonology) and <span class="expandable concept highlight" id="semantics">meaning</span> (semantics) are patterned across the lexicon, and how those patterns can be documented, analyzed, and later used in <span class="super expandable concept highlight" id="sltech">SL technologies</span>.
             </p>
 
             <section class="concept expansion" id="phonology">
                 <p>
                     <span class="highlight-noexpand">Phonemes</span><br>
-                    In visual-manual modalities, phonemes correspond to articulatory patterns that signal a change in meaning. For example, the prototypical ASL signs for "mother" and "father" are contrasted by location (chin or forehead, respectively). Changes in meaning can also be signaled through visual contrasts in handshape, palm orientation, movement, facial features, and body movements.
+                    In visual-manual modalities, phonemes correspond to patterns of articulation that signal a change in meaning.
+                    For example, the prototypical ASL signs for "mother" and "father" are contrasted by <i>location</i> (chin or forehead, respectively).
+                    Changes in meaning can also be signaled through visual contrasts in <i>handshape, palm orientation, movement, and other non-manual markers</i>.
 
-                    The ability to consistently represent these contrasts underpins comprehension and production. My papers at <span class="expandable paper highlight" id="eacl">EACL</span>, <span class="expandable paper highlight" id="esann">ESANN</span>, and <span class="expandable paper highlight" id="aslkg">NAACL</span> have shown that machine learning models do not adequately learn this skill, but specific training techniques can improve it leading to increased performance on tasks like automatic sign recognition and predicting the meaning of novel signs.
+                    The ability to consistently represent these contrasts underpins comprehension and production.
+                    My papers at <span class="expandable paper highlight" id="eacl">EACL</span>, <span class="expandable paper highlight" id="esann">ESANN</span>, and <span class="expandable paper highlight" id="aslkg">NAACL</span> have shown that machine learning models do not adequately learn this skill, but specific training techniques can improve it leading to increased performance on tasks like automatic sign recognition and predicting the meaning of novel signs.
                 </p>
             </section> 
 
@@ -98,19 +101,21 @@
         </section> 
         </section>
 
-            <section class="super concept expansion" id="understanding">
+            <section class="super concept expansion" id="sltech">
                 <p>
                     <span class="highlight-noexpand">SL Technologies</span><br>
                     I use linguistic knowledge in SL technologies to <span class="expandable concept highlight" id="perception">perceive</span> sign structure from video, <span class="expandable concept highlight" id="recognition">understand</span> unfamiliar signs, and <span class="expandable concept highlight" id="comprehension">produce</span> compact representations that support broader coverage of the ASL lexicon.
                 </p>
                 <section class="concept expansion" id="perception">
                     <p>
-                        <span class="highlight-noexpand">Perceive</span><br>
-                        I train models to recover <span class="expandable concept highlight" id="phonology">phonological features</span> such as handshape, movement, and location directly from video, as in my <span class="expandable paper highlight" id="esann">ESANN</span> and <span class="expandable paper highlight" id="eacl">EACL</span> work, so higher-level predictions have something structured to build on. I use those visual components to improve sign recognition, especially when signs are rare, visually similar, or produced with variation. I also study compact sign encodings that preserve the parts of a sign, not just its identity, so the model can generalize across related forms instead of memorizing isolated labels.
+                        <span class="highlight-noexpand">Recognition</span><br>
+                        For tasks where the user's signing is the primary input, recognition skills are responsible for distinguishing and representing the salient visual properties of signed expressions.
+                        My approach emphasizes the ability to distinguish <span class="expandable concept highlight" id="phonology">phonological</span> contrasts, like the difference between <span class="highlight"><a href="https://asl-lex.org/visualization/?sign=computer" target="_blank">computer</a></span> and <span class="highlight"><a href="https://asl-lex.org/visualization/?sign=recording" target="_blank">recording</a></span>.
+                        My work studies when and how this skill breaks down, as well as how models can close those skill gaps by explicitly learning phonological structure.
                     </p>
                 </section>
         
-                <section class="concept expansion" id="recognition">
+                <section class="concept expansion" id="understand">
                     <p>
                         <span class="highlight-noexpand">Understand</span><br>
                         I use knowledge graphs (<span class="highlight"><a href="/knowledge-graph/">Demo</a></span>) to represent signs as linked bundles of linguistic facts about form, meaning, and lexical structure rather than as isolated labels. I study unseen sign understanding by asking whether a model can estimate what a sign means even when it has never seen that exact sign before, using <span class="expandable concept highlight" id="semantics">lexical semantics</span> regularities between form and meaning to guide its predictions. I also use embedding neighborhoods to place related signs near one another in a shared space, so similarity itself becomes a tool for exploration, interpretation, and semantic generalization.
@@ -258,7 +263,7 @@
                     </p>
                     <p>
                         <span class="highlight-noexpand">Abstract</span><br>
-                        Sign language <span class="expandable concept highlight" id="recognition">recognition</span> and translation technologies have the potential to increase access and inclusion of deaf signing communities, but research progress is bottlenecked by a lack of representative data. We introduce a new resource for American Sign Language (ASL) modeling, the Sem-Lex Benchmark. The Benchmark is the current largest of its kind, consisting of over 84k videos of isolated sign productions from deaf ASL signers who gave informed consent and received compensation. Human experts aligned these videos with other sign language resources including ASL-LEX, SignBank, and ASL Citizen, enabling useful expansions for sign and <span class="expandable concept highlight" id="perception">phonological feature recognition</span>. We present a suite of experiments which make use of the linguistic information in ASL-LEX, evaluating the practicality and fairness of the Sem-Lex Benchmark for isolated sign recognition (ISR). We use an SL-GCN model to show that the phonological features are recognizable with 85% accuracy, and that they are efective as an auxiliary target to ISR. Learning to recognize phonological features alongside gloss results in a 6% improvement for few-shot ISR accuracy and a 2% improvement for ISR accuracy overall. Instructions for downloading the data can be found at https://github.com/leekezar/SemLex.
+                        Sign language <span class="expandable concept highlight" id="perception">recognition</span> and translation technologies have the potential to increase access and inclusion of deaf signing communities, but research progress is bottlenecked by a lack of representative data. We introduce a new resource for American Sign Language (ASL) modeling, the Sem-Lex Benchmark. The Benchmark is the current largest of its kind, consisting of over 84k videos of isolated sign productions from deaf ASL signers who gave informed consent and received compensation. Human experts aligned these videos with other sign language resources including ASL-LEX, SignBank, and ASL Citizen, enabling useful expansions for sign and <span class="expandable concept highlight" id="perception">phonological feature recognition</span>. We present a suite of experiments which make use of the linguistic information in ASL-LEX, evaluating the practicality and fairness of the Sem-Lex Benchmark for isolated sign recognition (ISR). We use an SL-GCN model to show that the phonological features are recognizable with 85% accuracy, and that they are efective as an auxiliary target to ISR. Learning to recognize phonological features alongside gloss results in a 6% improvement for few-shot ISR accuracy and a 2% improvement for ISR accuracy overall. Instructions for downloading the data can be found at https://github.com/leekezar/SemLex.
                     </p>
                 </span>
 
@@ -298,7 +303,7 @@
                     </p>
                     <p>
                         <span class="highlight-noexpand">Abstract</span><br>
-                        Like speech, signs are composed of discrete, recombinable features called <span class="expandable concept highlight" id="phonology">phonemes</span>. Prior work shows that models which can <span class="expandable concept highlight" id="perception">recognize phonemes</span> are better at <span class="expandable concept highlight" id="recognition">sign recognition</span>, motivating deeper exploration into strategies for modeling sign language phonemes. In this work, we learn graph convolution networks to recognize the sixteen phoneme"types"found in ASL-LEX 2.0. Specifically, we explore how learning strategies like multi-task and curriculum learning can leverage mutually useful information between phoneme types to facilitate better modeling of sign language phonemes. Results on the Sem-Lex Benchmark show that curriculum learning yields an average accuracy of 87% across all phoneme types, outperforming fine-tuning and multi-task strategies for most phoneme types.
+                        Like speech, signs are composed of discrete, recombinable features called <span class="expandable concept highlight" id="phonology">phonemes</span>. Prior work shows that models which can <span class="expandable concept highlight" id="perception">recognize phonemes</span> are better at <span class="expandable concept highlight" id="perception">sign recognition</span>, motivating deeper exploration into strategies for modeling sign language phonemes. In this work, we learn graph convolution networks to recognize the sixteen phoneme"types"found in ASL-LEX 2.0. Specifically, we explore how learning strategies like multi-task and curriculum learning can leverage mutually useful information between phoneme types to facilitate better modeling of sign language phonemes. Results on the Sem-Lex Benchmark show that curriculum learning yields an average accuracy of 87% across all phoneme types, outperforming fine-tuning and multi-task strategies for most phoneme types.
                     </p>
                 </span>
 
@@ -340,7 +345,7 @@
                     </p>
                     <p>
                         <span class="highlight-noexpand">Abstract</span><br>
-                        We use insights from research on American Sign Language (ASL) <span class="expandable concept highlight" id="phonology">phonology</span> to train models for <span class="expandable concept highlight" id="recognition">isolated sign language recognition</span> (ISLR), a step towards automatic sign language <span class="expandable concept highlight" id="understanding">understanding</span>. Our key insight is to explicitly recognize the role of phonology in sign production to achieve more accurate ISLR than existing work which does not consider sign language phonology. We train ISLR models that take in pose estimations of a signer producing a single sign to predict not only the sign but additionally its phonological characteristics, such as the handshape. These auxiliary predictions lead to a nearly 9% absolute gain in sign recognition accuracy on the WLASL benchmark, with consistent improvements in ISLR regardless of the underlying prediction model architecture. This work has the potential to accelerate linguistic research in the domain of signed languages and reduce communication barriers between deaf and hearing people.
+                        We use insights from research on American Sign Language (ASL) <span class="expandable concept highlight" id="phonology">phonology</span> to train models for <span class="expandable concept highlight" id="perception">isolated sign language recognition</span> (ISLR), a step towards automatic sign language <span class="expandable concept highlight" id="understand">understanding</span>. Our key insight is to explicitly recognize the role of phonology in sign production to achieve more accurate ISLR than existing work which does not consider sign language phonology. We train ISLR models that take in pose estimations of a signer producing a single sign to predict not only the sign but additionally its phonological characteristics, such as the handshape. These auxiliary predictions lead to a nearly 9% absolute gain in sign recognition accuracy on the WLASL benchmark, with consistent improvements in ISLR regardless of the underlying prediction model architecture. This work has the potential to accelerate linguistic research in the domain of signed languages and reduce communication barriers between deaf and hearing people.
                     </p>
                 </span>
 
