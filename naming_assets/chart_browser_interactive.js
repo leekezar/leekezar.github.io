@@ -1800,25 +1800,27 @@
       const displayZ = normalizedBehaviorZ(prof, mark.model, exact ? mark.scale : null, mark.comp);
       const barsHtml = zBarRows(displayZ, behaviorIdxs.length, "main", behaviorIdxs, rawZ);
       const pie = profilePieParts(mark, prof, behaviorIdxs);
-      codeProfile.innerHTML = `<b>${esc(mark.label)} - Which behaviors are present when this code is used?</b><br><span class="muted">Scope: ${esc(scope)}; windows assigned: ${prof[R.count]}; bars are channel-normalized z-scores, so each behavior is judged relative to how much that behavior varies across codes. Hover a row for raw z.</span><div class="profileGrid">${pieSvg(pie.vals, pie.colors)}<div>${barsHtml}</div></div><div class="pieLegend">${pie.legend}</div>`;
+      codeProfile.innerHTML = `<b>${esc(mark.label)} - Which behaviors are present when this code is used?</b><br><span class="muted">Bars: z relative to this codebook; 0 = typical, + = more present, - = less present. Pie: absolute share of this code's deviation profile.</span><div class="profileGrid">${pieSvg(pie.vals, pie.colors)}<div>${barsHtml}</div></div><div class="pieLegend">${pie.legend}</div>`;
     }
-    function codeProfileTooltip(mark) {
+    function codeProfileTooltip(mark, titleOverride = null) {
       const exact = profileByMSCCode.get(key(mark.model, mark.scale, mark.comp, mark.code));
       const prof = exact || profileByMCCode.get(key(mark.model, mark.comp, mark.code));
       if (!prof) return `<b>${esc(mark.label)}</b><span class="tipMuted">Unused codebook entry: no exported windows were assigned to this code, so there is no behavior decomposition to highlight.</span>`;
-      const scope = exact ? data.scaleLabels[mark.scale] : "all time windows";
       const behaviorIdxs = sourceBehaviorIndices(mark.comp);
       const rawZ = prof[R.zMeans] || prof[R.means];
       const displayZ = normalizedBehaviorZ(prof, mark.model, exact ? mark.scale : null, mark.comp);
       const barsHtml = zBarRows(displayZ, behaviorIdxs.length, "tip", behaviorIdxs, rawZ);
       const pie = profilePieParts(mark, prof, behaviorIdxs);
-      return `<b>${esc(mark.label)} - Which behaviors are present when this code is used?</b><span class="tipMuted">Scope: ${esc(scope)}; windows assigned: ${prof[R.count]}; bars are channel-normalized; hover rows for raw z.</span><div class="tipProfile"><div class="tipPiePane">${pieSvg(pie.vals, pie.colors)}<div class="tipLegend">${pie.legend}</div></div><div class="tipZPane">${barsHtml}</div></div>`;
+      const title = titleOverride || `${mark.label} - Which behaviors are present when this code is used?`;
+      return `<b>${esc(title)}</b><span class="tipMuted">Bars: z vs this codebook. Pie: absolute share of the deviation profile.</span><div class="tipProfile"><div class="tipPiePane">${pieSvg(pie.vals, pie.colors)}<div class="tipLegend">${pie.legend}</div></div><div class="tipZPane">${barsHtml}</div></div>`;
     }
     function codeMarkTooltip(mark) {
       if (!mark.pair) return codeProfileTooltip(mark);
-      const xMark = { model:mark.model, scale:mark.scale, comp:mark.xComp, code:mark.xCode, label:`X ${data.components[mark.xComp]} C${mark.xCode}` };
-      const yMark = { model:mark.model, scale:mark.scale, comp:mark.yComp, code:mark.yCode, label:`Y ${data.components[mark.yComp]} C${mark.yCode}` };
-      return `<b>${esc(mark.label)}</b><span class="tipMuted">This node is a displayed code pair, not an extra learned codebook. The panels below show each component code's behavior profile.</span><div class="pairTip">${codeProfileTooltip(xMark)}${codeProfileTooltip(yMark)}</div>`;
+      const xLabel = `${data.components[mark.xComp]} C${mark.xCode}`;
+      const yLabel = `${data.components[mark.yComp]} C${mark.yCode}`;
+      const xMark = { model:mark.model, scale:mark.scale, comp:mark.xComp, code:mark.xCode, label:xLabel };
+      const yMark = { model:mark.model, scale:mark.scale, comp:mark.yComp, code:mark.yCode, label:yLabel };
+      return `<b>${esc(mark.label)}</b><div class="pairTip"><div class="pairHalf">${codeProfileTooltip(xMark, xLabel)}</div><div class="pairHalf">${codeProfileTooltip(yMark, yLabel)}</div></div>`;
     }
     function profileFor(model, scale, comp, code) {
       return profileByMSCCode.get(key(model, scale, comp, code)) || profileByMCCode.get(key(model, comp, code));
@@ -2148,11 +2150,15 @@
         ctx.strokeStyle = "rgba(0,0,0,.25)";
         ctx.strokeRect(cx - bw / 2, bottom - barH, bw, barH);
         ctx.globalAlpha = 1;
-        currentCodeMarks.push({x:cx, y:bottom - Math.max(6, barH) / 2, r:Math.max(11, bw / 2), model:f.model, scale:f.scale, comp:compIdx, code, label:`${data.components[compIdx]} code ${code}`});
-        ctx.fillStyle = "#191919";
-        ctx.font = "700 11px Segoe UI, Arial";
+        const markerY = bottom + 17;
+        drawDiamond(cx, markerY, 9.3, palette[code % palette.length], "#111", 1.1);
+        currentCodeMarks.push({x:cx, y:markerY, r:15, model:f.model, scale:f.scale, comp:compIdx, code, label:`${data.components[compIdx]} code ${code}`});
+        ctx.fillStyle = "#111";
+        ctx.font = "800 10.5px Segoe UI, Arial";
         ctx.textAlign = "center";
-        ctx.fillText(String(code), cx, bottom + 16);
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(code), cx, markerY + 0.3);
+        ctx.textBaseline = "alphabetic";
         if (share >= 0.08) {
           ctx.fillStyle = "#333";
           ctx.font = "11px Segoe UI, Arial";
@@ -2309,12 +2315,50 @@
         const next = [out[0]];
         for (let i = 0; i < out.length - 1; i++) {
           const a = out[i], b = out[i + 1];
-          next.push({ x: a.x * 0.75 + b.x * 0.25, y: a.y * 0.75 + b.y * 0.25 });
-          next.push({ x: a.x * 0.25 + b.x * 0.75, y: a.y * 0.25 + b.y * 0.75 });
+          next.push({
+            x: a.x * 0.75 + b.x * 0.25,
+            y: a.y * 0.75 + b.y * 0.25,
+            progress: (a.progress ?? 0) * 0.75 + (b.progress ?? 0) * 0.25,
+            pt: b.pt || b,
+          });
+          next.push({
+            x: a.x * 0.25 + b.x * 0.75,
+            y: a.y * 0.25 + b.y * 0.75,
+            progress: (a.progress ?? 0) * 0.25 + (b.progress ?? 0) * 0.75,
+            pt: b.pt || b,
+          });
         }
         next.push(out[out.length - 1]);
         out = next;
       }
+      return out;
+    }
+    function interpDisplayPath(points, progress) {
+      if (!points.length) return null;
+      if (progress <= points[0].progress) return {...points[0], progress};
+      if (progress >= points[points.length - 1].progress) return {...points[points.length - 1], progress};
+      let lo = 0, hi = points.length - 1;
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (points[mid].progress <= progress) lo = mid; else hi = mid;
+      }
+      const a = points[lo], b = points[hi];
+      const t = (progress - a.progress) / Math.max(1e-9, b.progress - a.progress);
+      return {
+        x:a.x + (b.x - a.x) * t,
+        y:a.y + (b.y - a.y) * t,
+        progress,
+        pt:t < 0.5 ? (a.pt || a) : (b.pt || b),
+      };
+    }
+    function stableTailPolyline(series, start, end, ex, rect) {
+      const mapped = series.map(p => ({ ...mapPt(p, ex, rect), progress:p.progress, pt:p }));
+      const smooth = smoothPolyline(mapped, mapped.length >= 5 ? 2 : 1).sort((a,b) => a.progress - b.progress);
+      const out = [];
+      const a = interpDisplayPath(smooth, start), b = interpDisplayPath(smooth, end);
+      if (a) out.push(a);
+      for (const p of smooth) if (p.progress > start && p.progress < end) out.push(p);
+      if (b && (!out.length || Math.abs(out[out.length - 1].progress - b.progress) > 1e-8)) out.push(b);
       return out;
     }
     function drawPaths(seriesRows, f, ex, rect) {
@@ -2329,13 +2373,14 @@
         const sKey = sessionBaseKey(row.session);
         const highlighted = f.highlightSessions.has(sKey);
         const hovered = hoveredSessionKey === sKey;
-        const mapped = pts.map(p => mapPt(p, ex, rect));
-        const smooth = smoothPolyline(mapped, pts.length >= 5 ? 2 : 1);
+        const smooth = stableTailPolyline(row.series, start, end, ex, rect);
+        if (smooth.length < 2) continue;
         const baseAlpha = hovered ? 0.92 : highlighted ? 0.68 : 0.30;
         const lineWidth = hovered ? 4.2 : highlighted ? 3.0 : 1.7;
-        const stroke = hovered || highlighted ? "#000" : "rgba(0,0,0,.58)";
-        for (let i = 0; i < mapped.length - 1; i++) {
-          currentTailHits.push({ sessionKey:sKey, pt:pts[i + 1], x1:mapped[i].x, y1:mapped[i].y, x2:mapped[i + 1].x, y2:mapped[i + 1].y });
+        const tailColor = f.showKeypoints ? colorForPoint(pts[pts.length - 1], f) : "rgba(65,65,65,.66)";
+        const stroke = hovered || highlighted ? "#000" : tailColor;
+        for (let i = 0; i < smooth.length - 1; i++) {
+          currentTailHits.push({ sessionKey:sKey, pt:smooth[i + 1].pt || pts[pts.length - 1], x1:smooth[i].x, y1:smooth[i].y, x2:smooth[i + 1].x, y2:smooth[i + 1].y });
         }
         for (let i = 0; i < smooth.length - 1; i++) {
           const fade = 0.25 + 0.75 * (i + 1) / Math.max(1, smooth.length - 1);
@@ -3381,25 +3426,31 @@
     }
     function drawNamingStars(seriesRows, f, ex, rect) {
       if (!f.showNamingStars) return;
-      const moving = true;
-      const lifetime = moving ? Math.max(1 / 10000, f.windowsPerSecond / Math.max(1, typicalWindowCount(f) - 1)) : 1;
-      const start = moving ? Math.max(0, f.progress - lifetime) : 0;
-      const end = moving ? f.progress : 1;
+      const lifetime = 3 * Math.max(0.1, f.windowsPerSecond) / Math.max(1, typicalWindowCount(f) - 1);
+      const start = Math.max(0, f.progress - lifetime);
+      const end = f.progress;
       for (const row of seriesRows) {
+        const head = interp(row.series, f.progress);
+        if (!head) continue;
         let lastAnchor = -Infinity;
+        let active = false;
+        let freshestProgress = -Infinity;
         for (const p of row.series) {
           if (!p.window || data.phases[p.window[W.phase]] !== "during") continue;
           if (p.progress < start || p.progress > end) continue;
           const minGap = Math.max(0.5, scaleSeconds(p.scale) * 0.75);
           if (p.window[W.anchor] - lastAnchor < minGap) continue;
           lastAnchor = p.window[W.anchor];
-          const m = mapPt(p, ex, rect);
-          const age = moving ? clamp((p.progress - start) / Math.max(1e-9, end - start), 0, 1) : 1;
-          ctx.save();
-          ctx.globalAlpha = 0.35 + 0.65 * age;
-          drawStar(m.x, m.y, 7.2, colorForPoint(p, f));
-          ctx.restore();
+          active = true;
+          freshestProgress = Math.max(freshestProgress, p.progress);
         }
+        if (!active) continue;
+        const m = mapPt(head, ex, rect);
+        const age = clamp((f.progress - freshestProgress) / Math.max(1e-9, lifetime), 0, 1);
+        ctx.save();
+        ctx.globalAlpha = 0.96 - 0.26 * age;
+        drawStar(m.x, m.y, 7.2, colorForPoint(head, f));
+        ctx.restore();
       }
     }
     function syncCanvasSize() {
@@ -3495,7 +3546,6 @@
       drawTopologyContours(seriesRows, pts, f, ex, rect);
       drawTransitions(seriesRows, f, ex, rect, cb, ring);
       drawPaths(seriesRows, f, ex, rect);
-      drawNamingStars(seriesRows, f, ex, rect);
       currentDrawn = [];
       if (f.showKeypoints) {
         for (const pt of pts) {
@@ -3514,6 +3564,7 @@
       }
       if (f.mapMode === "code_layout") drawCodeRingNodes(rect, ex, ring, f);
       else if (f.showCodes || f.showTransitions) drawCodeMarks(rect, ex, cb, f);
+      drawNamingStars(seriesRows, f, ex, rect);
       const source = data.models.find(m => m.idx === f.model)?.label || "model";
       currentCanvasMeta = filterSummary(f);
       const windows = seriesRows.reduce((a,b)=>a+b.series.length,0);
@@ -3892,10 +3943,10 @@
         ".explorerControls .globalSelectors .controlRow > div > label",
         ".explorerControls .layerHeader > label",
         ".explorerControls .layerInner > label",
-        ".explorerControls .abCompareGrid > label",
         ".explorerControls .inlineChecks > label"
       ].join(",");
       document.querySelectorAll(selector).forEach(node => {
+        if (node.closest(".abAccordion") || node.closest(".abCompareGrid")) return;
         if (node.querySelector(".helpIcon")) return;
         const text = helpLabelText(node);
         const help = helpForLabel(text);
