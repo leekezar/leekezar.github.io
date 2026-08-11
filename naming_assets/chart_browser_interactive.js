@@ -105,6 +105,9 @@
     let lastDrag = null;
     let sessionRows = [];
     let relatedMode = "similar";
+    let bootingUrlState = true;
+    let pendingUrlSync = null;
+    let lastUrlSyncMs = 0;
 
     for (const p of data.points) {
       pointByExact.set(key(p[P.model], p[P.sid], p[P.scale], p[P.comp], p[P.token]), p);
@@ -160,6 +163,21 @@
     function checkboxAllValues(id) {
       return new Set([...document.querySelectorAll(`#${id} input[type=checkbox]`)].map(x => x.value));
     }
+    function checkboxState(id) {
+      return [...document.querySelectorAll(`#${id} input[type=checkbox]:checked`)].map(x => x.value);
+    }
+    function setCheckboxState(id, values) {
+      if (!Array.isArray(values)) return;
+      const wanted = new Set(values.map(String));
+      document.querySelectorAll(`#${id} input[type=checkbox]`).forEach(x => { x.checked = wanted.has(String(x.value)); });
+    }
+    function setIfOption(select, value) {
+      if (!select || value === undefined || value === null) return false;
+      const v = String(value);
+      if (![...select.options].some(o => o.value === v)) return false;
+      select.value = v;
+      return true;
+    }
     function fillChecks(id, values, labelMap = {}) {
       const node = $(id);
       node.innerHTML = values.map(v => `<label><input type="checkbox" value="${esc(v)}" checked> ${esc(labelMap[v] || v)}</label>`).join("");
@@ -199,6 +217,146 @@
         sessionPhases: checkboxValues(`${prefix}_sessionPhase`),
         mutualAttention: checkboxValues(`${prefix}_mutualAttention`),
       };
+    }
+    function compareState(prefix) {
+      return {
+        l: checkboxState(`${prefix}_language`),
+        a: checkboxState(`${prefix}_hearing`),
+        s: checkboxState(`${prefix}_session`),
+        n: checkboxState(`${prefix}_naming`),
+        p: checkboxState(`${prefix}_proximity`),
+        ph: checkboxState(`${prefix}_sessionPhase`),
+        ma: checkboxState(`${prefix}_mutualAttention`),
+      };
+    }
+    function applyCompareState(prefix, st) {
+      if (!st) return;
+      setCheckboxState(`${prefix}_language`, st.l);
+      setCheckboxState(`${prefix}_hearing`, st.a);
+      setCheckboxState(`${prefix}_session`, st.s);
+      setCheckboxState(`${prefix}_naming`, st.n);
+      setCheckboxState(`${prefix}_proximity`, st.p);
+      setCheckboxState(`${prefix}_sessionPhase`, st.ph);
+      setCheckboxState(`${prefix}_mutualAttention`, st.ma);
+    }
+    function encodeUrlState(obj) {
+      const bytes = new TextEncoder().encode(JSON.stringify(obj));
+      let bin = "";
+      bytes.forEach(b => { bin += String.fromCharCode(b); });
+      return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    }
+    function decodeUrlState(raw) {
+      try {
+        let txt = String(raw || "").replace(/-/g, "+").replace(/_/g, "/");
+        while (txt.length % 4) txt += "=";
+        const bin = atob(txt);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return JSON.parse(new TextDecoder("utf-8").decode(bytes));
+      } catch (_) {
+        return null;
+      }
+    }
+    function collectUrlState() {
+      const st = {
+        m: controls.model.value,
+        sc: controls.scale.value,
+        x: controls.xComp.value,
+        y: controls.yComp.value,
+        pr: controls.progress.value,
+        bg: controls.showBg.checked ? 1 : 0,
+        lp: controls.latentPositions.checked ? 1 : 0,
+        dots: controls.showKeypoints.checked ? 1 : 0,
+        trails: controls.showTrails.checked ? 1 : 0,
+        stars: controls.showNamingStars.checked ? 1 : 0,
+        topo: controls.showTopology.checked ? 1 : 0,
+        trans: controls.showTransitions.checked ? 1 : 0,
+        color: controls.color.value,
+        tail: controls.tailLength.value,
+        cuCtx: controls.codeUsageContext ? controls.codeUsageContext.value : "1000",
+        cuStack: controls.codeUsageStack ? controls.codeUsageStack.value : "none",
+        topCtx: controls.topologyContext.value,
+        topMode: controls.topologyMode.value,
+        trCtx: controls.transitionContext.value,
+        trMode: controls.transitionMode.value,
+        selActive: controls.selectedSessionsActive?.checked ? 1 : 0,
+        l: checkboxState("embedLanguageChecks"),
+        a: checkboxState("embedHearingChecks"),
+        se: checkboxState("embedSessionChecks"),
+        n: checkboxState("embedNamingChecks"),
+        prox: checkboxState("embedProximityChecks"),
+        ph: checkboxState("embedSessionPhaseChecks"),
+        ma: checkboxState("embedMutualAttentionChecks"),
+        tA: compareState("topoA"),
+        tB: compareState("topoB"),
+        rA: compareState("transA"),
+        rB: compareState("transB"),
+      };
+      if (controls.selectedSessionsActive?.checked) {
+        st.fs = checkboxState("embedFilterSessions");
+        st.hs = checkboxState("embedHighlightSessions");
+      }
+      return st;
+    }
+    function syncUrlStateNow() {
+      if (bootingUrlState) return;
+      const url = new URL(window.location.href);
+      url.searchParams.set("state", encodeUrlState(collectUrlState()));
+      window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+      lastUrlSyncMs = Date.now();
+    }
+    function scheduleUrlStateSync() {
+      if (bootingUrlState || !window.history || !window.URL) return;
+      const elapsed = Date.now() - lastUrlSyncMs;
+      if (elapsed > 500) {
+        syncUrlStateNow();
+        return;
+      }
+      if (pendingUrlSync) return;
+      pendingUrlSync = setTimeout(() => {
+        pendingUrlSync = null;
+        syncUrlStateNow();
+      }, 520 - elapsed);
+    }
+    function applyUrlState() {
+      const st = decodeUrlState(new URLSearchParams(window.location.search).get("state"));
+      if (!st) return false;
+      if (setIfOption(controls.model, st.m)) fillScaleControls();
+      if (setIfOption(controls.scale, st.sc)) fillAxisControls();
+      setIfOption(controls.xComp, st.x);
+      setIfOption(controls.yComp, st.y);
+      if (st.pr !== undefined) controls.progress.value = String(st.pr);
+      if (st.bg !== undefined) controls.showBg.checked = !!Number(st.bg);
+      if (st.lp !== undefined) controls.latentPositions.checked = !!Number(st.lp);
+      if (st.dots !== undefined) controls.showKeypoints.checked = !!Number(st.dots);
+      if (st.trails !== undefined) controls.showTrails.checked = !!Number(st.trails);
+      if (st.stars !== undefined) controls.showNamingStars.checked = !!Number(st.stars);
+      if (st.topo !== undefined) controls.showTopology.checked = !!Number(st.topo);
+      if (st.trans !== undefined) controls.showTransitions.checked = !!Number(st.trans);
+      setIfOption(controls.color, st.color);
+      if (st.tail !== undefined) controls.tailLength.value = String(st.tail);
+      if (controls.codeUsageContext && st.cuCtx !== undefined) controls.codeUsageContext.value = String(st.cuCtx);
+      setIfOption(controls.codeUsageStack, st.cuStack);
+      if (st.topCtx !== undefined) controls.topologyContext.value = String(st.topCtx);
+      setIfOption(controls.topologyMode, st.topMode);
+      if (st.trCtx !== undefined) controls.transitionContext.value = String(st.trCtx);
+      setIfOption(controls.transitionMode, st.trMode);
+      if (controls.selectedSessionsActive && st.selActive !== undefined) controls.selectedSessionsActive.checked = !!Number(st.selActive);
+      setCheckboxState("embedLanguageChecks", st.l);
+      setCheckboxState("embedHearingChecks", st.a);
+      setCheckboxState("embedSessionChecks", st.se);
+      setCheckboxState("embedNamingChecks", st.n);
+      setCheckboxState("embedProximityChecks", st.prox);
+      setCheckboxState("embedSessionPhaseChecks", st.ph);
+      setCheckboxState("embedMutualAttentionChecks", st.ma);
+      applyCompareState("topoA", st.tA);
+      applyCompareState("topoB", st.tB);
+      applyCompareState("transA", st.rA);
+      applyCompareState("transB", st.rB);
+      refreshSessionPickers();
+      setCheckboxState("embedFilterSessions", st.fs);
+      setCheckboxState("embedHighlightSessions", st.hs);
+      return true;
     }
     function inferMapMode(f) {
       if (f.showCodeUsage) return "code_usage_chart";
@@ -2721,6 +2879,7 @@
     function draw() {
       syncCanvasSize();
       const f = filters();
+      scheduleUrlStateSync();
       const rawSeriesRows = allSeries(f);
       const cb = codebookFor(f);
       const ring = codeRingLayout(rawSeriesRows, f, cb);
@@ -3221,6 +3380,7 @@
     window.addEventListener("resize", () => { refreshOpenAccordions(); draw(); layoutRightRail(); });
     fillModelControls();
     fillSessionControls();
+    applyUrlState();
     decorateHelpIcons();
     updateMovementControls();
     updateArrangementControls();
@@ -3229,6 +3389,7 @@
     renderWindowDetail(null);
     renderCodeProfile(null);
     setHoverInspector(null);
+    bootingUrlState = false;
     draw();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
