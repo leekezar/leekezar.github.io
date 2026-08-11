@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Naming Events: ML Analysis Explorer</title>
+  <style>
+    :root {
+      --bg: #f4f2ed;
+      --panel: #ffffff;
+      --ink: #191919;
+      --muted: #686868;
+      --line: #d8d3c9;
+      --accent: #1f5f8b;
+      --accent2: #b13d2b;
+      --chip: #ece7dc;
+      --shadow: rgba(0,0,0,.08);
+      --interactive-margin: 16px;
+      --interactive-rail-width: 330px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, Segoe UI, Arial, sans-serif; }
+    header { padding: 18px 24px 12px; border-bottom: 1px solid var(--line); background: #fbfaf7; position: sticky; top: 0; z-index: 20; }
+    h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: 0; }
+    header p { margin: 0; color: var(--muted); font-size: 13px; max-width: 1100px; line-height: 1.35; }
+    .layout { display: grid; grid-template-columns: 330px 1fr; min-height: calc(100vh - 78px); }
+    body.interactiveMode { overflow: hidden; background: #faf8f2; }
+    body.interactiveMode header { display: none; }
+    body.interactiveMode .layout { display: block; min-height: 100vh; }
+    body.interactiveMode > .layout > aside { display: none; }
+    body.interactiveMode > .layout > main { width: 100%; padding: 0; }
+    body.interactiveMode .topTabs { display: none !important; }
+    body.interactiveMode .topTabs .tabButton {
+      background: rgba(255,255,255,.76); border: 1px solid rgba(25,25,25,.18);
+      box-shadow: 0 10px 28px rgba(0,0,0,.12); backdrop-filter: blur(14px);
+    }
+    body.interactiveMode .topTabs .tabButton.active { background: rgba(25,25,25,.9); color: #fff; }
+    .layout > aside { border-right: 1px solid var(--line); padding: 14px; background: #fbfaf7; position: sticky; top: 77px; height: calc(100vh - 77px); overflow: auto; }
+    main { padding: 16px 20px 32px; }
+    .control { margin-bottom: 12px; }
+    label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #4e4b47; margin-bottom: 5px; }
+    input, select { width: 100%; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); padding: 8px 9px; font-size: 13px; }
+    .internalControl { display: none !important; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .checks { display: grid; gap: 7px; margin: 10px 0 14px; }
+    .checks label { display: flex; align-items: center; gap: 8px; font-size: 12px; text-transform: none; font-weight: 600; letter-spacing: 0; margin: 0; }
+    .checks input { width: auto; }
+    .summary { display: grid; grid-template-columns: repeat(4, minmax(120px,1fr)); gap: 10px; margin-bottom: 14px; }
+    .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; box-shadow: 0 1px 4px var(--shadow); }
+    .stat b { display: block; font-size: 20px; }
+    .stat span { color: var(--muted); font-size: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 14px; align-items: start; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 1px 6px var(--shadow); overflow: hidden; }
+    .card.hidden { display: none; }
+    .media { background: #f8f8f8; border-bottom: 1px solid var(--line); }
+    .media img, .media video { width: 100%; display: block; max-height: 520px; object-fit: contain; background: #f8f8f8; }
+    .filebox { padding: 24px; font-size: 13px; color: var(--muted); min-height: 130px; display: flex; align-items: center; justify-content: center; text-align: center; }
+    .body { padding: 11px 12px 13px; }
+    .title { font-weight: 750; font-size: 14px; margin-bottom: 5px; line-height: 1.25; }
+    .desc { color: #444; font-size: 12.5px; line-height: 1.35; margin-bottom: 8px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+    .chip { background: var(--chip); border-radius: 999px; padding: 3px 7px; font-size: 11px; color: #333; }
+    .chip.score { background: #dcebf5; color: #123d5b; }
+    .chip.diff { background: #f1ddd8; color: #6b1c13; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .path { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
+    .empty { display: none; padding: 35px; background: var(--panel); border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); }
+    .quick { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+    .quick button { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 5px 8px; font-size: 12px; cursor: pointer; }
+    .quick button:hover { border-color: #999; }
+    .topTabs { display: flex; gap: 8px; padding: 10px 20px; background: #fbfaf7; border-bottom: 1px solid var(--line); position: sticky; top: 76px; z-index: 18; }
+    .tabButton { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 8px 13px; font-size: 13px; cursor: pointer; }
+    .tabButton.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+    .tabPanel { display: none; }
+    .tabPanel.active { display: block; }
+    .guide { background: #fffaf0; border: 1px solid #e4d4aa; border-radius: 8px; padding: 11px 13px; margin-bottom: 14px; font-size: 13px; line-height: 1.38; }
+    .guide b { display: block; margin-bottom: 3px; }
+    .comparePanel { display: none; background: #fbfaf7; border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 16px; box-shadow: 0 1px 6px var(--shadow); }
+    .compareHeader { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 10px; }
+    .compareHeader h2 { font-size: 16px; margin: 0; }
+    .compareHeader button { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 6px 9px; cursor: pointer; }
+    .compareGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 12px; align-items: start; }
+    .pinRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
+    .pinRow label { display: flex; align-items: center; gap: 6px; margin: 0; text-transform: none; letter-spacing: 0; font-size: 12px; }
+    .pinRow input { width: auto; }
+    .interactiveExplorer { width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 1px 6px var(--shadow); padding: 12px; margin-bottom: 16px; }
+    .interactiveExplorer h2 { margin: 0 0 4px; font-size: 17px; }
+    .interactiveExplorer p { margin: 0 0 10px; color: var(--muted); font-size: 12.5px; line-height: 1.35; }
+    .explorerLayout { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 14px; align-items: start; }
+    .explorerControls { position: sticky; top: 130px; border: 1px solid var(--line); background: #fbfaf7; border-radius: 8px; padding: 10px; max-height: calc(100vh - 155px); overflow: auto; }
+    .controlGroup { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 16px; }
+    .controlGroup:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+    .controlGroup h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: 0; }
+    .layerHeader {
+      width: 100%; border: 0; background: transparent; padding: 0; margin: 0;
+      cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+      font-size: 12px; font-weight: 800; color: #2f2c28; user-select: none; text-align: left;
+    }
+    .layerHeader label { display: flex; align-items: center; gap: 8px; margin: 0; text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 850; cursor: pointer; }
+    .layerHeader input[type=checkbox] { width: 18px; height: 18px; accent-color: #191919; margin: 0; }
+    .layerHeader .layerHint { font-size: 10.5px; font-weight: 700; color: var(--muted); }
+    .layerToggle {
+      width: 18px; height: 18px; flex: 0 0 18px; display: inline-flex; align-items: center; justify-content: center;
+      border: 1.5px solid rgba(25,25,25,.72); border-radius: 3px; background: rgba(255,255,255,.72);
+      color: #191919; font-size: 14px; font-weight: 850; line-height: 1; padding: 0; cursor: pointer;
+    }
+    .layerToggle:hover { background: #fff; border-color: #111; }
+    .layerBody {
+      overflow: hidden; max-height: 0; opacity: 0;
+      transition: max-height .24s ease, opacity .18s ease;
+    }
+    .layerGroup.open .layerBody { opacity: 1; }
+    .layerInner { padding-top: 10px; }
+    .controlGroup > label { display: block; margin-top: 12px; margin-bottom: 6px; }
+    .controlGroup > label:first-of-type { margin-top: 0; }
+    .controlRow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .controlRow .control { margin-bottom: 8px; }
+    .checkGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 8px; }
+    .checkGrid label { display: flex; align-items: center; gap: 5px; margin: 0; text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; }
+    .checkGrid input { width: auto; }
+    .toolButtonGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .toolButtonGrid button {
+      border: 1px solid rgba(25,25,25,.15); border-radius: 7px; background: rgba(255,255,255,.78);
+      min-height: 30px; padding: 5px 7px; font-size: 11px; font-weight: 800; cursor: pointer;
+    }
+    .toolButtonGrid button:hover { background: #fff; border-color: rgba(25,25,25,.32); }
+    .compactTools { margin: 6px 0 8px; grid-template-columns: repeat(3, 1fr); }
+    .smallAction {
+      width: 100%; border: 1px solid rgba(25,25,25,.15); border-radius: 7px; background: rgba(255,255,255,.78);
+      min-height: 30px; padding: 5px 7px; font-size: 11px; font-weight: 800; cursor: pointer; margin-bottom: 8px;
+    }
+    .smallAction:hover { background: #fff; border-color: rgba(25,25,25,.32); }
+    .sessionCheckGrid {
+      max-height: 138px; overflow: auto; padding: 5px; border: 1px solid rgba(25,25,25,.10);
+      border-radius: 7px; background: rgba(255,255,255,.52); margin-bottom: 9px;
+    }
+    .sessionCheckGrid label { font-size: 11px; }
+    .chartNote {
+      padding: 8px 9px; border: 1px solid rgba(25,25,25,.10); border-radius: 7px;
+      background: rgba(255,255,255,.58); color: #444; font-size: 12px; line-height: 1.25;
+    }
+    .abAccordion { margin-top: 8px; border: 1px solid rgba(25,25,25,.12); border-radius: 8px; background: rgba(255,255,255,.48); overflow: hidden; }
+    .abTabBar { display: flex; gap: 4px; padding: 5px; background: rgba(236,231,220,.58); }
+    .abTab {
+      border: 0; border-radius: 6px; min-height: 28px; background: transparent; cursor: pointer;
+      font-size: 12px; font-weight: 850; color: #3f3c38;
+      transition: flex-basis .22s ease, flex-grow .22s ease, background .14s ease, color .14s ease;
+    }
+    .abTab[data-side="A"] { flex: 1 1 auto; }
+    .abTab[data-side="B"] { flex: 0 0 38px; }
+    .abAccordion.compareActive .abTab { flex: 1 1 0; }
+    .abTab.active { background: #191919; color: #fff; }
+    .abCompareGrid {
+      display: grid; grid-template-columns: 66px minmax(0,1fr) 0;
+      gap: 5px 7px; padding: 8px; align-items: start;
+      transition: grid-template-columns .24s ease;
+    }
+    .abAccordion.compareActive .abCompareGrid { grid-template-columns: 58px minmax(0,1fr) minmax(0,1fr); }
+    .abCompareGrid > label { margin: 4px 0 0; font-size: 10px; line-height: 1.15; color: #4e4b47; }
+    .abHead { font-size: 10px; font-weight: 900; color: #4e4b47; text-transform: uppercase; letter-spacing: .04em; }
+    .abCellB, .abHeadB {
+      opacity: 0; overflow: hidden; pointer-events: none; max-width: 0;
+      transition: opacity .18s ease, max-width .24s ease;
+    }
+    .abAccordion.compareActive .abCellB, .abAccordion.compareActive .abHeadB {
+      opacity: 1; pointer-events: auto; max-width: 500px;
+    }
+    .abCompareGrid .checkGrid { grid-template-columns: 1fr; gap: 3px; }
+    .abCompareGrid .checkGrid label { font-size: 11px; gap: 4px; }
+    .zoomButtons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .zoomButtons button { border: 1px solid rgba(25,25,25,.16); background: rgba(255,255,255,.78); border-radius: 7px; padding: 7px 8px; font-size: 12px; cursor: pointer; }
+    .zoomButtons button:hover { background: #fff; border-color: rgba(25,25,25,.32); }
+    .rangeReadout { color: var(--muted); font-size: 11.5px; margin-top: 4px; text-align: right; }
+    select[multiple] { min-height: 92px; padding: 5px; }
+    .embedTimeline { display: grid; grid-template-columns: minmax(180px, 1fr) auto; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .embedTimeline .control { margin: 0; }
+    .playerControls { display: inline-flex; align-items: center; gap: 6px; }
+    .playerControls button, .iconButton, .speedBtn {
+      border: 1px solid rgba(25,25,25,.16); background: rgba(255,255,255,.82);
+      min-height: 34px; border-radius: 9px; padding: 0 10px; font-size: 12px; font-weight: 750;
+      color: #191919; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.05);
+    }
+    .iconButton { width: 34px; padding: 0; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; }
+    .speedGroup { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid rgba(25,25,25,.14); border-radius: 10px; background: rgba(250,248,242,.78); }
+    .speedBtn { min-height: 26px; border: 0; border-radius: 7px; padding: 0 8px; box-shadow: none; background: transparent; }
+    .speedBtn.active { background: #191919; color: #fff; }
+    .playerControls button:hover { border-color: rgba(25,25,25,.34); background: #fff; }
+    .embedCanvasWrap { position: relative; border: 1px solid var(--line); background: #faf8f2; border-radius: 6px; overflow: hidden; }
+    #embedCanvas { display: block; width: 100%; height: calc(100vh - 218px); min-height: 680px; }
+    .embedStatus { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+    .embedDetailGrid { display: grid; grid-template-columns: minmax(260px, .85fr) minmax(360px, 1.15fr); gap: 12px; align-items: stretch; }
+    .embedDetail, .embedBars, .embedCodeProfile, .embedSessionList { border: 1px solid var(--line); background: #fbfaf7; border-radius: 6px; padding: 10px; font-size: 12.5px; line-height: 1.35; }
+    .embedDetail, .embedBars { height: 260px; overflow: auto; }
+    .embedCodeProfile { display: none; }
+    .embedSessionList { margin-top: 12px; max-height: 340px; overflow: auto; }
+    .hiddenExplorerInfo { display: none; }
+    .legendOverlay { display: none; }
+    .legendTitle { font-size: 13px; font-weight: 800; margin-bottom: 3px; }
+    .legendSub { color: #3f3c38; font-size: 11.5px; line-height: 1.3; }
+    .legendLayerRow { display: flex; flex-wrap: wrap; gap: 7px 12px; align-items: flex-start; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,.10); }
+    .legendLayerItem { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 5px; max-width: 100%; font-size: 11px; color: #333; }
+    .legendLayerItem b { font-size: 11px; color: #2f2c28; margin-right: 1px; }
+    .legendLayerItem span { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #333; }
+    .legendLayerItem i { width: 10px; height: 10px; border-radius: 99px; border: 1px solid rgba(0,0,0,.32); display: inline-block; }
+    .legendLayerItem em { font-style: normal; font-size: 11px; color: #3f3c38; }
+    .legendColor { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 9px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,.10); }
+    .legendColor b, .legendCodeGroup b { font-size: 11px; color: #2f2c28; margin-right: 2px; }
+    .legendColor span { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #333; }
+    .legendColor i { width: 10px; height: 10px; border-radius: 99px; border: 1px solid rgba(0,0,0,.26); display: inline-block; }
+    .legendColor em { font-style: normal; font-size: 11px; color: #3f3c38; }
+    .gradientChip { width: 72px; height: 10px; border-radius: 999px; border: 1px solid rgba(0,0,0,.25); background: linear-gradient(90deg,#d9d9d9,#777,#111); display: inline-block; }
+    .legendCodeGroup { margin-top: 9px; }
+    .legendCodes { display: grid; grid-template-columns: repeat(auto-fit, minmax(46px, 1fr)); gap: 5px; margin-top: 4px; max-width: none; }
+    .legendCodes span { display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid rgba(0,0,0,.28); border-radius: 999px; background: rgba(255,255,255,.92); padding: 5px 7px; font-size: 12px; font-weight: 800; color: #111; cursor: default; box-shadow: 0 1px 4px rgba(0,0,0,.10); }
+    .legendCodes span:hover { background: #fff; border-color: rgba(0,0,0,.55); }
+    .legendCodes i { width: 10px; height: 10px; border-radius: 1px; border: 1.2px solid #111; display: inline-block; flex: 0 0 auto; transform: rotate(45deg); }
+    body.interactiveMode #explorerTab {
+      position: fixed; inset: 0; display: block; z-index: 50; background: #faf8f2;
+    }
+    body.interactiveMode .interactiveExplorer {
+      position: absolute; inset: 0; margin: 0; padding: 0; border: 0; border-radius: 0;
+      box-shadow: none; background: #faf8f2;
+    }
+    body.interactiveMode .embedPending { position: fixed; top: 60px; left: 18px; z-index: 65; color: #333; }
+    body.interactiveMode .explorerLayout { display: block; }
+    body.interactiveMode .explorerControls {
+      position: fixed; top: var(--interactive-margin); bottom: var(--interactive-margin); left: var(--interactive-margin); z-index: 64; width: var(--interactive-rail-width);
+      max-height: none; overflow: auto; padding: 12px;
+      border: 1px solid rgba(25,25,25,.16); border-radius: 10px;
+      background: rgba(255,255,255,.76); box-shadow: 0 18px 48px rgba(0,0,0,.16);
+      backdrop-filter: blur(16px);
+    }
+    body.interactiveMode .embedCanvasWrap {
+      position: fixed; inset: 0; z-index: 51; border: 0; border-radius: 0; background: #faf8f2;
+    }
+    body.interactiveMode #embedCanvas { height: 100vh; min-height: 0; }
+    body.interactiveMode .embedTimeline {
+      position: fixed; left: calc(var(--interactive-margin) + var(--interactive-rail-width) + 16px); right: calc(var(--interactive-margin) + var(--interactive-rail-width) + 16px); bottom: var(--interactive-margin); z-index: 64;
+      display: grid; grid-template-columns: minmax(240px, 1fr) auto; align-items: center;
+      padding: 10px 12px; border: 1px solid rgba(25,25,25,.15); border-radius: 10px;
+      background: rgba(255,255,255,.78); box-shadow: 0 14px 36px rgba(0,0,0,.14);
+      backdrop-filter: blur(16px);
+    }
+    body.interactiveMode .embedStatus { display: none; }
+    body.interactiveMode .legendOverlay {
+      display: block; position: fixed; top: var(--interactive-margin); right: var(--interactive-margin); z-index: 64;
+      width: var(--interactive-rail-width); max-width: calc(100vw - 32px); max-height: 42vh; overflow: auto; padding: 11px 12px; border: 1px solid rgba(25,25,25,.16); border-radius: 10px;
+      background: rgba(255,255,255,.78); box-shadow: 0 18px 48px rgba(0,0,0,.14);
+      backdrop-filter: blur(16px);
+    }
+    .relatedPanel {
+      display: none;
+    }
+    body.interactiveMode .relatedPanel {
+      display: none;
+      flex-direction: column; position: fixed; right: 16px; bottom: 88px; z-index: 63;
+      height: 340px;
+      width: 430px; border: 1px solid rgba(25,25,25,.16); border-radius: 10px;
+      background: rgba(255,255,255,.80); box-shadow: 0 18px 48px rgba(0,0,0,.14);
+      backdrop-filter: blur(16px); overflow: hidden; transition: width .16s ease, right .16s ease;
+    }
+    body.interactiveMode .relatedPanel.collapsed { width: 46px; }
+    .relatedHeader { display: flex; align-items: center; gap: 9px; padding: 10px; border-bottom: 1px solid rgba(0,0,0,.10); }
+    .relatedHeader b { display: block; font-size: 12px; }
+    .relatedHeader span { color: var(--muted); font-size: 11px; }
+    .relatedToggle {
+      width: 28px; height: 28px; flex: 0 0 auto; border: 1px solid rgba(25,25,25,.16); border-radius: 8px;
+      background: rgba(255,255,255,.86); cursor: pointer; font-size: 16px; line-height: 1;
+    }
+    .relatedPanel.collapsed .relatedToggle { transform: rotate(180deg); }
+    .relatedPanel.collapsed .relatedTitle, .relatedPanel.collapsed .relatedMeta, .relatedPanel.collapsed .relatedControls, .relatedPanel.collapsed .relatedList { display: none; }
+    .relatedMeta { padding: 8px 10px 0; color: #4b4843; font-size: 11px; line-height: 1.3; }
+    .relatedControls { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; padding: 8px 10px 0; align-items: center; }
+    .relatedControls input { height: 30px; padding: 5px 8px; font-size: 12px; }
+    .relatedModeBtns { display: inline-flex; gap: 3px; padding: 3px; border: 1px solid rgba(25,25,25,.14); border-radius: 9px; background: rgba(250,248,242,.8); }
+    .relatedModeBtns button { border: 0; border-radius: 7px; background: transparent; cursor: pointer; font-size: 11px; font-weight: 800; padding: 5px 7px; }
+    .relatedModeBtns button.active { background: #191919; color: #fff; }
+    .relatedList { overflow: auto; padding: 8px 10px 10px; display: grid; gap: 6px; }
+    .relatedList.presetGrid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-auto-rows: minmax(72px, 1fr);
+      align-content: stretch;
+      gap: 8px;
+      padding: 10px;
+    }
+    .presetButton {
+      min-width: 0; border: 1px solid rgba(25,25,25,.14); border-radius: 9px;
+      background: rgba(255,255,255,.74); color: #191919; padding: 8px 8px;
+      display: flex; flex-direction: column; justify-content: space-between; gap: 4px;
+      text-align: left; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.05);
+    }
+    .presetButton:hover { background: #fff; border-color: rgba(25,25,25,.32); }
+    .presetButton.active { border-color: #191919; box-shadow: inset 0 0 0 1px #191919; }
+    .presetButton b { font-size: 11.5px; line-height: 1.12; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .presetButton span { font-size: 10.5px; color: #4f4b45; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; }
+    .presetButton em { font-style: normal; font-size: 10.5px; font-weight: 800; color: #8a2d21; }
+    .relatedCard {
+      display: grid; grid-template-columns: 68px minmax(0,1fr) 25px; gap: 7px; align-items: center;
+      border: 1px solid rgba(0,0,0,.10); border-radius: 7px; padding: 5px; background: rgba(255,255,255,.62);
+      color: inherit; text-decoration: none;
+    }
+    .relatedCard:hover { background: #fff; text-decoration: none; border-color: rgba(0,0,0,.24); }
+    .relatedMedia { height: 42px; border-radius: 5px; background: #f4f2ed; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .relatedMedia img, .relatedMedia video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .relatedFile { font-size: 11px; font-weight: 800; color: var(--muted); }
+    .relatedText b { display: block; font-size: 11px; line-height: 1.16; max-height: 28px; overflow: hidden; }
+    .relatedText span { display: block; margin-top: 4px; color: var(--muted); font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .relatedText { color: inherit; text-decoration: none; }
+    .relatedText:hover { text-decoration: none; }
+    .relatedActions { display: grid; gap: 4px; justify-items: end; align-items: center; }
+    .relatedApply {
+      border: 1px solid rgba(25,25,25,.18); background: rgba(255,255,255,.82); border-radius: 7px;
+      padding: 4px 5px; font-size: 10px; font-weight: 800; cursor: pointer;
+    }
+    .relatedApply:hover { background: #fff; border-color: rgba(25,25,25,.35); }
+    .relatedCard em { font-style: normal; font-size: 10px; color: var(--muted); text-align: right; }
+    .relatedEmpty { color: var(--muted); font-size: 12px; padding: 12px; }
+    .muted { color: var(--muted); font-size: 12px; display: block; margin: 3px 0 7px; }
+    .sessionRow { border-top: 1px solid #e5ded3; padding: 6px 0; display: grid; gap: 2px; }
+    .sessionRow.highlight { background: #fff6d7; margin: 0 -6px; padding-left: 6px; padding-right: 6px; }
+    .sessionRow span, .sessionRow em { color: var(--muted); font-style: normal; font-size: 11.5px; }
+    .profileGrid { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: start; margin-top: 8px; }
+    .profilePie { width: 102px; height: 102px; }
+    .pieLegend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .pieLegend span { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #333; }
+    .pieLegend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+    .embedPending { color: var(--muted); font-size: 12px; margin: 0 0 8px; }
+    .behaviorRow { display: grid; grid-template-columns: 180px 1fr 42px; align-items: center; gap: 8px; margin-bottom: 5px; }
+    .behaviorRow span { font-size: 11px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .behaviorRow div { height: 8px; background: #e4dfd6; border-radius: 999px; overflow: hidden; }
+    .behaviorRow i { display: block; height: 100%; background: linear-gradient(90deg, #2166ac, #b2182b); }
+    .behaviorRow b { font-size: 11px; font-weight: 650; text-align: right; }
+    .embedTooltip { display: none !important; }
+    .hoverInspector {
+      display: none; position: fixed; right: var(--interactive-margin); width: var(--interactive-rail-width); max-width: calc(100vw - 32px);
+      overflow: hidden; background: rgba(255,255,255,.84); color: #191919; border: 1px solid rgba(25,25,25,.16);
+      border-radius: 10px; padding: 10px 11px; font-size: 12px; line-height: 1.3; z-index: 64;
+      box-shadow: 0 18px 48px rgba(0,0,0,.16); backdrop-filter: blur(16px);
+    }
+    body.interactiveMode .hoverInspector { display: block; }
+    .hoverInspector > b { display: block; font-size: 12.5px; margin-bottom: 2px; }
+    .embedTooltip.profileTip { max-width: 470px; padding: 10px; }
+    .embedTooltip.sessionTip { max-width: 430px; padding: 10px 11px; }
+    .tipMuted { display: block; color: #5d5954; font-size: 11px; margin: 2px 0 7px; }
+    .sessionTipRows { display: grid; gap: 8px; margin-top: 8px; overflow: auto; max-height: calc(100% - 58px); padding-right: 3px; }
+    .sessionTipMod { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 8px; align-items: start; }
+    .sessionTipMod > b { color: #191919; font-size: 11.5px; text-transform: capitalize; display: inline-flex; align-items: center; gap: 5px; }
+    .sessionTipMod > b i { width: 10px; height: 10px; border-radius: 2px; background: var(--mod); display: inline-block; }
+    .sessionTipBar { display: grid; grid-template-columns: 128px minmax(72px, 1fr) 34px; gap: 6px; align-items: center; margin-bottom: 4px; }
+    .sessionTipBar span { color: #191919; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sessionTipBar i { height: 7px; background: rgba(0,0,0,.11); border-radius: 99px; overflow: hidden; display: block; }
+    .sessionTipBar i b { display: block; height: 100%; border-radius: 99px; }
+    .sessionTipBar em { color: #191919; font-size: 10.5px; font-style: normal; text-align: right; }
+    .sessionTipEmpty { color: #5d5954; font-size: 11px; padding-top: 1px; }
+    .tipProfile { display: grid; grid-template-rows: auto minmax(120px, 1fr); gap: 9px; min-height: 0; height: calc(100% - 48px); }
+    .tipPiePane { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 8px; align-items: center; min-height: 96px; }
+    .tipZPane { overflow: auto; min-height: 0; padding-right: 4px; }
+    .tipProfile .profilePie { width: 88px; height: 88px; }
+    .pairTip { display: grid; gap: 10px; margin-top: 8px; overflow: auto; max-height: calc(100% - 46px); padding-right: 3px; }
+    .pairTip > b, .pairTip .tipMuted:first-child { display: none; }
+    .tipBar { display: grid; grid-template-columns: 132px 1fr 34px; gap: 6px; align-items: center; margin-bottom: 4px; }
+    .tipBar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #191919; }
+    .tipBar i { height: 7px; display: block; background: rgba(0,0,0,.12); border-radius: 99px; overflow: hidden; }
+    .tipBar i b { height: 100%; display: block; background: linear-gradient(90deg, #7bb6e8, #ffb36b); }
+    .tipBar em { color: #191919; font-style: normal; font-size: 11px; text-align: right; }
+    .zTipBar i, .zRow i { position: relative; height: 8px; display: block; background: rgba(120,120,120,.18); border-radius: 99px; overflow: hidden; }
+    .zTipBar i::after, .zRow i::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(0,0,0,.35); }
+    .zRow i::after { background: rgba(0,0,0,.28); }
+    .zTipBar i b, .zRow i b { position: absolute; top: 0; height: 100%; display: block; border-radius: 99px; }
+    .zTipBar i b.pos, .zRow i b.pos { background: #f28e2b; }
+    .zTipBar i b.neg, .zRow i b.neg { background: #4e79a7; }
+    .zTipBar.sig, .zRow.sig {
+      outline: 2px solid #f5d36b; outline-offset: 1px; border-radius: 5px;
+      background: rgba(245,211,107,.16); padding: 2px 3px;
+    }
+    .zTipBar.rankSig, .zRow.rankSig {
+      outline-color: rgba(245,211,107,.72);
+      background: rgba(245,211,107,.10);
+    }
+    .zTipBar em small, .zRow em small {
+      display: inline-block; margin-left: 4px; padding: 0 3px; border-radius: 3px;
+      background: rgba(245,211,107,.24); color: inherit; font-size: 9px; font-weight: 750;
+    }
+    .zRow { grid-template-columns: 180px 1fr 52px; }
+    .zRow em { font-size: 11px; font-style: normal; font-weight: 650; text-align: right; }
+    .tipLegend { display: flex; flex-wrap: wrap; gap: 5px 8px; margin-top: 0; }
+    .tipLegend span { display: flex; align-items: center; gap: 4px; color: #333; font-size: 10.5px; }
+    .tipLegend i { width: 9px; height: 9px; display: inline-block; border-radius: 2px; }
+    .inlineChecks { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .inlineChecks label { display: flex; align-items: center; gap: 5px; margin: 0; text-transform: none; letter-spacing: 0; font-size: 12px; }
+    .inlineChecks input { width: auto; }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .layout > aside { position: relative; top: 0; height: auto; border-right: none; border-bottom: 1px solid var(--line); }
+      .summary { grid-template-columns: repeat(2, 1fr); }
+      .grid { grid-template-columns: 1fr; }
+      .embedControls { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
+      .explorerLayout { grid-template-columns: 1fr; }
+      .explorerControls { max-height: none; }
+      .embedDetailGrid { grid-template-columns: 1fr; }
+      #embedCanvas { height: 70vh; min-height: 460px; }
+    }
+  </style>
+</head>
+<body class="interactiveMode">
+  <header>
+    <h1>Naming Events: ML Analysis Explorer</h1>
+  </header>
+  <nav class="topTabs">
+    <button class="tabButton active" data-tab="figureTab">Figure browser</button>
+    <button class="tabButton" data-tab="explorerTab">Interactive explorer</button>
+  </nav>
+  <div class="layout">
+    <aside>
+      <div class="control">
+        <label for="q">Search</label>
+        <input id="q" placeholder="code, topology, s20, gaze, session...">
+      </div>
+      <div class="control"><label for="section">Analysis Section</label><select id="section"></select></div>
+      <div class="row">
+        <div class="control"><label for="type">Media Type</label><select id="type"></select></div>
+        <div class="control"><label for="sort">Sort</label><select id="sort">
+          <option value="story">Narrative order</option>
+          <option value="sep">High/low separability</option>
+          <option value="scale">Time granularity</option>
+          <option value="name">Name</option>
+          <option value="newest">Newest</option>
+          <option value="size">Largest file</option>
+        </select></div>
+      </div>
+      <div class="row">
+        <div class="control"><label for="language">Language</label><select id="language"></select></div>
+        <div class="control"><label for="hearing">Aud. Status</label><select id="hearing"></select></div>
+      </div>
+      <div class="row">
+        <div class="control"><label for="session">Session</label><select id="session"></select></div>
+        <div class="control"><label for="naming">Naming Frequency</label><select id="naming"></select></div>
+      </div>
+      <div class="row">
+        <div class="control"><label for="proximity">Naming Proximity</label><select id="proximity"></select></div>
+        <div class="control"><label for="scale">Time Granularity</label><select id="scale"></select></div>
+      </div>
+      <div class="control"><label for="modality">Modality / Component</label><select id="modality"></select></div>
+      <div class="row">
+        <div class="control"><label for="codeScope">Code Scope</label><select id="codeScope"></select></div>
+        <div class="control"><label for="minSep">Min Separability</label><input id="minSep" type="number" min="0" step="0.01" placeholder="0.00"></div>
+      </div>
+      <div class="checks">
+        <label><input type="checkbox" id="includeAll" checked> Include overview/all figures with filtered results</label>
+        <label><input type="checkbox" id="differentials"> Only differential/comparison figures</label>
+        <label><input type="checkbox" id="described" checked> Require descriptions</label>
+      </div>
+      <div class="quick">
+        <button data-preset="story">Story view</button>
+        <button data-preset="session">Session 1/2</button>
+        <button data-preset="hearing">Aud. status</button>
+        <button data-preset="proximity">Naming proximity</button>
+        <button data-preset="multi">Multimodal C0</button>
+        <button data-preset="residual">Residuals</button>
+        <button data-preset="pairs">Modality pairs</button>
+        <button data-preset="sep">Most separable</button>
+        <button data-preset="videos">Videos</button>
+        <button data-preset="reset">Reset</button>
+      </div>
+    </aside>
+    <main>
+      <section id="figureTab" class="tabPanel">
+        <div class="summary">
+          <div class="stat"><b id="visibleCount">0</b><span>visible assets</span></div>
+          <div class="stat"><b id="diffCount">0</b><span>differential views</span></div>
+          <div class="stat"><b id="videoCount">0</b><span>videos</span></div>
+          <div class="stat"><b id="bestSep">0.000</b><span>best high/low separability</span></div>
+        </div>
+        <div class="guide">
+          <b>Interpretive frame</b>
+          Look first for multimodal behavior-combination clusters, then use residual and modality-pair figures to ask what gaze, touch, language, referential language, or attention details differ inside those broad states. The current scales are 5-60 seconds; the co-PI notes suggest future model levers should also test about 1 second and 3-5 second units because those may be building blocks of joint attention.
+        </div>
+        <section id="comparePanel" class="comparePanel">
+          <div class="compareHeader">
+            <h2>Comparison View <span id="compareCount"></span></h2>
+            <button id="clearCompare">Clear comparison</button>
+          </div>
+          <div id="compareGrid" class="compareGrid"></div>
+        </section>
+        <div id="empty" class="empty">Start by searching, choosing a preset, or setting a filter. The gallery is intentionally empty by default.</div>
+        <div id="grid" class="grid"></div>
+      </section>
+      <section id="explorerTab" class="tabPanel active">
+        <div class="interactiveExplorer">
+        <div id="embedPending" class="embedPending"></div>
+        <div class="explorerLayout">
+          <div class="explorerControls">
+            <div class="controlGroup globalSelectors">
+              <div class="control presetControl"><label for="embedPreset">Preset</label><select id="embedPreset"></select></div>
+              <h3>Global Selectors</h3>
+              <select id="embedModel" class="internalControl" aria-hidden="true" tabindex="-1"></select>
+              <div class="control"><label for="embedScale">Window</label><select id="embedScale"></select></div>
+              <div class="controlRow">
+                <div class="control"><label for="embedXComponent">X Axis</label><select id="embedXComponent"></select></div>
+                <div class="control"><label for="embedYComponent">Y Axis</label><select id="embedYComponent"></select></div>
+              </div>
+              <label>Language</label>
+              <div id="embedLanguageChecks" class="checkGrid"></div>
+              <label>Aud. Status</label>
+              <div id="embedHearingChecks" class="checkGrid"></div>
+              <div class="controlRow">
+                <div>
+                  <label>Session</label>
+                  <div id="embedSessionChecks" class="checkGrid"></div>
+                </div>
+                <div>
+                  <label>Naming Frequency</label>
+                  <div id="embedNamingChecks" class="checkGrid"></div>
+                </div>
+              </div>
+              <label>Proximity to Naming Event</label>
+              <div id="embedProximityChecks" class="checkGrid"></div>
+              <label>Session Phase</label>
+              <div id="embedSessionPhaseChecks" class="checkGrid"></div>
+              <label>Mutual Attention</label>
+              <div id="embedMutualAttentionChecks" class="checkGrid"></div>
+            </div>
+            <section class="controlGroup layerGroup" data-layer="background">
+              <div class="layerHeader" aria-expanded="false"><label><input id="embedShowBg" type="checkbox" checked> Background + Codes</label><button class="layerToggle" type="button" aria-label="Expand Background + Codes">+</button></div>
+              <div class="layerBody"><div class="layerInner">
+                <div class="inlineChecks">
+                  <label><input id="embedLatentPositions" type="checkbox" checked> latent positions</label>
+                </div>
+              </div></div>
+            </section>
+            <section class="controlGroup layerGroup" data-layer="dots">
+              <div class="layerHeader" aria-expanded="false"><label><input id="embedShowKeypoints" type="checkbox" checked> Dots</label><button class="layerToggle" type="button" aria-label="Expand Dots">+</button></div>
+              <div class="layerBody"><div class="layerInner">
+                <div class="control"><label for="embedColor">Color</label><select id="embedColor">
+                  <option value="language">Language</option>
+                  <option value="aud">Aud. status</option>
+                  <option value="naming_binary">Naming: high/low</option>
+                  <option value="naming_tertile">Naming: high/mid/low</option>
+                  <option value="naming_rate">Naming: continuous</option>
+                  <option value="session">Session</option>
+                  <option value="phase">Naming proximity</option>
+                  <option value="session_phase">Session phase</option>
+                  <option value="mutual_attention">Mutual attention</option>
+                  <option value="code">Code assignment</option>
+                </select></div>
+                <div class="inlineChecks">
+                  <label><input id="embedShowTrails" type="checkbox"> session trails</label>
+                  <label><input id="embedShowNamingStars" type="checkbox"> naming event stars</label>
+                </div>
+                <div class="control movementOnly"><label for="embedTailLength">Trail Length</label><input id="embedTailLength" type="range" min="0" max="1000" step="1" value="480"><div id="embedTailReadout" class="rangeReadout">6.00% session</div></div>
+              </div></div>
+            </section>
+            <section class="controlGroup layerGroup" data-layer="selectedSessions">
+              <div class="layerHeader" aria-expanded="false"><label><input id="embedSelectedSessionsActive" type="checkbox"> Selected Sessions</label><button class="layerToggle" type="button" aria-label="Expand Selected Sessions">+</button></div>
+              <div class="layerBody"><div class="layerInner">
+                <button id="embedResetSelectedSessions" class="smallAction" type="button">Reset to global filters</button>
+                <label>Filter Sessions</label><div id="embedFilterSessions" class="checkGrid sessionCheckGrid"></div>
+                <label>Highlight Sessions</label><div id="embedHighlightSessions" class="checkGrid sessionCheckGrid"></div>
+              </div></div>
+            </section>
+            <section class="controlGroup layerGroup" data-layer="topology">
+              <div class="layerHeader" aria-expanded="false"><label><input id="embedShowTopology" type="checkbox"> Topology</label><button class="layerToggle" type="button" aria-label="Expand Topology">+</button></div>
+              <div class="layerBody"><div class="layerInner">
+                <select id="embedTopologyMode" class="internalControl" aria-hidden="true" tabindex="-1">
+                  <option value="density">Density</option>
+                  <option value="compare">A/B differential</option>
+                </select>
+                <div class="control"><label for="embedTopologyContext">Context</label><input id="embedTopologyContext" type="range" min="0" max="1000" step="1" value="1000"><div id="embedTopologyContextReadout" class="rangeReadout">full session</div></div>
+                <div class="toolButtonGrid compactTools">
+                  <button id="copyGlobalToTopology" type="button">Global -> A/B</button>
+                  <button id="copyTransitionsToTopology" type="button">Use Transitions</button>
+                  <button id="swapTopologyAB" type="button">Swap A/B</button>
+                </div>
+                <div class="abAccordion" data-ab="topology" data-mode-target="embedTopologyMode" data-inactive-value="density" data-active-value="compare">
+                  <div class="abTabBar">
+                    <button type="button" class="abTab active" data-side="A" aria-pressed="true">A</button>
+                    <button type="button" class="abTab" data-side="B" aria-pressed="false">B</button>
+                  </div>
+                  <div class="abCompareGrid">
+                    <span></span><span class="abHead">A</span><span class="abHead abHeadB">B</span>
+                    <label>Language</label><div id="topoA_language" class="checkGrid"></div><div id="topoB_language" class="checkGrid abCellB"></div>
+                    <label>Aud.</label><div id="topoA_hearing" class="checkGrid"></div><div id="topoB_hearing" class="checkGrid abCellB"></div>
+                    <label>Session</label><div id="topoA_session" class="checkGrid"></div><div id="topoB_session" class="checkGrid abCellB"></div>
+                    <label>Naming</label><div id="topoA_naming" class="checkGrid"></div><div id="topoB_naming" class="checkGrid abCellB"></div>
+                    <label>Near</label><div id="topoA_proximity" class="checkGrid"></div><div id="topoB_proximity" class="checkGrid abCellB"></div>
+                    <label>Phase</label><div id="topoA_sessionPhase" class="checkGrid"></div><div id="topoB_sessionPhase" class="checkGrid abCellB"></div>
+                    <label>Mutual</label><div id="topoA_mutualAttention" class="checkGrid"></div><div id="topoB_mutualAttention" class="checkGrid abCellB"></div>
+                  </div>
+                </div>
+              </div></div>
+            </section>
+            <section class="controlGroup layerGroup" data-layer="transitions">
+              <div class="layerHeader" aria-expanded="false"><label><input id="embedShowTransitions" type="checkbox"> Transitions</label><button class="layerToggle" type="button" aria-label="Expand Transitions">+</button></div>
+              <div class="layerBody"><div class="layerInner">
+                <select id="embedTransitionMode" class="internalControl" aria-hidden="true" tabindex="-1">
+                  <option value="observed">Observed</option>
+                  <option value="compare">A/B differential</option>
+                </select>
+                <div class="control"><label for="embedTransitionContext">Context</label><input id="embedTransitionContext" type="range" min="0" max="1000" step="1" value="1000"><div id="embedTransitionContextReadout" class="rangeReadout">full session</div></div>
+                <div class="toolButtonGrid compactTools">
+                  <button id="copyGlobalToTransitions" type="button">Global -> A/B</button>
+                  <button id="copyTopologyToTransitions" type="button">Use Topology</button>
+                  <button id="swapTransitionsAB" type="button">Swap A/B</button>
+                </div>
+                <div class="abAccordion" data-ab="transitions" data-mode-target="embedTransitionMode" data-inactive-value="observed" data-active-value="compare">
+                  <div class="abTabBar">
+                    <button type="button" class="abTab active" data-side="A" aria-pressed="true">A</button>
+                    <button type="button" class="abTab" data-side="B" aria-pressed="false">B</button>
+                  </div>
+                  <div class="abCompareGrid">
+                    <span></span><span class="abHead">A</span><span class="abHead abHeadB">B</span>
+                    <label>Language</label><div id="transA_language" class="checkGrid"></div><div id="transB_language" class="checkGrid abCellB"></div>
+                    <label>Aud.</label><div id="transA_hearing" class="checkGrid"></div><div id="transB_hearing" class="checkGrid abCellB"></div>
+                    <label>Session</label><div id="transA_session" class="checkGrid"></div><div id="transB_session" class="checkGrid abCellB"></div>
+                    <label>Naming</label><div id="transA_naming" class="checkGrid"></div><div id="transB_naming" class="checkGrid abCellB"></div>
+                    <label>Near</label><div id="transA_proximity" class="checkGrid"></div><div id="transB_proximity" class="checkGrid abCellB"></div>
+                    <label>Phase</label><div id="transA_sessionPhase" class="checkGrid"></div><div id="transB_sessionPhase" class="checkGrid abCellB"></div>
+                    <label>Mutual</label><div id="transA_mutualAttention" class="checkGrid"></div><div id="transB_mutualAttention" class="checkGrid abCellB"></div>
+                  </div>
+                </div>
+              </div></div>
+            </section>
+          </div>
+          <div>
+            <div class="embedTimeline">
+              <input id="embedProgress" class="movementOnly" type="range" min="0" max="10000" step="1" value="5000" aria-label="Session progress">
+              <div class="playerControls">
+                <button id="embedPlay" type="button" class="iconButton movementOnly" aria-label="Play">&#9658;</button>
+                <div class="speedGroup movementOnly">
+                  <button class="speedBtn active" type="button" data-speed="0.5" aria-pressed="true">1x</button>
+                  <button class="speedBtn" type="button" data-speed="1" aria-pressed="false">2x</button>
+                  <button class="speedBtn" type="button" data-speed="2" aria-pressed="false">3x</button>
+                </div>
+                <button id="embedZoomOut" type="button" class="iconButton" aria-label="Zoom out">-</button>
+                <button id="embedZoomIn" type="button" class="iconButton" aria-label="Zoom in">+</button>
+                <button id="embedResetView" type="button">Reset</button>
+                <button id="embedExport" type="button">PNG</button>
+              </div>
+              <input id="embedWindowsPerSecond" type="hidden" value="0.5">
+            </div>
+            <div id="embedStatus" class="embedStatus"></div>
+            <div class="embedCanvasWrap">
+              <canvas id="embedCanvas" width="1280" height="720"></canvas>
+              <div id="embedLegendOverlay" class="legendOverlay"></div>
+              <div id="embedHoverPanel" class="hoverInspector"></div>
+              <div id="embedTooltip" class="embedTooltip"></div>
+            </div>
+            <aside id="relatedPanel" class="relatedPanel">
+              <div class="relatedHeader">
+                <button id="relatedToggle" class="relatedToggle" type="button" aria-label="Collapse related figures">&#8250;</button>
+                <div class="relatedTitle"><b>Related figures</b><span id="relatedCount">0</span></div>
+              </div>
+              <div class="relatedMeta"></div>
+              <div class="relatedControls">
+                <input id="relatedSearch" type="search" placeholder="Search figures">
+                <div class="relatedModeBtns">
+                  <button id="relatedSimilar" class="active" type="button" aria-pressed="true">Similar</button>
+                  <button id="relatedAll" type="button" aria-pressed="false">All</button>
+                </div>
+              </div>
+              <div id="relatedList" class="relatedList"></div>
+            </aside>
+            <div class="hiddenExplorerInfo">
+            <div class="embedDetailGrid">
+              <div id="embedDetail" class="embedDetail"></div>
+              <div id="embedBars" class="embedBars"></div>
+            </div>
+            <div id="embedCodeProfile" class="embedCodeProfile"></div>
+            <div id="embedSessionList" class="embedSessionList"></div>
+            </div>
+          </div>
+        </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script type="application/json" id="assets-json">[{"id":"F_prediction_html_browser_top_separability_scores.png","path":"naming_assets/html_browser_top_separability_scores.png","name":"html_browser_top_separability_scores.png","title":"Which views best separate high and low naming","section":"F_prediction","type":"image","scale":"all","scaleLabel":"all","modalities":["all"],"component":"all","codeScope":"code_usage_summary","language":["all"],"hearing":["all"],"session":["all"],"naming":["all"],"proximity":["all"],"differential":false,"separability":0.0,"size":107925,"mtime":1786461547.3343966,"description":"Prediction/separability summary for whether code usage explains naming-event frequency or high/low naming status.","storyOrder":70},{"id":"J_session_comparisons_session_C0_code_share_s10_language_highlow.png","path":"naming_assets/session_C0_code_share_s10_language_highlow.png","name":"session_C0_code_share_s10_language_highlow.png","title":"Session, language, and naming group: broad-state occupancy (10 sec)","section":"J_session_comparisons","type":"image","scale":"s10","scaleLabel":"10 sec","modalities":["joint","language"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["S1","S2"],"naming":["low","high"],"proximity":["all"],"differential":false,"separability":0.2408,"size":45048,"mtime":1786461525.939552,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_code_share_s20_language_highlow.png","path":"naming_assets/session_C0_code_share_s20_language_highlow.png","name":"session_C0_code_share_s20_language_highlow.png","title":"Session, language, and naming group: broad-state occupancy (20 sec)","section":"J_session_comparisons","type":"image","scale":"s20","scaleLabel":"20 sec","modalities":["joint","language"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["S1","S2"],"naming":["low","high"],"proximity":["all"],"differential":false,"separability":0.2153,"size":46657,"mtime":1786461531.6984487,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_code_share_s30_language_highlow.png","path":"naming_assets/session_C0_code_share_s30_language_highlow.png","name":"session_C0_code_share_s30_language_highlow.png","title":"Session, language, and naming group: broad-state occupancy (30 sec)","section":"J_session_comparisons","type":"image","scale":"s30","scaleLabel":"30 sec","modalities":["joint","language"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["S1","S2"],"naming":["low","high"],"proximity":["all"],"differential":false,"separability":0.4682,"size":45334,"mtime":1786461537.049933,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_code_share_s5_language_highlow.png","path":"naming_assets/session_C0_code_share_s5_language_highlow.png","name":"session_C0_code_share_s5_language_highlow.png","title":"Session, language, and naming group: broad-state occupancy (5 sec)","section":"J_session_comparisons","type":"image","scale":"s5","scaleLabel":"5 sec","modalities":["joint","language"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["S1","S2"],"naming":["low","high"],"proximity":["all"],"differential":false,"separability":0.2457,"size":47188,"mtime":1786461517.0503793,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_code_share_s60_language_highlow.png","path":"naming_assets/session_C0_code_share_s60_language_highlow.png","name":"session_C0_code_share_s60_language_highlow.png","title":"Session, language, and naming group: broad-state occupancy (60 sec)","section":"J_session_comparisons","type":"image","scale":"s60","scaleLabel":"60 sec","modalities":["joint","language"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["S1","S2"],"naming":["low","high"],"proximity":["all"],"differential":false,"separability":1.8143,"size":45383,"mtime":1786461542.325537,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_topology_s10_S1_vs_S2_all.png","path":"naming_assets/session_C0_topology_s10_S1_vs_S2_all.png","name":"session_C0_topology_s10_S1_vs_S2_all.png","title":"Session 1 vs 2 broad-state map (10 sec)","section":"J_session_comparisons","type":"image","scale":"s10","scaleLabel":"10 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.2408,"size":402033,"mtime":1786461523.5156646,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_topology_s10_S1_vs_S2_NGT.png","path":"naming_assets/session_C0_topology_s10_S1_vs_S2_NGT.png","name":"session_C0_topology_s10_S1_vs_S2_NGT.png","title":"Session 1 vs 2 broad-state map (10 sec): NGT","section":"J_session_comparisons","type":"image","scale":"s10","scaleLabel":"10 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["NGT"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.2408,"size":385584,"mtime":1786461524.8360329,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_topology_s10_S1_vs_S2_NL.png","path":"naming_assets/session_C0_topology_s10_S1_vs_S2_NL.png","name":"session_C0_topology_s10_S1_vs_S2_NL.png","title":"Session 1 vs 2 broad-state map (10 sec): NL","section":"J_session_comparisons","type":"image","scale":"s10","scaleLabel":"10 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["NL"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.2408,"size":406472,"mtime":1786461525.809986,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_topology_s20_S1_vs_S2_all.png","path":"naming_assets/session_C0_topology_s20_S1_vs_S2_all.png","name":"session_C0_topology_s20_S1_vs_S2_all.png","title":"Session 1 vs 2 broad-state map (20 sec)","section":"J_session_comparisons","type":"image","scale":"s20","scaleLabel":"20 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.2153,"size":390793,"mtime":1786461529.658497,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_topology_s20_S1_vs_S2_NGT.png","path":"naming_assets/session_C0_topology_s20_S1_vs_S2_NGT.png","name":"session_C0_topology_s20_S1_vs_S2_NGT.png","title":"Session 1 vs 2 broad-state map (20 sec): NGT","section":"J_session_comparisons","type":"image","scale":"s20","scaleLabel":"20 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["NGT"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.2153,"size":329560,"mtime":1786461530.534822,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_topology_s20_S1_vs_S2_NL.png","path":"naming_assets/session_C0_topology_s20_S1_vs_S2_NL.png","name":"session_C0_topology_s20_S1_vs_S2_NL.png","title":"Session 1 vs 2 broad-state map (20 sec): NL","section":"J_session_comparisons","type":"image","scale":"s20","scaleLabel":"20 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["NL"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.2153,"size":403860,"mtime":1786461531.5586717,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_topology_s30_S1_vs_S2_all.png","path":"naming_assets/session_C0_topology_s30_S1_vs_S2_all.png","name":"session_C0_topology_s30_S1_vs_S2_all.png","title":"Session 1 vs 2 broad-state map (30 sec)","section":"J_session_comparisons","type":"image","scale":"s30","scaleLabel":"30 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.4682,"size":379827,"mtime":1786461535.1681724,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_topology_s30_S1_vs_S2_NGT.png","path":"naming_assets/session_C0_topology_s30_S1_vs_S2_NGT.png","name":"session_C0_topology_s30_S1_vs_S2_NGT.png","title":"Session 1 vs 2 broad-state map (30 sec): NGT","section":"J_session_comparisons","type":"image","scale":"s30","scaleLabel":"30 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["NGT"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.4682,"size":342710,"mtime":1786461536.049927,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_topology_s30_S1_vs_S2_NL.png","path":"naming_assets/session_C0_topology_s30_S1_vs_S2_NL.png","name":"session_C0_topology_s30_S1_vs_S2_NL.png","title":"Session 1 vs 2 broad-state map (30 sec): NL","section":"J_session_comparisons","type":"image","scale":"s30","scaleLabel":"30 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["NL"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.4682,"size":343597,"mtime":1786461536.9238381,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_topology_s5_S1_vs_S2_all.png","path":"naming_assets/session_C0_topology_s5_S1_vs_S2_all.png","name":"session_C0_topology_s5_S1_vs_S2_all.png","title":"Session 1 vs 2 broad-state map (5 sec)","section":"J_session_comparisons","type":"image","scale":"s5","scaleLabel":"5 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.2457,"size":663865,"mtime":1786461513.8303983,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_topology_s5_S1_vs_S2_NGT.png","path":"naming_assets/session_C0_topology_s5_S1_vs_S2_NGT.png","name":"session_C0_topology_s5_S1_vs_S2_NGT.png","title":"Session 1 vs 2 broad-state map (5 sec): NGT","section":"J_session_comparisons","type":"image","scale":"s5","scaleLabel":"5 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["NGT"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.2457,"size":701703,"mtime":1786461515.3913686,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_topology_s5_S1_vs_S2_NL.png","path":"naming_assets/session_C0_topology_s5_S1_vs_S2_NL.png","name":"session_C0_topology_s5_S1_vs_S2_NL.png","title":"Session 1 vs 2 broad-state map (5 sec): NL","section":"J_session_comparisons","type":"image","scale":"s5","scaleLabel":"5 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["NL"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.2457,"size":631261,"mtime":1786461516.7955382,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_topology_s60_S1_vs_S2_all.png","path":"naming_assets/session_C0_topology_s60_S1_vs_S2_all.png","name":"session_C0_topology_s60_S1_vs_S2_all.png","title":"Session 1 vs 2 broad-state map (60 sec)","section":"J_session_comparisons","type":"image","scale":"s60","scaleLabel":"60 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":1.8143,"size":363139,"mtime":1786461540.331834,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_topology_s60_S1_vs_S2_NGT.png","path":"naming_assets/session_C0_topology_s60_S1_vs_S2_NGT.png","name":"session_C0_topology_s60_S1_vs_S2_NGT.png","title":"Session 1 vs 2 broad-state map (60 sec): NGT","section":"J_session_comparisons","type":"image","scale":"s60","scaleLabel":"60 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["NGT"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":1.8143,"size":346648,"mtime":1786461541.2043588,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_topology_s60_S1_vs_S2_NL.png","path":"naming_assets/session_C0_topology_s60_S1_vs_S2_NL.png","name":"session_C0_topology_s60_S1_vs_S2_NL.png","title":"Session 1 vs 2 broad-state map (60 sec): NL","section":"J_session_comparisons","type":"image","scale":"s60","scaleLabel":"60 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["NL"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":1.8143,"size":290085,"mtime":1786461542.062647,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_transition_S1_S2_s10.png","path":"naming_assets/session_C0_transition_S1_S2_s10.png","name":"session_C0_transition_S1_S2_s10.png","title":"Session 1 vs 2 transition differences (10 sec)","section":"J_session_comparisons","type":"image","scale":"s10","scaleLabel":"10 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.2408,"size":48757,"mtime":1786461526.049891,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_transition_S1_S2_s20.png","path":"naming_assets/session_C0_transition_S1_S2_s20.png","name":"session_C0_transition_S1_S2_s20.png","title":"Session 1 vs 2 transition differences (20 sec)","section":"J_session_comparisons","type":"image","scale":"s20","scaleLabel":"20 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.2153,"size":114275,"mtime":1786461531.8666172,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_transition_S1_S2_s30.png","path":"naming_assets/session_C0_transition_S1_S2_s30.png","name":"session_C0_transition_S1_S2_s30.png","title":"Session 1 vs 2 transition differences (30 sec)","section":"J_session_comparisons","type":"image","scale":"s30","scaleLabel":"30 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.4682,"size":48994,"mtime":1786461537.144514,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_transition_S1_S2_s5.png","path":"naming_assets/session_C0_transition_S1_S2_s5.png","name":"session_C0_transition_S1_S2_s5.png","title":"Session 1 vs 2 transition differences (5 sec)","section":"J_session_comparisons","type":"image","scale":"s5","scaleLabel":"5 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.2457,"size":159533,"mtime":1786461517.350601,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_C0_transition_S1_S2_s60.png","path":"naming_assets/session_C0_transition_S1_S2_s60.png","name":"session_C0_transition_S1_S2_s60.png","title":"Session 1 vs 2 transition differences (60 sec)","section":"J_session_comparisons","type":"image","scale":"s60","scaleLabel":"60 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":true,"separability":1.8143,"size":49497,"mtime":1786461542.429805,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_language_hearing_support_counts.csv","path":"naming_assets/session_language_hearing_support_counts.csv","name":"session_language_hearing_support_counts.csv","title":"Session 1 vs 2 broad-state map (all scales)","section":"J_session_comparisons","type":"table","scale":"all","scaleLabel":"all","modalities":["language"],"component":"language","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":false,"separability":0.0,"size":766,"mtime":1786461512.7825367,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_naming_rate_by_language_hearing.png","path":"naming_assets/session_naming_rate_by_language_hearing.png","name":"session_naming_rate_by_language_hearing.png","title":"Session support and naming rates","section":"J_session_comparisons","type":"image","scale":"all","scaleLabel":"all","modalities":["language"],"component":"language","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":false,"separability":0.0,"size":61096,"mtime":1786461512.777531,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"J_session_comparisons_session_support_metadata.csv","path":"naming_assets/session_support_metadata.csv","name":"session_support_metadata.csv","title":"Session 1 vs 2 broad-state map (all scales)","section":"J_session_comparisons","type":"table","scale":"all","scaleLabel":"all","modalities":["all"],"component":"all","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["S1","S2"],"naming":["all"],"proximity":["all"],"differential":false,"separability":0.0,"size":14633,"mtime":1786461512.6182213,"description":"Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.","storyOrder":110},{"id":"K_hearing_comparisons_hearing_C0_code_share_s10_language_highlow.png","path":"naming_assets/hearing_C0_code_share_s10_language_highlow.png","name":"hearing_C0_code_share_s10_language_highlow.png","title":"Child hearing status, language, and naming group: broad-state occupancy (10 sec)","section":"K_hearing_comparisons","type":"image","scale":"s10","scaleLabel":"10 sec","modalities":["joint","language"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing","Comparison","Deaf"],"session":["all"],"naming":["low","high"],"proximity":["all"],"differential":false,"separability":0.2408,"size":53223,"mtime":1786461527.967519,"description":"Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.","storyOrder":120},{"id":"K_hearing_comparisons_hearing_C0_code_share_s20_language_highlow.png","path":"naming_assets/hearing_C0_code_share_s20_language_highlow.png","name":"hearing_C0_code_share_s20_language_highlow.png","title":"Child hearing status, language, and naming group: broad-state occupancy (20 sec)","section":"K_hearing_comparisons","type":"image","scale":"s20","scaleLabel":"20 sec","modalities":["joint","language"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing","Comparison","Deaf"],"session":["all"],"naming":["low","high"],"proximity":["all"],"differential":false,"separability":0.2153,"size":54587,"mtime":1786461533.4318495,"description":"Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.","storyOrder":120},{"id":"K_hearing_comparisons_hearing_C0_code_share_s30_language_highlow.png","path":"naming_assets/hearing_C0_code_share_s30_language_highlow.png","name":"hearing_C0_code_share_s30_language_highlow.png","title":"Child hearing status, language, and naming group: broad-state occupancy (30 sec)","section":"K_hearing_comparisons","type":"image","scale":"s30","scaleLabel":"30 sec","modalities":["joint","language"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing","Comparison","Deaf"],"session":["all"],"naming":["low","high"],"proximity":["all"],"differential":false,"separability":0.4682,"size":53582,"mtime":1786461538.8131902,"description":"Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.","storyOrder":120},{"id":"K_hearing_comparisons_hearing_C0_code_share_s5_language_highlow.png","path":"naming_assets/hearing_C0_code_share_s5_language_highlow.png","name":"hearing_C0_code_share_s5_language_highlow.png","title":"Child hearing status, language, and naming group: broad-state occupancy (5 sec)","section":"K_hearing_comparisons","type":"image","scale":"s5","scaleLabel":"5 sec","modalities":["joint","language"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing","Comparison","Deaf"],"session":["all"],"naming":["low","high"],"proximity":["all"],"differential":false,"separability":0.2457,"size":55413,"mtime":1786461520.404996,"description":"Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.","storyOrder":120},{"id":"K_hearing_comparisons_hearing_C0_code_share_s60_language_highlow.png","path":"naming_assets/hearing_C0_code_share_s60_language_highlow.png","name":"hearing_C0_code_share_s60_language_highlow.png","title":"Child hearing status, language, and naming group: broad-state occupancy (60 sec)","section":"K_hearing_comparisons","type":"image","scale":"s60","scaleLabel":"60 sec","modalities":["joint","language"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing","Comparison","Deaf"],"session":["all"],"naming":["low","high"],"proximity":["all"],"differential":false,"separability":1.8143,"size":53645,"mtime":1786461543.9238613,"description":"Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.","storyOrder":120},{"id":"K_hearing_comparisons_hearing_C0_topology_s10_hearing_vs_deaf.png","path":"naming_assets/hearing_C0_topology_s10_hearing_vs_deaf.png","name":"hearing_C0_topology_s10_hearing_vs_deaf.png","title":"Hearing vs deaf child broad-state map (10 sec)","section":"K_hearing_comparisons","type":"image","scale":"s10","scaleLabel":"10 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing","Deaf"],"session":["all"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.2408,"size":372334,"mtime":1786461526.913616,"description":"Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.","storyOrder":120},{"id":"K_hearing_comparisons_hearing_C0_topology_s10_three_groups.png","path":"naming_assets/hearing_C0_topology_s10_three_groups.png","name":"hearing_C0_topology_s10_three_groups.png","title":"Broad-state map for hearing, deaf, and comparison sessions (10 sec)","section":"K_hearing_comparisons","type":"image","scale":"s10","scaleLabel":"10 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing","Comparison","Deaf"],"session":["all"],"naming":["all"],"proximity":["all"],"differential":false,"separability":0.2408,"size":447280,"mtime":1786461527.8117566,"description":"Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.","storyOrder":120},{"id":"K_hearing_comparisons_hearing_C0_topology_s20_hearing_vs_deaf.png","path":"naming_assets/hearing_C0_topology_s20_hearing_vs_deaf.png","name":"hearing_C0_topology_s20_hearing_vs_deaf.png","title":"Hearing vs deaf child broad-state map (20 sec)","section":"K_hearing_comparisons","type":"image","scale":"s20","scaleLabel":"20 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing","Deaf"],"session":["all"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.2153,"size":330216,"mtime":1786461532.4801648,"description":"Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.","storyOrder":120},{"id":"K_hearing_comparisons_hearing_C0_topology_s20_three_groups.png","path":"naming_assets/hearing_C0_topology_s20_three_groups.png","name":"hearing_C0_topology_s20_three_groups.png","title":"Broad-state map for hearing, deaf, and comparison sessions (20 sec)","section":"K_hearing_comparisons","type":"image","scale":"s20","scaleLabel":"20 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing","Comparison","Deaf"],"session":["all"],"naming":["all"],"proximity":["all"],"differential":false,"separability":0.2153,"size":407998,"mtime":1786461533.278725,"description":"Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.","storyOrder":120},{"id":"K_hearing_comparisons_hearing_C0_topology_s30_hearing_vs_deaf.png","path":"naming_assets/hearing_C0_topology_s30_hearing_vs_deaf.png","name":"hearing_C0_topology_s30_hearing_vs_deaf.png","title":"Hearing vs deaf child broad-state map (30 sec)","section":"K_hearing_comparisons","type":"image","scale":"s30","scaleLabel":"30 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing","Deaf"],"session":["all"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.4682,"size":340631,"mtime":1786461537.7671263,"description":"Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.","storyOrder":120},{"id":"K_hearing_comparisons_hearing_C0_topology_s30_three_groups.png","path":"naming_assets/hearing_C0_topology_s30_three_groups.png","name":"hearing_C0_topology_s30_three_groups.png","title":"Broad-state map for hearing, deaf, and comparison sessions (30 sec)","section":"K_hearing_comparisons","type":"image","scale":"s30","scaleLabel":"30 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing","Comparison","Deaf"],"session":["all"],"naming":["all"],"proximity":["all"],"differential":false,"separability":0.4682,"size":407364,"mtime":1786461538.6874254,"description":"Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.","storyOrder":120},{"id":"K_hearing_comparisons_hearing_C0_topology_s5_hearing_vs_deaf.png","path":"naming_assets/hearing_C0_topology_s5_hearing_vs_deaf.png","name":"hearing_C0_topology_s5_hearing_vs_deaf.png","title":"Hearing vs deaf child broad-state map (5 sec)","section":"K_hearing_comparisons","type":"image","scale":"s5","scaleLabel":"5 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing","Deaf"],"session":["all"],"naming":["all"],"proximity":["all"],"differential":true,"separability":0.2457,"size":615056,"mtime":1786461518.536766,"description":"Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.","storyOrder":120},{"id":"K_hearing_comparisons_hearing_C0_topology_s5_three_groups.png","path":"naming_assets/hearing_C0_topology_s5_three_groups.png","name":"hearing_C0_topology_s5_three_groups.png","title":"Broad-state map for hearing, deaf, and comparison sessions (5 sec)","section":"K_hearing_comparisons","type":"image","scale":"s5","scaleLabel":"5 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing","Comparison","Deaf"],"session":["all"],"naming":["all"],"proximity":["all"],"differential":false,"separability":0.2457,"size":769633,"mtime":1786461520.1401246,"description":"Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.","storyOrder":120},{"id":"K_hearing_comparisons_hearing_C0_topology_s60_hearing_vs_deaf.png","path":"naming_assets/hearing_C0_topology_s60_hearing_vs_deaf.png","name":"hearing_C0_topology_s60_hearing_vs_deaf.png","title":"Hearing vs deaf child broad-state map (60 sec)","section":"K_hearing_comparisons","type":"image","scale":"s60","scaleLabel":"60 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing","Deaf"],"session":["all"],"naming":["all"],"proximity":["all"],"differential":true,"separability":1.8143,"size":347098,"mtime":1786461543.028812,"description":"Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.","storyOrder":120},{"id":"K_hearing_comparisons_hearing_C0_topology_s60_three_groups.png","path":"naming_assets/hearing_C0_topology_s60_three_groups.png","name":"hearing_C0_topology_s60_three_groups.png","title":"Broad-state map for hearing, deaf, and comparison sessions (60 sec)","section":"K_hearing_comparisons","type":"image","scale":"s60","scaleLabel":"60 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["Hearing","Comparison","Deaf"],"session":["all"],"naming":["all"],"proximity":["all"],"differential":false,"separability":1.8143,"size":357684,"mtime":1786461543.7815392,"description":"Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.","storyOrder":120},{"id":"L_proximity_topology_proximity_C0_code_share_s10_event_phase_highlow.png","path":"naming_assets/proximity_C0_code_share_s10_event_phase_highlow.png","name":"proximity_C0_code_share_s10_event_phase_highlow.png","title":"Broad-state occupancy by naming proximity (10 sec)","section":"L_proximity_topology","type":"image","scale":"s10","scaleLabel":"10 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["all"],"naming":["low","high"],"proximity":["far","before","during","after"],"differential":false,"separability":0.2408,"size":40578,"mtime":1786461528.9675303,"description":"Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.","storyOrder":130},{"id":"L_proximity_topology_proximity_C0_code_share_s20_event_phase_highlow.png","path":"naming_assets/proximity_C0_code_share_s20_event_phase_highlow.png","name":"proximity_C0_code_share_s20_event_phase_highlow.png","title":"Broad-state occupancy by naming proximity (20 sec)","section":"L_proximity_topology","type":"image","scale":"s20","scaleLabel":"20 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["all"],"naming":["low","high"],"proximity":["far","before","during","after"],"differential":false,"separability":0.2153,"size":42135,"mtime":1786461534.490168,"description":"Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.","storyOrder":130},{"id":"L_proximity_topology_proximity_C0_code_share_s30_event_phase_highlow.png","path":"naming_assets/proximity_C0_code_share_s30_event_phase_highlow.png","name":"proximity_C0_code_share_s30_event_phase_highlow.png","title":"Broad-state occupancy by naming proximity (30 sec)","section":"L_proximity_topology","type":"image","scale":"s30","scaleLabel":"30 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["all"],"naming":["low","high"],"proximity":["far","before","during","after"],"differential":false,"separability":0.4682,"size":40837,"mtime":1786461539.696716,"description":"Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.","storyOrder":130},{"id":"L_proximity_topology_proximity_C0_code_share_s5_event_phase_highlow.png","path":"naming_assets/proximity_C0_code_share_s5_event_phase_highlow.png","name":"proximity_C0_code_share_s5_event_phase_highlow.png","title":"Broad-state occupancy by naming proximity (5 sec)","section":"L_proximity_topology","type":"image","scale":"s5","scaleLabel":"5 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["all"],"naming":["low","high"],"proximity":["far","before","during","after"],"differential":false,"separability":0.2457,"size":42374,"mtime":1786461522.3446093,"description":"Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.","storyOrder":130},{"id":"L_proximity_topology_proximity_C0_code_share_s60_event_phase_highlow.png","path":"naming_assets/proximity_C0_code_share_s60_event_phase_highlow.png","name":"proximity_C0_code_share_s60_event_phase_highlow.png","title":"Broad-state occupancy by naming proximity (60 sec)","section":"L_proximity_topology","type":"image","scale":"s60","scaleLabel":"60 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["all"],"naming":["low","high"],"proximity":["far","before","during","after"],"differential":false,"separability":1.8143,"size":39735,"mtime":1786461544.7663138,"description":"Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.","storyOrder":130},{"id":"L_proximity_topology_proximity_C0_topology_s10_far_before_during_after.png","path":"naming_assets/proximity_C0_topology_s10_far_before_during_after.png","name":"proximity_C0_topology_s10_far_before_during_after.png","title":"Broad-state map by naming proximity (10 sec)","section":"L_proximity_topology","type":"image","scale":"s10","scaleLabel":"10 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["all"],"naming":["all"],"proximity":["far","before","during","after"],"differential":false,"separability":0.2408,"size":572527,"mtime":1786461528.845142,"description":"Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.","storyOrder":130},{"id":"L_proximity_topology_proximity_C0_topology_s20_far_before_during_after.png","path":"naming_assets/proximity_C0_topology_s20_far_before_during_after.png","name":"proximity_C0_topology_s20_far_before_during_after.png","title":"Broad-state map by naming proximity (20 sec)","section":"L_proximity_topology","type":"image","scale":"s20","scaleLabel":"20 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["all"],"naming":["all"],"proximity":["far","before","during","after"],"differential":false,"separability":0.2153,"size":495092,"mtime":1786461534.2377205,"description":"Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.","storyOrder":130},{"id":"L_proximity_topology_proximity_C0_topology_s30_far_before_during_after.png","path":"naming_assets/proximity_C0_topology_s30_far_before_during_after.png","name":"proximity_C0_topology_s30_far_before_during_after.png","title":"Broad-state map by naming proximity (30 sec)","section":"L_proximity_topology","type":"image","scale":"s30","scaleLabel":"30 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["all"],"naming":["all"],"proximity":["far","before","during","after"],"differential":false,"separability":0.4682,"size":460872,"mtime":1786461539.577882,"description":"Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.","storyOrder":130},{"id":"L_proximity_topology_proximity_C0_topology_s5_far_before_during_after.png","path":"naming_assets/proximity_C0_topology_s5_far_before_during_after.png","name":"proximity_C0_topology_s5_far_before_during_after.png","title":"Broad-state map by naming proximity (5 sec)","section":"L_proximity_topology","type":"image","scale":"s5","scaleLabel":"5 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["all"],"naming":["all"],"proximity":["far","before","during","after"],"differential":false,"separability":0.2457,"size":957165,"mtime":1786461522.1184978,"description":"Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.","storyOrder":130},{"id":"L_proximity_topology_proximity_C0_topology_s60_far_before_during_after.png","path":"naming_assets/proximity_C0_topology_s60_far_before_during_after.png","name":"proximity_C0_topology_s60_far_before_during_after.png","title":"Broad-state map by naming proximity (60 sec)","section":"L_proximity_topology","type":"image","scale":"s60","scaleLabel":"60 sec","modalities":["joint"],"component":"joint","codeScope":"multimodal_C0","language":["all"],"hearing":["all"],"session":["all"],"naming":["all"],"proximity":["far","before","during","after"],"differential":false,"separability":1.8143,"size":327307,"mtime":1786461544.6586707,"description":"Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.","storyOrder":130},{"id":"research_guide.md","path":"naming_assets/research_guide.md","name":"research_guide.md","title":"Research guide and interpretation notes","section":"root","type":"report","scale":"all","scaleLabel":"all","modalities":["all"],"component":"all","codeScope":"all","language":["all"],"hearing":["all"],"session":["all"],"naming":["all"],"proximity":["all"],"differential":false,"separability":0.0,"size":1682,"mtime":1786461489.4638956,"description":"Narrative report for the analysis package.","storyOrder":950},{"id":"tables_html_browser_separability_scores.csv","path":"naming_assets/html_browser_separability_scores.csv","name":"html_browser_separability_scores.csv","title":"Html Browser Separability Scores","section":"tables","type":"table","scale":"all","scaleLabel":"all","modalities":["all"],"component":"all","codeScope":"all","language":["all"],"hearing":["all"],"session":["all"],"naming":["all"],"proximity":["all"],"differential":false,"separability":0.0,"size":3332,"mtime":1786461547.2079651,"description":"CSV table supporting the figures and filters in this browser.","storyOrder":900}]</script>
+  <script src="naming_assets/interactive_embeddings.js?v=2026-08-11_11_19"></script>
+  <script src="naming_assets/chart_browser_interactive.js?v=2026-08-11_11_19"></script>
+  <script>
+    const ASSETS = JSON.parse(document.getElementById('assets-json').textContent);
+    const ids = ['q','section','type','language','hearing','session','naming','proximity','scale','modality','codeScope','minSep','sort','includeAll','differentials','described'];
+    const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
+    const grid = document.getElementById('grid');
+    const empty = document.getElementById('empty');
+    const comparePanel = document.getElementById('comparePanel');
+    const compareGrid = document.getElementById('compareGrid');
+    const compareCount = document.getElementById('compareCount');
+    const clearCompare = document.getElementById('clearCompare');
+    let compareIds = new Set(JSON.parse(localStorage.getItem('jointVqCompareIds') || '[]'));
+    let galleryStarted = false;
+    const scaleOrder = {all:0,s1:1,s3:2,s5:3,s10:4,s20:5,s30:6,s60:7};
+
+    function uniqFor(key) {
+      const vals = new Set(['all']);
+      for (const a of ASSETS) {
+        const v = a[key];
+        if (Array.isArray(v)) v.forEach(x => vals.add(x));
+        else if (v) vals.add(v);
+      }
+      return [...vals].filter(Boolean).sort((a,b) => a === 'all' ? -1 : b === 'all' ? 1 : String(a).localeCompare(String(b)));
+    }
+    function fillSelect(id, key, labelMap={}) {
+      const vals = uniqFor(key);
+      el[id].innerHTML = vals.map(v => `<option value="${v}">${labelMap[v] || v}</option>`).join('');
+    }
+    fillSelect('section','section');
+    fillSelect('type','type');
+    fillSelect('language','language');
+    fillSelect('hearing','hearing');
+    fillSelect('session','session');
+    fillSelect('naming','naming');
+    fillSelect('proximity','proximity');
+    fillSelect('scale','scale');
+    fillSelect('codeScope','codeScope');
+    const modalities = new Set(['all']);
+    ASSETS.forEach(a => (a.modalities || []).forEach(m => modalities.add(m)));
+    el.modality.innerHTML = [...modalities].sort((a,b) => a === 'all' ? -1 : b === 'all' ? 1 : a.localeCompare(b)).map(v => `<option value="${v}">${v}</option>`).join('');
+
+    function tagMatch(asset, key, selected) {
+      if (selected === 'all') return true;
+      const v = asset[key];
+      const arr = Array.isArray(v) ? v : [v];
+      if (arr.includes(selected)) return true;
+      return el.includeAll.checked && arr.includes('all');
+    }
+    function matches(asset) {
+      const q = el.q.value.trim().toLowerCase();
+      if (q) {
+        const hay = [asset.title, asset.name, asset.path, asset.description, asset.section, asset.component, ...(asset.modalities || [])].join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (!tagMatch(asset, 'section', el.section.value)) return false;
+      if (!tagMatch(asset, 'type', el.type.value)) return false;
+      if (!tagMatch(asset, 'language', el.language.value)) return false;
+      if (!tagMatch(asset, 'hearing', el.hearing.value)) return false;
+      if (!tagMatch(asset, 'session', el.session.value)) return false;
+      if (!tagMatch(asset, 'naming', el.naming.value)) return false;
+      if (!tagMatch(asset, 'proximity', el.proximity.value)) return false;
+      if (!tagMatch(asset, 'scale', el.scale.value)) return false;
+      if (el.modality.value !== 'all' && !(asset.modalities || []).includes(el.modality.value) && asset.component !== el.modality.value) return false;
+      if (!tagMatch(asset, 'codeScope', el.codeScope.value)) return false;
+      const minSep = Number(el.minSep.value || 0);
+      if (minSep > 0 && (asset.separability || 0) < minSep) return false;
+      if (el.differentials.checked && !asset.differential) return false;
+      if (el.described.checked && !asset.description) return false;
+      return true;
+    }
+    function sorted(list) {
+      const mode = el.sort.value;
+      const out = [...list];
+      if (mode === 'sep') out.sort((a,b) => (b.separability || 0) - (a.separability || 0) || a.storyOrder - b.storyOrder || a.name.localeCompare(b.name));
+      else if (mode === 'scale') out.sort((a,b) => (scaleOrder[a.scale] || 99) - (scaleOrder[b.scale] || 99) || a.name.localeCompare(b.name));
+      else if (mode === 'name') out.sort((a,b) => a.name.localeCompare(b.name));
+      else if (mode === 'newest') out.sort((a,b) => b.mtime - a.mtime);
+      else if (mode === 'size') out.sort((a,b) => b.size - a.size);
+      else out.sort((a,b) => a.storyOrder - b.storyOrder || (scaleOrder[a.scale] || 99) - (scaleOrder[b.scale] || 99) || a.name.localeCompare(b.name));
+      return out;
+    }
+    function chip(text, cls='') { return `<span class="chip ${cls}">${text}</span>`; }
+    function card(asset) {
+      const chips = [
+        chip(asset.section), chip(asset.type), chip(asset.codeScope || 'all'), chip(asset.scaleLabel || asset.scale),
+        ...(asset.modalities || []).slice(0,4).map(m => chip(m)),
+        ...(asset.language || []).map(x => chip(x)),
+        ...(asset.hearing || []).filter(x => x !== 'all').map(x => chip(x)),
+        ...(asset.session || []).filter(x => x !== 'all').map(x => chip(x)),
+        ...(asset.proximity || []).filter(x => x !== 'all').map(x => chip(x)),
+        asset.differential ? chip('differential','diff') : '',
+        asset.separability ? chip(`sep ${asset.separability.toFixed(3)}`, 'score') : ''
+      ].filter(Boolean).join('');
+      let media = '';
+      if (asset.type === 'image') media = `<div class="media"><a href="${asset.path}" target="_blank"><img loading="lazy" src="${asset.path}" alt="${asset.title}"></a></div>`;
+      else if (asset.type === 'video') media = `<div class="media"><video controls preload="metadata" src="${asset.path}"></video></div>`;
+      else media = `<div class="filebox"><a href="${asset.path}" target="_blank">Open ${asset.type} file</a></div>`;
+      const checked = compareIds.has(asset.id) ? 'checked' : '';
+      return `<article class="card" data-id="${asset.id}">${media}<div class="body"><div class="pinRow"><label><input type="checkbox" class="compareToggle" data-id="${asset.id}" ${checked}> Add to comparison</label><span class="chip score">${asset.separability ? 'sep ' + asset.separability.toFixed(3) : 'sep n/a'}</span></div><div class="title">${asset.title}</div><div class="desc">${asset.description}</div><div class="chips">${chips}</div><div class="path"><a href="${asset.path}" target="_blank">${asset.path}</a></div></div></article>`;
+    }
+    function renderCompare() {
+      const chosen = ASSETS.filter(a => compareIds.has(a.id));
+      comparePanel.style.display = chosen.length ? 'block' : 'none';
+      compareCount.textContent = chosen.length ? `(${chosen.length} pinned)` : '';
+      compareGrid.innerHTML = chosen.map(card).join('');
+      localStorage.setItem('jointVqCompareIds', JSON.stringify([...compareIds]));
+    }
+    function render() {
+      const visible = galleryStarted ? sorted(ASSETS.filter(matches)) : [];
+      grid.innerHTML = visible.map(card).join('');
+      empty.style.display = visible.length ? 'none' : 'block';
+      document.getElementById('visibleCount').textContent = visible.length;
+      document.getElementById('diffCount').textContent = visible.filter(a => a.differential).length;
+      document.getElementById('videoCount').textContent = visible.filter(a => a.type === 'video').length;
+      const best = visible.reduce((m,a) => Math.max(m, a.separability || 0), 0);
+      document.getElementById('bestSep').textContent = best.toFixed(3);
+      renderCompare();
+    }
+    for (const id of ids) el[id].addEventListener('input', () => { galleryStarted = true; render(); });
+    document.body.addEventListener('change', (e) => {
+      if (!e.target.classList.contains('compareToggle')) return;
+      const id = e.target.dataset.id;
+      if (e.target.checked) compareIds.add(id);
+      else compareIds.delete(id);
+      galleryStarted = true;
+      render();
+    });
+    clearCompare.addEventListener('click', () => {
+      compareIds = new Set();
+      render();
+    });
+    document.querySelectorAll('.quick button').forEach(btn => btn.addEventListener('click', () => {
+      const p = btn.dataset.preset;
+      for (const id of ['q','section','type','language','hearing','session','naming','proximity','scale','modality','codeScope']) el[id].value = 'all';
+      el.minSep.value = '';
+      el.differentials.checked = false; el.includeAll.checked = true; el.described.checked = true; el.sort.value = 'story';
+      galleryStarted = p !== 'reset';
+      if (p === 'session') el.section.value = 'J_session_comparisons';
+      if (p === 'hearing') el.section.value = 'K_hearing_comparisons';
+      if (p === 'proximity') el.section.value = 'L_proximity_topology';
+      if (p === 'multi') el.codeScope.value = 'multimodal_C0';
+      if (p === 'residual') el.codeScope.value = 'modality_residual';
+      if (p === 'pairs') el.codeScope.value = 'modality_pair';
+      if (p === 'sep') { el.differentials.checked = true; el.sort.value = 'sep'; }
+      if (p === 'videos') el.type.value = 'video';
+      render();
+    }));
+    document.querySelectorAll('.tabButton').forEach(btn => btn.addEventListener('click', () => {
+      document.querySelectorAll('.tabButton').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.tabPanel').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+      document.body.classList.toggle('interactiveMode', btn.dataset.tab === 'explorerTab');
+    }));
+    render();
+  </script>
+</body>
+</html>
