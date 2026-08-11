@@ -77,15 +77,22 @@
     async function decryptJson(key, url) {
       return JSON.parse(decoder.decode(await decryptUrl(key, url)));
     }
+    function escapeRegExp(text) {
+      return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
     function patchHtml(html, assetUrlByPath) {
       html = html.replace(/<head>`n\s*/i, '<head>\n');
       const oldBase = 'naming' + '_' + 'assets/';
       const oldBasePattern = new RegExp('<base\\s+href=["\\\']' + oldBase.replace('/', '\\/') + '["\\\']\\s*>\\s*', 'i');
       html = html.replace(oldBasePattern, '');
-      const dataUrl = assetUrlByPath.get('interactive_embeddings.js');
-      const appUrl = assetUrlByPath.get('chart_browser_interactive.js');
-      if (dataUrl) html = html.replace(/fetchTextWithProgress\("interactive_embeddings\.js\?v="\s*\+\s*cacheTag\)/g, 'fetchTextWithProgress(' + JSON.stringify(dataUrl) + ')');
-      if (appUrl) html = html.replace(/loadScript\("chart_browser_interactive\.js\?v="\s*\+\s*cacheTag\)/g, 'loadScript(' + JSON.stringify(appUrl) + ')');
+      const dataAsset = ['interactive', 'embeddings.js'].join('_');
+      const appAsset = ['chart', 'browser', 'interactive.js'].join('_');
+      const dataUrl = assetUrlByPath.get(dataAsset);
+      const appUrl = assetUrlByPath.get(appAsset);
+      const dataPattern = new RegExp('fetchTextWithProgress\\("' + escapeRegExp(dataAsset) + '\\?v="\\s*\\+\\s*cacheTag\\)', 'g');
+      const appPattern = new RegExp('loadScript\\("' + escapeRegExp(appAsset) + '\\?v="\\s*\\+\\s*cacheTag\\)', 'g');
+      if (dataUrl) html = html.replace(dataPattern, 'fetchTextWithProgress(' + JSON.stringify(dataUrl) + ')');
+      if (appUrl) html = html.replace(appPattern, 'loadScript(' + JSON.stringify(appUrl) + ')');
       html = html.replace(/(<script\b(?=[^>]*\bid=["']assets-json["'])(?=[^>]*\btype=["']application\/json["'])[^>]*>)([\s\S]*?)(<\/script>)/i, (m, open, jsonText, close) => {
         const assets = JSON.parse(jsonText);
         for (const asset of assets) if (asset && assetUrlByPath.has(asset.path)) asset.path = assetUrlByPath.get(asset.path);
