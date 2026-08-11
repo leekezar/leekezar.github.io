@@ -32,6 +32,8 @@
       topologyMode: $("embedTopologyMode"),
       topologyContext: $("embedTopologyContext"),
       topologyContextReadout: $("embedTopologyContextReadout"),
+      topologyStep: $("embedTopologyStep"),
+      topologyStepReadout: $("embedTopologyStepReadout"),
       codeUsageContext: $("embedCodeUsageContext"),
       codeUsageContextReadout: $("embedCodeUsageContextReadout"),
       codeUsageStack: $("embedCodeUsageStack"),
@@ -51,6 +53,7 @@
       showKeypoints: $("embedShowKeypoints"),
       showTrails: $("embedShowTrails"),
       tailLength: $("embedTailLength"),
+      tailLabel: $("embedTailLabel"),
       windowsPerSecond: $("embedWindowsPerSecond"),
       zoomIn: $("embedZoomIn"),
       zoomOut: $("embedZoomOut"),
@@ -100,6 +103,8 @@
     let hoveredSessionKey = null;
     let viewKey = "";
     let viewEx = null;
+    let preparedKey = "";
+    let preparedView = null;
     let playing = false;
     let timer = null;
     let lastFrameMs = 0;
@@ -376,6 +381,7 @@
         stack: controls.codeUsageStack ? controls.codeUsageStack.value : "none",
         topologyMode: controls.topologyMode.value,
         topologyContext: sliderToUrlValue(controls.topologyContext.value),
+        topologyStep: controls.topologyStep ? controls.topologyStep.value : "12",
         transitionMode: controls.transitionMode.value,
         transitionContext: sliderToUrlValue(controls.transitionContext.value),
         selected: controls.selectedSessionsActive?.checked ? "on" : "off",
@@ -396,7 +402,7 @@
     }
     const READABLE_URL_KEYS = [
       "model", "window", "x", "y", "dims", "at", "layers", "color", "speed", "tail",
-      "codeContext", "stack", "topologyMode", "topologyContext", "transitionMode", "transitionContext",
+      "codeContext", "stack", "topologyMode", "topologyContext", "topologyStep", "transitionMode", "transitionContext",
       "selected", "lang", "aud", "session", "naming", "near", "phase", "attention", "filter", "highlight",
       "topoA_lang", "topoA_aud", "topoA_session", "topoA_naming", "topoA_near", "topoA_phase", "topoA_attention",
       "topoB_lang", "topoB_aud", "topoB_session", "topoB_naming", "topoB_near", "topoB_phase", "topoB_attention",
@@ -494,6 +500,7 @@
       setIfOption(controls.codeUsageStack, st.stack);
       setIfOption(controls.topologyMode, st.topologyMode);
       if (st.topologyContext !== undefined) controls.topologyContext.value = sliderFromUrlValue(st.topologyContext);
+      if (controls.topologyStep && st.topologyStep !== undefined) controls.topologyStep.value = String(clamp(Number(st.topologyStep || 12), 3, 30));
       setIfOption(controls.transitionMode, st.transitionMode);
       if (st.transitionContext !== undefined) controls.transitionContext.value = sliderFromUrlValue(st.transitionContext);
       if (controls.selectedSessionsActive && st.selected !== undefined) controls.selectedSessionsActive.checked = st.selected === "on" || st.selected === "1" || st.selected === "true";
@@ -589,6 +596,11 @@
         else readout.textContent = `${fmt(frac * 100, 1)}% session`;
       }
       return frac;
+    }
+    function topologyStepFromSlider() {
+      const raw = clamp(Number(controls.topologyStep?.value || 12), 3, 30);
+      if (controls.topologyStepReadout) controls.topologyStepReadout.textContent = `${raw}% peak density interval`;
+      return raw / 100;
     }
     function modelScales(modelIdx) {
       const m = data.models.find(x => x.idx === modelIdx);
@@ -710,10 +722,9 @@
     function filters() {
       const tail = tailFractionFromSlider();
       if (controls.tailReadout) controls.tailReadout.textContent = `${fmt(tail * 100, 2)}% session`;
-      const spatialLayerActive = controls.showTransitions.checked || controls.showKeypoints.checked || controls.showTrails.checked || controls.showTopology.checked || controls.showNamingStars.checked;
       const latentOn = controls.latentPositions ? controls.latentPositions.checked : true;
       const bgOn = controls.showBg ? controls.showBg.checked : true;
-      const inferredCodeUsage = bgOn && !controls.showKeypoints.checked && !controls.showTopology.checked && !controls.showTransitions.checked && !controls.showTrails.checked && !controls.showNamingStars.checked;
+      const inferredCodeUsage = bgOn && !controls.showKeypoints.checked;
       const inferredBarChart = false;
       const out = {
         model: Number(controls.model.value || 0),
@@ -723,6 +734,7 @@
         dimSelection: controls.dimSelection ? controls.dimSelection.value : "grid",
         topologyMode: controls.topologyMode.value,
         topologyContext: contextFractionFromSlider(controls.topologyContext, controls.topologyContextReadout),
+        topologyStep: topologyStepFromSlider(),
         codeUsageContext: contextFractionFromSlider(controls.codeUsageContext, controls.codeUsageContextReadout),
         codeUsageStack: controls.codeUsageStack ? controls.codeUsageStack.value : "none",
         transitionMode: controls.transitionMode.value,
@@ -808,6 +820,7 @@
     }
     function updateMovementControls() {
       document.querySelectorAll(".movementOnly").forEach(node => { node.style.display = ""; });
+      if (controls.tailLabel) controls.tailLabel.textContent = controls.showTrails.checked ? "Context/tail length" : "Context length";
       controls.play.innerHTML = playing ? "&#10074;&#10074;" : "&#9658;";
       controls.play.setAttribute("aria-label", playing ? "Pause" : "Play");
       if (!controls.showKeypoints.checked) hoveredSessionKey = null;
@@ -819,7 +832,7 @@
         const label = controls.latentPositions.closest("label");
         if (label) label.classList.toggle("disabledControl", !codeDisplay);
       }
-      const codeUsage = codeDisplay && controls.latentPositions && !controls.latentPositions.checked;
+      const codeUsage = codeDisplay && controls.showKeypoints && !controls.showKeypoints.checked;
       const crossDims = String(controls.xComp?.value || "") !== String(controls.yComp?.value || "");
       document.querySelectorAll(".codeUsageOnly").forEach(node => { node.style.display = codeUsage ? "" : "none"; });
       document.querySelectorAll(".dimSelectionOnly").forEach(node => { node.style.display = (codeDisplay && !codeUsage && crossDims) ? "" : "none"; });
@@ -1166,6 +1179,33 @@
       }
       return rows;
     }
+    function sortedSetText(set) {
+      return [...(set || new Set())].sort().join(",");
+    }
+    function preparedViewKeyFor(f) {
+      return key(
+        f.model, f.scale, f.xComp, f.yComp, f.mapMode, f.dimSelection,
+        f.selectedSessionsActive ? sortedSetText(f.filterSessions) : "",
+        sortedSetText(f.languages), sortedSetText(f.hearings), sortedSetText(f.sessions), sortedSetText(f.naming),
+        sortedSetText(f.phases), sortedSetText(f.sessionPhases), sortedSetText(f.mutualAttention)
+      );
+    }
+    function preparedFor(f) {
+      const k = preparedViewKeyFor(f);
+      if (preparedView && preparedKey === k) return preparedView;
+      const rawSeriesRows = allSeries(f);
+      const cb = codebookFor(f);
+      const ring = f.mapMode === "code_layout" ? codeRingLayout(rawSeriesRows, f, cb) : null;
+      const seriesRows = projectSeriesRows(rawSeriesRows, f, ring);
+      const exBase = f.mapMode === "code_layout" ? ringExtent() : baseExtent(seriesRows, f, cb);
+      preparedKey = k;
+      preparedView = { key:k, rawSeriesRows, cb, ring, seriesRows, exBase };
+      return preparedView;
+    }
+    function clearPreparedView() {
+      preparedKey = "";
+      preparedView = null;
+    }
     function median(vals) {
       if (!vals.length) return 0;
       const s = vals.slice().sort((a, b) => a - b);
@@ -1328,13 +1368,13 @@
     function ringExtent() {
       return { xmin:-1.28, xmax:1.28, ymin:-1.28, ymax:1.28 };
     }
-    function resetView(f, ex) {
-      viewKey = key(f.model, f.scale, f.xComp, f.yComp, f.mapMode, f.dimSelection);
+    function resetView(f, ex, forcedKey = null) {
+      viewKey = forcedKey || key(f.model, f.scale, f.xComp, f.yComp, f.mapMode, f.dimSelection);
       viewEx = {...ex};
     }
-    function ensureView(f, ex) {
-      const k = key(f.model, f.scale, f.xComp, f.yComp, f.mapMode, f.dimSelection);
-      if (k !== viewKey || !viewEx) resetView(f, ex);
+    function ensureView(f, ex, forcedKey = null) {
+      const k = forcedKey || key(f.model, f.scale, f.xComp, f.yComp, f.mapMode, f.dimSelection);
+      if (k !== viewKey || !viewEx) resetView(f, ex, k);
       return viewEx;
     }
     function mapPt(p, ex, rect) {
@@ -2345,8 +2385,7 @@
       const comps = f.xComp === f.yComp ? [f.xComp] : [f.xComp, f.yComp];
       const allPts = [];
       for (const row of seriesRows) {
-        const pts = codeUsageContextPoints(row.series, f.progress, f.codeUsageContext);
-        for (const p of pts) allPts.push(p);
+        for (const p of row.series) allPts.push(p);
       }
       ctx.save();
       ctx.fillStyle = "#faf8f2";
@@ -2359,8 +2398,7 @@
       ctx.fillText("Code Usage", rect.x, rect.y + 24);
       ctx.font = "13px Segoe UI, Arial";
       ctx.fillStyle = "#555";
-      const contextText = f.codeUsageContext >= 0.999 ? "full session" : f.codeUsageContext <= 0.001 ? "current frame" : `${fmt(f.codeUsageContext * 100, 1)}% session`;
-      ctx.fillText(`${data.scaleLabels[f.scale]} | counted windows: ${allPts.length} | context: ${contextText}`, rect.x, rect.y + 45);
+      ctx.fillText(`${data.scaleLabels[f.scale]} | counted windows: ${allPts.length} | session-level aggregate under current filters`, rect.x, rect.y + 45);
       if (!allPts.length) {
         ctx.fillStyle = "#666";
         ctx.font = "14px Segoe UI, Arial";
@@ -2474,8 +2512,7 @@
               ctx.font = "800 9.5px Segoe UI, Arial";
               ctx.textAlign = "center";
               ctx.textBaseline = "middle";
-              const label = String(meta.label || meta.key).replace(" naming", "").slice(0, Math.max(3, Math.floor(bw / 5)));
-              ctx.fillText(label, cx, yCursor + segH / 2);
+              ctx.fillText(String(v), cx, yCursor + segH / 2);
               ctx.textBaseline = "alphabetic";
             }
           });
@@ -2595,6 +2632,7 @@
         `bar chart: ${f.showBarChart ? "on" : "off"}`,
         `topology mode: ${f.topologyMode}`,
         `topology context: ${fmt(f.topologyContext * 100, 1)}%`,
+        `topology contour step: ${fmt(f.topologyStep * 100, 0)}% peak`,
         `transition mode: ${f.transitionMode}`,
         `transition context: ${fmt(f.transitionContext * 100, 1)}%`,
         `tail length: ${fmt(f.tail * 100, 1)}%`,
@@ -3001,12 +3039,13 @@
       if (f.mapMode === "code_usage_chart") return "";
       if (f.mapMode === "heatmap_chart") return `${legendSwatch("#fff","low")}${legendSwatch("#f46d43","higher co-occurrence")}`;
       if (!f.showTopology && !f.showHeatmap) return "";
+      const stepText = `<em>step ${fmt((f.topologyStep || 0.12) * 100, 0)}% peak</em>`;
       if (f.topologyMode === "compare") {
         const cmp = compareDescriptor(f.topologyA, f.topologyB);
         const colors = topologyCompareColors(f);
-        return `${legendSwatch(colors.a, `${cmp.name}: ${cmp.a}`, true)}${legendSwatch(colors.b, `${cmp.name}: ${cmp.b}`, true)}`;
+        return `${legendSwatch(colors.a, `${cmp.name}: ${cmp.a}`, true)}${legendSwatch(colors.b, `${cmp.name}: ${cmp.b}`, true)}${stepText}`;
       }
-      return colorLegendBody(f, true) || legendSwatch("#111", "density", true);
+      return `${colorLegendBody(f, true) || legendSwatch("#111", "density", true)}${stepText}`;
     }
     function transitionLegendBody(f) {
       if (!f.showTransitions) return "";
@@ -3039,11 +3078,12 @@
       }
       if (!f.showTopology && !f.showHeatmap) return "";
       const sw = (color, label) => `<span><i style="background:${color};border-radius:2px;height:3px"></i>${esc(label)}</span>`;
+      const stepText = `<em>step ${fmt((f.topologyStep || 0.12) * 100, 0)}% peak</em>`;
       if (f.topologyMode === "compare") {
         const colors = topologyCompareColors(f);
-        return `<div class="legendColor"><b>${f.showHeatmap && f.showTopology ? "Topology + heatmap" : f.showHeatmap ? "Heatmap" : "Topology"}:</b>${sw(colors.a,"A > B")}${sw(colors.b,"B > A")}</div>`;
+        return `<div class="legendColor"><b>${f.showHeatmap && f.showTopology ? "Topology + heatmap" : f.showHeatmap ? "Heatmap" : "Topology"}:</b>${sw(colors.a,"A > B")}${sw(colors.b,"B > A")}${stepText}</div>`;
       }
-      return `<div class="legendColor"><b>${f.showHeatmap && f.showTopology ? "Topology + heatmap" : f.showHeatmap ? "Heatmap" : "Topology"}:</b>${colorLegendBody(f, true) || sw("#111","density")}</div>`;
+      return `<div class="legendColor"><b>${f.showHeatmap && f.showTopology ? "Topology + heatmap" : f.showHeatmap ? "Heatmap" : "Topology"}:</b>${colorLegendBody(f, true) || sw("#111","density")}${stepText}</div>`;
     }
     function transitionLegendHtml(f) {
       if (!f.showTransitions) return "";
@@ -3511,7 +3551,16 @@
       const u = Math.abs(den) < 1e-9 ? 0.5 : clamp((t - va) / den, 0, 1);
       return { x:a.x + (b.x - a.x) * u, y:a.y + (b.y - a.y) * u };
     }
-    function drawContourSet(src, ex, rect, strokes, halo = null) {
+    function contourThresholdFractions(f) {
+      const step = clamp(Number(f?.topologyStep || 0.12), 0.03, 0.30);
+      const out = [];
+      for (let t = step; t <= 0.94 + 1e-9; t += step) out.push(t);
+      return out.length ? out.slice(0, 26) : [0.22, 0.42, 0.62];
+    }
+    function contourWidth(i, n) {
+      return 0.65 + 1.25 * (i + 1) / Math.max(1, n);
+    }
+    function drawContourSet(src, ex, rect, strokes, halo = null, thresholdFracs = null) {
       src = src.filter(Boolean);
       if (src.length < 4) return;
       const cap = 2500;
@@ -3537,7 +3586,7 @@
       let maxV = 0;
       for (const row of grid) for (const v of row) if (v > maxV) maxV = v;
       if (maxV <= 0) return;
-      const thresholds = [0.22, 0.42, 0.62].map(x => x * maxV);
+      const thresholds = (thresholdFracs || [0.22, 0.42, 0.62]).map(x => x * maxV);
       const cellPt = (x, y) => ({ x:rect.x + x / (nx - 1) * rect.w, y:rect.y + y / (ny - 1) * rect.h });
       const cases = {
         1:[[3,0]], 2:[[0,1]], 3:[[3,1]], 4:[[1,2]], 5:[[3,2],[0,1]], 6:[[0,2]], 7:[[3,2]],
@@ -3547,7 +3596,7 @@
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       thresholds.forEach((t, ti) => {
-        const lineW = ti === 0 ? 0.9 : ti === 1 ? 1.2 : 1.55;
+        const lineW = contourWidth(ti, thresholds.length);
         if (halo) {
           ctx.strokeStyle = halo;
           ctx.lineWidth = lineW + 2.6;
@@ -3574,7 +3623,7 @@
           ctx.stroke();
         }
         ctx.strokeStyle = strokes[ti] || strokes[strokes.length - 1] || "rgba(0,0,0,.52)";
-        ctx.lineWidth = ti === 0 ? 0.9 : ti === 1 ? 1.2 : 1.55;
+        ctx.lineWidth = lineW;
         ctx.beginPath();
         for (let y = 0; y < ny - 1; y++) {
           for (let x = 0; x < nx - 1; x++) {
@@ -3714,21 +3763,31 @@
       ctx.restore();
     }
     function drawSignedDifferenceContours(aSrc, bSrc, f, ex, rect) {
-      if (aSrc.length < 4 || bSrc.length < 4) return;
+      const thresholdFracs = contourThresholdFractions(f);
+      const colors = topologyCompareColors(f);
+      if (aSrc.length < 4 && bSrc.length < 4) return;
+      if (aSrc.length < 4) {
+        drawContourSet(bSrc, ex, rect, thresholdFracs.map((_, i) => cssColorAlpha(colors.b, 0.34 + 0.48 * (i + 1) / thresholdFracs.length)), "rgba(255,255,255,.42)", thresholdFracs);
+        return;
+      }
+      if (bSrc.length < 4) {
+        drawContourSet(aSrc, ex, rect, thresholdFracs.map((_, i) => cssColorAlpha(colors.a, 0.34 + 0.48 * (i + 1) / thresholdFracs.length)), "rgba(255,255,255,.42)", thresholdFracs);
+        return;
+      }
       const ga = densityGrid(aSrc, ex, rect), gb = densityGrid(bSrc, ex, rect);
       const diffA = ga.map((row, y) => row.map((v, x) => v - gb[y][x]));
       const diffB = diffA.map(row => row.map(v => -v));
       let maxAbs = 0;
       for (const row of diffA) for (const v of row) maxAbs = Math.max(maxAbs, Math.abs(v));
       if (maxAbs <= 0) return;
-      const levels = [0.22, 0.42, 0.62].map(v => v * maxAbs);
-      const colors = topologyCompareColors(f);
+      const levels = thresholdFracs.map(v => v * maxAbs);
       const aColor = [cssColorAlpha(colors.a, .42), cssColorAlpha(colors.a, .66), cssColorAlpha(colors.a, .9)];
       const bColor = [cssColorAlpha(colors.b, .42), cssColorAlpha(colors.b, .66), cssColorAlpha(colors.b, .9)];
-      levels.forEach((t, i) => drawThresholdGrid(diffA, t, ex, rect, aColor[i], i === 0 ? 1.1 : i === 1 ? 1.5 : 2.0));
+      levels.forEach((t, i) => drawThresholdGrid(diffA, t, ex, rect, aColor[i] || aColor[aColor.length - 1], contourWidth(i, levels.length)));
       levels.forEach((t, i) => {
-        drawThresholdGrid(diffB, t, ex, rect, "rgba(255,255,255,.58)", i === 0 ? 3.3 : i === 1 ? 3.8 : 4.4);
-        drawThresholdGrid(diffB, t, ex, rect, bColor[i], i === 0 ? 1.1 : i === 1 ? 1.5 : 2.0);
+        const w = contourWidth(i, levels.length);
+        drawThresholdGrid(diffB, t, ex, rect, "rgba(255,255,255,.58)", w + 2.4);
+        drawThresholdGrid(diffB, t, ex, rect, bColor[i] || bColor[bColor.length - 1], w);
       });
     }
     function drawTopologyContours(seriesRows, pts, f, ex, rect) {
@@ -3741,16 +3800,18 @@
         drawSignedDifferenceContours(aSrc, bSrc, f, ex, rect);
       } else {
         const groups = topologyGroupsForColor(src, f);
+        const thresholdFracs = contourThresholdFractions(f);
         if (groups.length) {
           groups.forEach(g => drawContourSet(
             g.pts,
             ex,
             rect,
-            [cssColorAlpha(g.color, .34), cssColorAlpha(g.color, .56), cssColorAlpha(g.color, .82)],
-            "rgba(255,255,255,.42)"
+            thresholdFracs.map((_, i) => cssColorAlpha(g.color, 0.28 + 0.56 * (i + 1) / thresholdFracs.length)),
+            "rgba(255,255,255,.42)",
+            thresholdFracs
           ));
         } else {
-          drawContourSet(src, ex, rect, ["rgba(0,0,0,.26)","rgba(0,0,0,.38)","rgba(0,0,0,.52)"]);
+          drawContourSet(src, ex, rect, thresholdFracs.map((_, i) => `rgba(0,0,0,${0.20 + 0.42 * (i + 1) / thresholdFracs.length})`), null, thresholdFracs);
         }
       }
     }
@@ -3842,10 +3903,11 @@
       syncCanvasSize();
       const f = filters();
       scheduleUrlStateSync();
-      const rawSeriesRows = allSeries(f);
-      const cb = codebookFor(f);
-      const ring = codeRingLayout(rawSeriesRows, f, cb);
-      const seriesRows = projectSeriesRows(rawSeriesRows, f, ring);
+      const prepared = preparedFor(f);
+      const rawSeriesRows = prepared.rawSeriesRows;
+      const cb = prepared.cb;
+      const ring = prepared.ring;
+      const seriesRows = prepared.seriesRows;
       if (f.mapMode === "code_usage_chart") {
         ctx.clearRect(0,0,canvas.width,canvas.height);
         const histogramWindows = drawCodeUsageHistogramView(f, rawSeriesRows, cb) || 0;
@@ -3892,8 +3954,7 @@
         sessionList.innerHTML = `<b>Displayed participants at selected time</b><span class="muted">Code decomposition view hides session movement. Turn on session points or latent positions to inspect trajectories.</span>`;
         return;
       }
-      const exBase = f.mapMode === "code_layout" ? ringExtent() : baseExtent(seriesRows, f, cb);
-      const ex = ensureView(f, exBase);
+      const ex = ensureView(f, prepared.exBase, prepared.key);
       const rect = plotRect(f);
       const pts = currentPoints(seriesRows, f);
       ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -4253,7 +4314,7 @@
       "background + codes": "Colored code regions and code markers. Turn this off with other layers off to show code-usage histograms.",
       "latent positions": "Use learned 2D codebook/latent coordinates instead of arranging codes in a simple layout.",
       "dim. selection": "For cross-component axes, choose the current pooled X/Y grid or a fixed projection of the selected components' exported latent dimensions.",
-      "context size": "When latent positions are off, this controls how much of each session contributes to the code-usage histogram.",
+      "context size": "When available, this controls how much of each session contributes to a summary layer.",
       "stacking": "Subdivide each code-usage bar by a selected categorical variable.",
       "dots": "Animated session points at the selected normalized session time.",
       "color": "Variable used to color moving session points.",
@@ -4267,6 +4328,7 @@
       "highlight sessions": "Selected sessions stay visible but are emphasized.",
       "topology": "Density contours over the currently selected windows. In comparison mode, show the difference between A and B.",
       "context": "How much of each session contributes to topology or transition summaries: current frame through full session.",
+      "contour step": "Spacing between topology contour lines as a percent of peak density. Smaller values draw more contour detail.",
       "transitions": "Directed transitions between codes over the selected windows. In comparison mode, arrows show A/B differences."
     };
     function helpLabelText(node) {
@@ -4360,13 +4422,14 @@
     }
     controls.topologyMode.addEventListener("change", () => { controls.showTopology.checked = true; clearChartModes(); draw(); });
     controls.transitionMode.addEventListener("change", () => { controls.showTransitions.checked = true; clearChartModes(); draw(); });
-    controls.showKeypoints.addEventListener("change", () => { if (controls.showKeypoints.checked) clearChartModes(); updateMovementControls(); draw(); });
+    controls.showKeypoints.addEventListener("change", () => { if (controls.showKeypoints.checked) clearChartModes(); updateMovementControls(); updateArrangementControls(); draw(); });
+    controls.showTrails.addEventListener("change", () => { updateMovementControls(); draw(); });
     controls.showTopology.addEventListener("change", () => { if (controls.showTopology.checked) clearChartModes(); });
     controls.showTransitions.addEventListener("change", () => { if (controls.showTransitions.checked) clearChartModes(); });
     controls.showHeatmap?.addEventListener("change", () => { if (controls.showHeatmap.checked && controls.showBarChart) controls.showBarChart.checked = false; });
     controls.showBarChart?.addEventListener("change", () => { if (controls.showBarChart.checked && controls.showHeatmap) controls.showHeatmap.checked = false; });
     controls.showCodes.addEventListener("change", draw);
-    for (const node of [controls.color, controls.dimSelection, controls.latentPositions, controls.showBg, controls.showHeatmap, controls.showBarChart, controls.showTransitions, controls.showTopology, controls.selectedSessionsActive, controls.showNamingStars, controls.showTrails, controls.tailLength, controls.topologyContext, controls.codeUsageContext, controls.codeUsageStack, controls.transitionContext, controls.filterSessions, controls.highlightSessions, controls.progress].filter(Boolean)) {
+    for (const node of [controls.color, controls.dimSelection, controls.latentPositions, controls.showBg, controls.showHeatmap, controls.showBarChart, controls.showTransitions, controls.showTopology, controls.selectedSessionsActive, controls.showNamingStars, controls.tailLength, controls.topologyContext, controls.topologyStep, controls.codeUsageContext, controls.codeUsageStack, controls.transitionContext, controls.filterSessions, controls.highlightSessions, controls.progress].filter(Boolean)) {
       node.addEventListener("input", draw);
       node.addEventListener("change", draw);
     }
