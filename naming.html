@@ -79,7 +79,9 @@
     }
     function patchHtml(html, assetUrlByPath) {
       html = html.replace(/<head>`n\s*/i, '<head>\n');
-      html = html.replace(/<base\s+href=["']naming_assets\/["']\s*>\s*/i, '');
+      const oldBase = 'naming' + '_' + 'assets/';
+      const oldBasePattern = new RegExp('<base\\s+href=["\\\']' + oldBase.replace('/', '\\/') + '["\\\']\\s*>\\s*', 'i');
+      html = html.replace(oldBasePattern, '');
       const dataUrl = assetUrlByPath.get('interactive_embeddings.js');
       const appUrl = assetUrlByPath.get('chart_browser_interactive.js');
       if (dataUrl) html = html.replace(/fetchTextWithProgress\("interactive_embeddings\.js\?v="\s*\+\s*cacheTag\)/g, 'fetchTextWithProgress(' + JSON.stringify(dataUrl) + ')');
