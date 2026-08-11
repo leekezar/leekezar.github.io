@@ -877,8 +877,86 @@
       }
       return orientVec(v);
     }
+    function squaredDistance(a, b) {
+      let s = 0;
+      for (let i = 0; i < a.length; i++) {
+        const d = a[i] - b[i];
+        s += d * d;
+      }
+      return s;
+    }
+    function pairCenterEntries(f) {
+      const xItems = codebooksByMSC.get(key(f.model, f.scale, f.xComp)) || [];
+      const yItems = codebooksByMSC.get(key(f.model, f.scale, f.yComp)) || [];
+      const out = [];
+      for (const xc of xItems) for (const yc of yItems) {
+        out.push({
+          v:[xc[C.z1], xc[C.z2], yc[C.z1], yc[C.z2]],
+          key:`${xc[C.code]},${yc[C.code]}`,
+          xCode:xc[C.code],
+          yCode:yc[C.code],
+          label:`${xc[C.code]}/${yc[C.code]}`,
+        });
+      }
+      return out;
+    }
+    function allPairFeatures(f, maxN = Infinity) {
+      const xPts = pointsByMSC.get(key(f.model, f.scale, f.xComp)) || [];
+      const out = [];
+      const stride = Number.isFinite(maxN) && xPts.length > maxN ? xPts.length / maxN : 1;
+      let next = 0;
+      for (let i = 0; i < xPts.length; i++) {
+        if (i + 1e-9 < next) continue;
+        const px = xPts[i];
+        const py = pointByExact.get(key(px[P.model], px[P.sid], px[P.scale], f.yComp, px[P.token]));
+        if (!py) continue;
+        out.push(pairFeature(px, py));
+        next += stride;
+      }
+      return out;
+    }
+    function medianDistance(features, fallback = 1) {
+      const ds = [];
+      const n = Math.min(features.length, 96);
+      if (n < 2) return fallback;
+      const stride = features.length / n;
+      const sample = [];
+      for (let i = 0; i < n; i++) sample.push(features[Math.min(features.length - 1, Math.floor(i * stride))]);
+      for (let i = 0; i < sample.length; i++) for (let j = i + 1; j < sample.length; j++) ds.push(Math.sqrt(squaredDistance(sample[i], sample[j])));
+      ds.sort((a, b) => a - b);
+      const med = ds[Math.floor(ds.length / 2)];
+      return Number.isFinite(med) && med > 1e-6 ? med : fallback;
+    }
+    function matVecN(m, v) {
+      return m.map(row => row.reduce((s, x, i) => s + x * v[i], 0));
+    }
+    function normalizeVecN(v, fallback = null) {
+      const n = Math.sqrt(Math.max(0, v.reduce((s, x) => s + x * x, 0)));
+      if (n > 1e-10) return v.map(x => x / n);
+      return fallback ? fallback.slice() : v.map((_, i) => i === 0 ? 1 : 0);
+    }
+    function dotVecN(a, b) {
+      return a.reduce((s, x, i) => s + x * b[i], 0);
+    }
+    function powerComponentN(cov, seed, orthogonalTo = null) {
+      let v = normalizeVecN(seed);
+      for (let iter = 0; iter < 38; iter++) {
+        let next = matVecN(cov, v);
+        if (orthogonalTo) {
+          const d = dotVecN(next, orthogonalTo);
+          next = next.map((x, i) => x - d * orthogonalTo[i]);
+        }
+        v = normalizeVecN(next, v);
+      }
+      return v;
+    }
+    function pairProjectionFor(f) {
+      if (f.dimSelection === "rbf") return rbfProjectionFor(f);
+      if (f.dimSelection === "graph") return graphProjectionFor(f);
+      return pcaProjectionFor(f);
+    }
     function pcaProjectionFor(f) {
-      const cacheKey = key(f.model, f.scale, f.xComp, f.yComp);
+      const cacheKey = key("pca", f.model, f.scale, f.xComp, f.yComp);
       if (pairPcaCache.has(cacheKey)) return pairPcaCache.get(cacheKey);
       const xPts = pointsByMSC.get(key(f.model, f.scale, f.xComp)) || [];
       const sum = [0, 0, 0, 0];
@@ -912,33 +990,150 @@
         const centered = v.map((x, i) => x - mean[i]);
         return { x:dotVec(centered, pc1), y:dotVec(centered, pc2) };
       }
-      const xItems = codebooksByMSC.get(key(f.model, f.scale, f.xComp)) || [];
-      const yItems = codebooksByMSC.get(key(f.model, f.scale, f.yComp)) || [];
       const pairs = [];
-      for (const xc of xItems) for (const yc of yItems) {
-        const pos = project([xc[C.z1], xc[C.z2], yc[C.z1], yc[C.z2]]);
+      for (const entry of pairCenterEntries(f)) {
+        const pos = project(entry.v);
         pairs.push({
           ...pos,
-          key:`${xc[C.code]},${yc[C.code]}`,
-          xCode:xc[C.code],
-          yCode:yc[C.code],
-          label:`${xc[C.code]}/${yc[C.code]}`,
+          key:entry.key,
+          xCode:entry.xCode,
+          yCode:entry.yCode,
+          label:entry.label,
         });
       }
       const out = { mean, pc1, pc2, project, pairs, n };
       pairPcaCache.set(cacheKey, out);
       return out;
     }
+    function rbfProjectionFor(f) {
+      const cacheKey = key("rbf", f.model, f.scale, f.xComp, f.yComp);
+      if (pairPcaCache.has(cacheKey)) return pairPcaCache.get(cacheKey);
+      const centers = pairCenterEntries(f);
+      const sample = allPairFeatures(f, 1800);
+      const landmarks = centers.map(c => c.v).concat(allPairFeatures(f, Math.max(0, 72 - centers.length))).slice(0, 72);
+      if (!landmarks.length || !sample.length) {
+        const fallback = pcaProjectionFor(f);
+        pairPcaCache.set(cacheKey, fallback);
+        return fallback;
+      }
+      const sigma = Math.max(1e-4, medianDistance(landmarks, medianDistance(sample, 1)));
+      const l = landmarks.length;
+      function phi(v) {
+        return landmarks.map(m => Math.exp(-squaredDistance(v, m) / (2 * sigma * sigma)));
+      }
+      const mean = Array(l).fill(0);
+      const phis = [];
+      for (const v of sample) {
+        const p = phi(v);
+        phis.push(p);
+        for (let i = 0; i < l; i++) mean[i] += p[i];
+      }
+      for (let i = 0; i < l; i++) mean[i] /= Math.max(1, phis.length);
+      const cov = Array.from({length:l}, () => Array(l).fill(0));
+      for (const p of phis) {
+        for (let i = 0; i < l; i++) {
+          const pi = p[i] - mean[i];
+          for (let j = 0; j < l; j++) cov[i][j] += pi * (p[j] - mean[j]);
+        }
+      }
+      for (let i = 0; i < l; i++) for (let j = 0; j < l; j++) cov[i][j] /= Math.max(1, phis.length);
+      const seed1 = Array.from({length:l}, (_, i) => i % 2 ? -0.6 : 1);
+      const pc1 = powerComponentN(cov, seed1);
+      const seed2 = Array.from({length:l}, (_, i) => i % 3 ? 0.7 : -1);
+      const pc2 = powerComponentN(cov, seed2, pc1);
+      function project(v) {
+        const p = phi(v).map((x, i) => x - mean[i]);
+        return { x:dotVecN(p, pc1), y:dotVecN(p, pc2) };
+      }
+      const pairs = centers.map(entry => ({ ...project(entry.v), key:entry.key, xCode:entry.xCode, yCode:entry.yCode, label:entry.label }));
+      const out = { project, pairs, n:sample.length, sigma };
+      pairPcaCache.set(cacheKey, out);
+      return out;
+    }
+    function graphProjectionFor(f) {
+      const cacheKey = key("graph", f.model, f.scale, f.xComp, f.yComp);
+      if (pairPcaCache.has(cacheKey)) return pairPcaCache.get(cacheKey);
+      const centers = pairCenterEntries(f);
+      if (!centers.length) {
+        const fallback = pcaProjectionFor(f);
+        pairPcaCache.set(cacheKey, fallback);
+        return fallback;
+      }
+      const pca = pcaProjectionFor(f);
+      const distVals = [];
+      for (let i = 0; i < centers.length; i++) for (let j = i + 1; j < centers.length; j++) distVals.push(Math.sqrt(squaredDistance(centers[i].v, centers[j].v)));
+      distVals.sort((a, b) => a - b);
+      const scaleD = Math.max(1e-4, distVals[Math.floor(distVals.length / 2)] || 1);
+      let pos = centers.map(entry => {
+        const p = pca.project(entry.v);
+        return { x:p.x / scaleD, y:p.y / scaleD };
+      });
+      const edges = [];
+      const kNear = Math.min(6, Math.max(1, centers.length - 1));
+      for (let i = 0; i < centers.length; i++) {
+        const nn = centers.map((c, j) => ({ j, d:Math.sqrt(squaredDistance(centers[i].v, c.v)) }))
+          .filter(x => x.j !== i)
+          .sort((a, b) => a.d - b.d)
+          .slice(0, kNear);
+        for (const n0 of nn) if (i < n0.j) edges.push({ a:i, b:n0.j, target:Math.max(0.16, n0.d / scaleD) });
+      }
+      for (let iter = 0; iter < 180; iter++) {
+        const forces = pos.map(() => ({ x:0, y:0 }));
+        for (const e of edges) {
+          const a = pos[e.a], b = pos[e.b];
+          let dx = b.x - a.x, dy = b.y - a.y;
+          const d = Math.max(1e-4, Math.hypot(dx, dy));
+          const mag = 0.026 * (d - e.target);
+          dx /= d; dy /= d;
+          forces[e.a].x += dx * mag; forces[e.a].y += dy * mag;
+          forces[e.b].x -= dx * mag; forces[e.b].y -= dy * mag;
+        }
+        for (let i = 0; i < pos.length; i++) for (let j = i + 1; j < pos.length; j++) {
+          let dx = pos[j].x - pos[i].x, dy = pos[j].y - pos[i].y;
+          const d2 = Math.max(0.01, dx * dx + dy * dy);
+          const d = Math.sqrt(d2);
+          const mag = 0.006 / d2;
+          dx /= d; dy /= d;
+          forces[i].x -= dx * mag; forces[i].y -= dy * mag;
+          forces[j].x += dx * mag; forces[j].y += dy * mag;
+        }
+        const step = 0.85 * (1 - iter / 220);
+        for (let i = 0; i < pos.length; i++) {
+          pos[i].x += forces[i].x * step;
+          pos[i].y += forces[i].y * step;
+        }
+      }
+      const mx = pos.reduce((s, p) => s + p.x, 0) / pos.length;
+      const my = pos.reduce((s, p) => s + p.y, 0) / pos.length;
+      pos = pos.map(p => ({ x:p.x - mx, y:p.y - my }));
+      const spread = Math.max(1e-4, Math.sqrt(pos.reduce((s, p) => s + p.x * p.x + p.y * p.y, 0) / pos.length));
+      pos = pos.map(p => ({ x:p.x / spread, y:p.y / spread }));
+      const sigma = Math.max(1e-4, scaleD * 0.75);
+      function project(v) {
+        const weighted = centers.map((entry, i) => ({ i, w:Math.exp(-squaredDistance(v, entry.v) / (2 * sigma * sigma)) }))
+          .sort((a, b) => b.w - a.w)
+          .slice(0, Math.min(8, centers.length));
+        const sw = weighted.reduce((s, x) => s + x.w, 0) || 1;
+        return {
+          x:weighted.reduce((s, x) => s + pos[x.i].x * x.w, 0) / sw,
+          y:weighted.reduce((s, x) => s + pos[x.i].y * x.w, 0) / sw,
+        };
+      }
+      const pairs = centers.map((entry, i) => ({ x:pos[i].x, y:pos[i].y, key:entry.key, xCode:entry.xCode, yCode:entry.yCode, label:entry.label }));
+      const out = { project, pairs, n:centers.length, sigma };
+      pairPcaCache.set(cacheKey, out);
+      return out;
+    }
     function makeSeriesForSession(s, f) {
       const xPts = (pointsByMSC.get(key(f.model, f.scale, f.xComp)) || []).filter(p => p[P.sid] === s.sid);
       const rows = [];
-      const pca = f.mapMode === "latent" && f.xComp !== f.yComp && f.dimSelection === "pca" ? pcaProjectionFor(f) : null;
+      const pairProjection = f.mapMode === "latent" && f.xComp !== f.yComp && f.dimSelection !== "grid" ? pairProjectionFor(f) : null;
       for (const px of xPts) {
         const py = f.xComp === f.yComp ? px : pointByExact.get(key(px[P.model], px[P.sid], px[P.scale], f.yComp, px[P.token]));
         const w = windowsByExact.get(key(px[P.model], px[P.sid], px[P.scale], px[P.token]));
         if (!py || !windowPass(w, f)) continue;
         const same = f.xComp === f.yComp;
-        const projected = same ? {x:px[P.z1], y:px[P.z2]} : pca ? pca.project(pairFeature(px, py)) : {x:px[P.pooled], y:py[P.pooled]};
+        const projected = same ? {x:px[P.z1], y:px[P.z2]} : pairProjection ? pairProjection.project(pairFeature(px, py)) : {x:px[P.pooled], y:py[P.pooled]};
         rows.push({
           model: px[P.model], sid: px[P.sid], scale: px[P.scale], token: px[P.token],
           progress: w[W.progress], anchor: w[W.anchor], window: w,
@@ -1065,9 +1260,9 @@
         same:false,
         xItems: codebooksByMSC.get(key(f.model, f.scale, f.xComp)) || [],
         yItems: codebooksByMSC.get(key(f.model, f.scale, f.yComp)) || [],
-        dimMode:f.mapMode === "latent" && f.dimSelection === "pca" ? "pca" : "grid",
+        dimMode:f.mapMode === "latent" && f.dimSelection !== "grid" ? f.dimSelection : "grid",
       };
-      if (out.dimMode === "pca") out.pairs = pcaProjectionFor(f).pairs;
+      if (out.dimMode !== "grid") out.pairs = pairProjectionFor(f).pairs;
       return out;
     }
     function codeRingLayout(seriesRows, f, cb) {
@@ -1266,9 +1461,10 @@
       }
       ctx.fillStyle = "#222"; ctx.font = "15px Segoe UI, Arial";
       const same = f.xComp === f.yComp;
-      const pca = !same && f.dimSelection === "pca";
-      const xLabel = same ? `${data.components[f.xComp]} latent x` : pca ? `PCA 1: ${data.components[f.xComp]} + ${data.components[f.yComp]}` : `${data.components[f.xComp]} pooled score`;
-      const yLabel = same ? `${data.components[f.yComp]} latent y` : pca ? `PCA 2: ${data.components[f.xComp]} + ${data.components[f.yComp]}` : `${data.components[f.yComp]} pooled score`;
+      const cross = `${data.components[f.xComp]} + ${data.components[f.yComp]}`;
+      const modeLabel = f.dimSelection === "pca" ? "PCA" : f.dimSelection === "rbf" ? "RBF KPCA" : f.dimSelection === "graph" ? "graph" : "";
+      const xLabel = same ? `${data.components[f.xComp]} latent x` : modeLabel ? `${modeLabel} 1: ${cross}` : `${data.components[f.xComp]} pooled score`;
+      const yLabel = same ? `${data.components[f.yComp]} latent y` : modeLabel ? `${modeLabel} 2: ${cross}` : `${data.components[f.yComp]} pooled score`;
       ctx.fillText(xLabel, rect.x + rect.w / 2 - ctx.measureText(xLabel).width / 2, rect.y + rect.h + 34);
       ctx.save(); ctx.translate(rect.x - 50, rect.y + rect.h / 2 + ctx.measureText(yLabel).width / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(yLabel, 0, 0); ctx.restore();
     }
@@ -1299,7 +1495,7 @@
           ctx.fillRect(px, py, step + 1, step + 1);
         }
       } else {
-        if (cb.dimMode === "pca") {
+        if (cb.dimMode !== "grid") {
           const pairs = cb.pairs || [];
           if (!pairs.length) return;
           for (let px = rect.x; px < rect.x + rect.w; px += step) for (let py = rect.y; py < rect.y + rect.h; py += step) {
@@ -1411,7 +1607,7 @@
           drawCodeLabel(String(c[C.code]), m.x + 13, m.y, "left");
         }
       } else {
-        if (cb.dimMode === "pca") {
+        if (cb.dimMode !== "grid") {
           for (const c of cb.pairs || []) {
             const m = mapPt(c, ex, rect);
             if (m.x < rect.x - 12 || m.x > rect.x + rect.w + 12 || m.y < rect.y - 12 || m.y > rect.y + rect.h + 12) continue;
@@ -2172,7 +2368,7 @@
           });
         }
       } else {
-        if (cb.dimMode === "pca") {
+        if (cb.dimMode !== "grid") {
           for (const c of cb.pairs || []) {
             centers.set(`${c.xCode},${c.yCode}`, {
               x:c.x, y:c.y,
@@ -2498,9 +2694,6 @@
       if (cb.same) {
         const chips = cb.items.slice().sort((a,b) => a[C.code] - b[C.code]).map(c => legendChip(c, f.xComp)).join("");
         codeGroups.push(`<div class="legendCodeGroup"><b>${esc(data.components[f.xComp])}</b><div class="legendCodes">${chips}</div></div>`);
-      } else if (cb.dimMode === "pca") {
-        const chips = (cb.pairs || []).slice().sort((a,b) => (a.xCode - b.xCode) || (a.yCode - b.yCode)).map(c => pairLegendChip(c, f)).join("");
-        codeGroups.push(`<div class="legendCodeGroup"><b>${esc(data.components[f.xComp])} / ${esc(data.components[f.yComp])} pairs</b><div class="legendCodes axisCodes">${chips}</div></div>`);
       } else {
         const xCodes = cb.xItems.slice().sort((a,b) => a[C.code] - b[C.code]).map(c => legendChip(c, f.xComp, "x")).join("");
         const yCodes = cb.yItems.slice().sort((a,b) => a[C.code] - b[C.code]).map(c => legendChip(c, f.yComp, "y")).join("");
@@ -3633,7 +3826,7 @@
       "code arrangement": "Controls whether codes use their learned latent geometry or a code-usage summary view.",
       "background + codes": "Colored code regions and code markers. Turn this off with other layers off to show code-usage histograms.",
       "latent positions": "Use learned 2D codebook/latent coordinates instead of arranging codes in a simple layout.",
-      "dim. selection": "For cross-component axes, choose the current pooled X/Y grid or a PCA projection of the selected components' exported latent dimensions.",
+      "dim. selection": "For cross-component axes, choose the current pooled X/Y grid or a fixed projection of the selected components' exported latent dimensions.",
       "context size": "When latent positions are off, this controls how much of each session contributes to the code-usage histogram.",
       "stacking": "Subdivide each code-usage bar by a selected categorical variable.",
       "dots": "Animated session points at the selected normalized session time.",
