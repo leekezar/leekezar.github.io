@@ -106,6 +106,7 @@
     let sessionRows = [];
     let relatedMode = "similar";
     let bootingUrlState = true;
+    let defaultReadableState = null;
     let pendingUrlSync = null;
     let lastUrlSyncMs = 0;
 
@@ -239,13 +240,8 @@
       setCheckboxState(`${prefix}_sessionPhase`, st.ph);
       setCheckboxState(`${prefix}_mutualAttention`, st.ma);
     }
-    function encodeUrlState(obj) {
-      const bytes = new TextEncoder().encode(JSON.stringify(obj));
-      let bin = "";
-      bytes.forEach(b => { bin += String.fromCharCode(b); });
-      return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-    }
-    function decodeUrlState(raw) {
+    function legacyDecodeUrlState(raw) {
+      if (!raw) return null;
       try {
         let txt = String(raw || "").replace(/-/g, "+").replace(/_/g, "/");
         while (txt.length % 4) txt += "=";
@@ -257,69 +253,188 @@
         return null;
       }
     }
-    function collectUrlState() {
-      const st = {
-        m: controls.model.value,
-        sc: controls.scale.value,
-        x: controls.xComp.value,
-        y: controls.yComp.value,
-        pr: controls.progress.value,
-        bg: controls.showBg.checked ? 1 : 0,
-        lp: controls.latentPositions.checked ? 1 : 0,
-        dots: controls.showKeypoints.checked ? 1 : 0,
-        trails: controls.showTrails.checked ? 1 : 0,
-        stars: controls.showNamingStars.checked ? 1 : 0,
-        topo: controls.showTopology.checked ? 1 : 0,
-        trans: controls.showTransitions.checked ? 1 : 0,
-        color: controls.color.value,
-        tail: controls.tailLength.value,
-        cuCtx: controls.codeUsageContext ? controls.codeUsageContext.value : "1000",
-        cuStack: controls.codeUsageStack ? controls.codeUsageStack.value : "none",
-        topCtx: controls.topologyContext.value,
-        topMode: controls.topologyMode.value,
-        trCtx: controls.transitionContext.value,
-        trMode: controls.transitionMode.value,
-        selActive: controls.selectedSessionsActive?.checked ? 1 : 0,
-        l: checkboxState("embedLanguageChecks"),
-        a: checkboxState("embedHearingChecks"),
-        se: checkboxState("embedSessionChecks"),
-        n: checkboxState("embedNamingChecks"),
-        prox: checkboxState("embedProximityChecks"),
-        ph: checkboxState("embedSessionPhaseChecks"),
-        ma: checkboxState("embedMutualAttentionChecks"),
-        tA: compareState("topoA"),
-        tB: compareState("topoB"),
-        rA: compareState("transA"),
-        rB: compareState("transB"),
+    function queryEncode(value) {
+      return encodeURIComponent(String(value))
+        .replace(/%2C/g, ",")
+        .replace(/%3A/g, ":")
+        .replace(/%7C/g, "|");
+    }
+    function sameStateValue(a, b) {
+      const aa = Array.isArray(a) ? [...a].map(String).sort() : null;
+      const bb = Array.isArray(b) ? [...b].map(String).sort() : null;
+      if (aa || bb) {
+        if (!aa || !bb || aa.length !== bb.length) return false;
+        return aa.every((v, i) => v === bb[i]);
+      }
+      return String(a ?? "") === String(b ?? "");
+    }
+    function optionCode(select, labels) {
+      if (!select) return "";
+      const idx = Number(select.value);
+      return labels && Number.isFinite(idx) && labels[idx] !== undefined ? String(labels[idx]) : String(select.value);
+    }
+    function setByCode(select, code, labels) {
+      if (!select || code === undefined || code === null) return false;
+      const v = String(code);
+      if (setIfOption(select, v)) return true;
+      if (labels) {
+        const idx = labels.findIndex(x => String(x) === v);
+        if (idx >= 0 && setIfOption(select, String(idx))) return true;
+      }
+      const opt = [...select.options].find(o => o.textContent.trim() === v);
+      if (!opt) return false;
+      select.value = opt.value;
+      return true;
+    }
+    function listOrNone(values) {
+      const arr = Array.isArray(values) ? values.map(String).filter(Boolean) : [];
+      return arr.length ? arr.join(",") : "none";
+    }
+    function parseList(raw) {
+      if (raw === null || raw === undefined) return undefined;
+      if (raw === "" || raw === "none") return [];
+      return String(raw).split(",").map(x => x.trim()).filter(Boolean);
+    }
+    function sliderToUrlValue(value) {
+      const n = clamp(Number(value || 0), 0, 1000);
+      if (n <= 0) return "current";
+      if (n >= 1000) return "full";
+      return `${Number((n / 10).toFixed(1))}pct`;
+    }
+    function sliderFromUrlValue(value) {
+      const v = String(value || "").trim().toLowerCase();
+      if (v === "current") return "0";
+      if (v === "full") return "1000";
+      if (v.endsWith("pct")) return String(Math.round(clamp(Number.parseFloat(v), 0, 100) * 10));
+      return String(clamp(Number(value || 0), 0, 1000));
+    }
+    function progressToUrlValue(value) {
+      return String(Number((clamp(Number(value || 0), 0, 10000) / 100).toFixed(1)));
+    }
+    function progressFromUrlValue(value) {
+      return String(Math.round(clamp(Number.parseFloat(value || "0"), 0, 100) * 100));
+    }
+    function layerState() {
+      const layers = [];
+      if (controls.showBg.checked) layers.push("bg");
+      if (controls.latentPositions.checked) layers.push("latent");
+      if (controls.showKeypoints.checked) layers.push("dots");
+      if (controls.showTrails.checked) layers.push("trails");
+      if (controls.showNamingStars.checked) layers.push("stars");
+      if (controls.showTopology.checked) layers.push("topology");
+      if (controls.showTransitions.checked) layers.push("transitions");
+      return layers;
+    }
+    function applyLayerState(layers) {
+      if (!Array.isArray(layers)) return;
+      const s = new Set(layers);
+      controls.showBg.checked = s.has("bg");
+      controls.latentPositions.checked = s.has("latent");
+      controls.showKeypoints.checked = s.has("dots");
+      controls.showTrails.checked = s.has("trails");
+      controls.showNamingStars.checked = s.has("stars");
+      controls.showTopology.checked = s.has("topology");
+      controls.showTransitions.checked = s.has("transitions");
+    }
+    function readableCompareState(prefix) {
+      return {
+        [`${prefix}_lang`]: checkboxState(`${prefix}_language`),
+        [`${prefix}_aud`]: checkboxState(`${prefix}_hearing`),
+        [`${prefix}_session`]: checkboxState(`${prefix}_session`),
+        [`${prefix}_naming`]: checkboxState(`${prefix}_naming`),
+        [`${prefix}_near`]: checkboxState(`${prefix}_proximity`),
+        [`${prefix}_phase`]: checkboxState(`${prefix}_sessionPhase`),
+        [`${prefix}_attention`]: checkboxState(`${prefix}_mutualAttention`),
       };
-      if (controls.selectedSessionsActive?.checked) {
-        st.fs = checkboxState("embedFilterSessions");
-        st.hs = checkboxState("embedHighlightSessions");
+    }
+    function applyReadableCompareState(prefix, st) {
+      setCheckboxState(`${prefix}_language`, st[`${prefix}_lang`]);
+      setCheckboxState(`${prefix}_hearing`, st[`${prefix}_aud`]);
+      setCheckboxState(`${prefix}_session`, st[`${prefix}_session`]);
+      setCheckboxState(`${prefix}_naming`, st[`${prefix}_naming`]);
+      setCheckboxState(`${prefix}_proximity`, st[`${prefix}_near`]);
+      setCheckboxState(`${prefix}_sessionPhase`, st[`${prefix}_phase`]);
+      setCheckboxState(`${prefix}_mutualAttention`, st[`${prefix}_attention`]);
+    }
+    function fullReadableState() {
+      return {
+        model: controls.model.value,
+        window: optionCode(controls.scale, data.scales),
+        x: optionCode(controls.xComp, data.components),
+        y: optionCode(controls.yComp, data.components),
+        at: progressToUrlValue(controls.progress.value),
+        layers: layerState(),
+        color: controls.color.value,
+        speed: controls.windowsPerSecond.value,
+        tail: controls.tailLength.value,
+        codeContext: sliderToUrlValue(controls.codeUsageContext ? controls.codeUsageContext.value : "1000"),
+        stack: controls.codeUsageStack ? controls.codeUsageStack.value : "none",
+        topologyMode: controls.topologyMode.value,
+        topologyContext: sliderToUrlValue(controls.topologyContext.value),
+        transitionMode: controls.transitionMode.value,
+        transitionContext: sliderToUrlValue(controls.transitionContext.value),
+        selected: controls.selectedSessionsActive?.checked ? "on" : "off",
+        lang: checkboxState("embedLanguageChecks"),
+        aud: checkboxState("embedHearingChecks"),
+        session: checkboxState("embedSessionChecks"),
+        naming: checkboxState("embedNamingChecks"),
+        near: checkboxState("embedProximityChecks"),
+        phase: checkboxState("embedSessionPhaseChecks"),
+        attention: checkboxState("embedMutualAttentionChecks"),
+        filter: controls.selectedSessionsActive?.checked ? checkboxState("embedFilterSessions") : [],
+        highlight: controls.selectedSessionsActive?.checked ? checkboxState("embedHighlightSessions") : [],
+        ...readableCompareState("topoA"),
+        ...readableCompareState("topoB"),
+        ...readableCompareState("transA"),
+        ...readableCompareState("transB"),
+      };
+    }
+    const READABLE_URL_KEYS = [
+      "model", "window", "x", "y", "at", "layers", "color", "speed", "tail",
+      "codeContext", "stack", "topologyMode", "topologyContext", "transitionMode", "transitionContext",
+      "selected", "lang", "aud", "session", "naming", "near", "phase", "attention", "filter", "highlight",
+      "topoA_lang", "topoA_aud", "topoA_session", "topoA_naming", "topoA_near", "topoA_phase", "topoA_attention",
+      "topoB_lang", "topoB_aud", "topoB_session", "topoB_naming", "topoB_near", "topoB_phase", "topoB_attention",
+      "transA_lang", "transA_aud", "transA_session", "transA_naming", "transA_near", "transA_phase", "transA_attention",
+      "transB_lang", "transB_aud", "transB_session", "transB_naming", "transB_near", "transB_phase", "transB_attention",
+    ];
+    const READABLE_ARRAY_KEYS = new Set([
+      "layers", "lang", "aud", "session", "naming", "near", "phase", "attention", "filter", "highlight",
+      "topoA_lang", "topoA_aud", "topoA_session", "topoA_naming", "topoA_near", "topoA_phase", "topoA_attention",
+      "topoB_lang", "topoB_aud", "topoB_session", "topoB_naming", "topoB_near", "topoB_phase", "topoB_attention",
+      "transA_lang", "transA_aud", "transA_session", "transA_naming", "transA_near", "transA_phase", "transA_attention",
+      "transB_lang", "transB_aud", "transB_session", "transB_naming", "transB_near", "transB_phase", "transB_attention",
+    ]);
+    function compactReadableState(st) {
+      if (!defaultReadableState) return st;
+      const out = {};
+      for (const k of READABLE_URL_KEYS) {
+        if (!sameStateValue(st[k], defaultReadableState[k])) out[k] = st[k];
       }
-      return st;
+      return out;
     }
-    function syncUrlStateNow() {
-      if (bootingUrlState) return;
-      const url = new URL(window.location.href);
-      url.searchParams.set("state", encodeUrlState(collectUrlState()));
-      window.history.replaceState(null, "", url.pathname + url.search + url.hash);
-      lastUrlSyncMs = Date.now();
-    }
-    function scheduleUrlStateSync() {
-      if (bootingUrlState || !window.history || !window.URL) return;
-      const elapsed = Date.now() - lastUrlSyncMs;
-      if (elapsed > 500) {
-        syncUrlStateNow();
-        return;
+    function readableQueryFromState(st) {
+      const parts = [];
+      for (const k of READABLE_URL_KEYS) {
+        if (!(k in st)) continue;
+        const value = READABLE_ARRAY_KEYS.has(k) ? listOrNone(st[k]) : st[k];
+        if (value === undefined || value === null || value === "") continue;
+        parts.push(`${queryEncode(k)}=${queryEncode(value)}`);
       }
-      if (pendingUrlSync) return;
-      pendingUrlSync = setTimeout(() => {
-        pendingUrlSync = null;
-        syncUrlStateNow();
-      }, 520 - elapsed);
+      return parts.join("&");
     }
-    function applyUrlState() {
-      const st = decodeUrlState(new URLSearchParams(window.location.search).get("state"));
+    function readableStateFromQuery(params) {
+      const st = {};
+      let found = false;
+      for (const k of READABLE_URL_KEYS) {
+        if (!params.has(k)) continue;
+        found = true;
+        const raw = params.get(k);
+        st[k] = READABLE_ARRAY_KEYS.has(k) ? parseList(raw) : raw;
+      }
+      return found ? st : null;
+    }
+    function applyLegacyUrlState(st) {
       if (!st) return false;
       if (setIfOption(controls.model, st.m)) fillScaleControls();
       if (setIfOption(controls.scale, st.sc)) fillAxisControls();
@@ -357,6 +472,87 @@
       setCheckboxState("embedFilterSessions", st.fs);
       setCheckboxState("embedHighlightSessions", st.hs);
       return true;
+    }
+    function applyReadableUrlState(st) {
+      if (!st) return false;
+      if (setIfOption(controls.model, st.model)) fillScaleControls();
+      if (setByCode(controls.scale, st.window, data.scales)) fillAxisControls();
+      setByCode(controls.xComp, st.x, data.components);
+      setByCode(controls.yComp, st.y, data.components);
+      if (st.at !== undefined) controls.progress.value = progressFromUrlValue(st.at);
+      applyLayerState(st.layers);
+      setIfOption(controls.color, st.color);
+      if (st.speed !== undefined) controls.windowsPerSecond.value = String(st.speed);
+      if (st.tail !== undefined) controls.tailLength.value = String(st.tail);
+      if (controls.codeUsageContext && st.codeContext !== undefined) controls.codeUsageContext.value = sliderFromUrlValue(st.codeContext);
+      setIfOption(controls.codeUsageStack, st.stack);
+      setIfOption(controls.topologyMode, st.topologyMode);
+      if (st.topologyContext !== undefined) controls.topologyContext.value = sliderFromUrlValue(st.topologyContext);
+      setIfOption(controls.transitionMode, st.transitionMode);
+      if (st.transitionContext !== undefined) controls.transitionContext.value = sliderFromUrlValue(st.transitionContext);
+      if (controls.selectedSessionsActive && st.selected !== undefined) controls.selectedSessionsActive.checked = st.selected === "on" || st.selected === "1" || st.selected === "true";
+      setCheckboxState("embedLanguageChecks", st.lang);
+      setCheckboxState("embedHearingChecks", st.aud);
+      setCheckboxState("embedSessionChecks", st.session);
+      setCheckboxState("embedNamingChecks", st.naming);
+      setCheckboxState("embedProximityChecks", st.near);
+      setCheckboxState("embedSessionPhaseChecks", st.phase);
+      setCheckboxState("embedMutualAttentionChecks", st.attention);
+      applyReadableCompareState("topoA", st);
+      applyReadableCompareState("topoB", st);
+      applyReadableCompareState("transA", st);
+      applyReadableCompareState("transB", st);
+      refreshSessionPickers();
+      setCheckboxState("embedFilterSessions", st.filter);
+      setCheckboxState("embedHighlightSessions", st.highlight);
+      return true;
+    }
+    function encodeUrlState(obj) {
+      const bytes = new TextEncoder().encode(JSON.stringify(obj));
+      let bin = "";
+      bytes.forEach(b => { bin += String.fromCharCode(b); });
+      return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    }
+    function decodeUrlState(raw) {
+      try {
+        let txt = String(raw || "").replace(/-/g, "+").replace(/_/g, "/");
+        while (txt.length % 4) txt += "=";
+        const bin = atob(txt);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return JSON.parse(new TextDecoder("utf-8").decode(bytes));
+      } catch (_) {
+        return null;
+      }
+    }
+    function collectUrlState() {
+      return compactReadableState(fullReadableState());
+    }
+    function syncUrlStateNow() {
+      if (bootingUrlState) return;
+      const url = new URL(window.location.href);
+      const query = readableQueryFromState(collectUrlState());
+      window.history.replaceState(null, "", url.pathname + (query ? `?${query}` : "") + url.hash);
+      lastUrlSyncMs = Date.now();
+    }
+    function scheduleUrlStateSync() {
+      if (bootingUrlState || !window.history || !window.URL) return;
+      const elapsed = Date.now() - lastUrlSyncMs;
+      if (elapsed > 500) {
+        syncUrlStateNow();
+        return;
+      }
+      if (pendingUrlSync) return;
+      pendingUrlSync = setTimeout(() => {
+        pendingUrlSync = null;
+        syncUrlStateNow();
+      }, 520 - elapsed);
+    }
+    function applyUrlState() {
+      const params = new URLSearchParams(window.location.search);
+      const readable = readableStateFromQuery(params);
+      if (readable) return applyReadableUrlState(readable);
+      return applyLegacyUrlState(legacyDecodeUrlState(params.get("state")));
     }
     function inferMapMode(f) {
       if (f.showCodeUsage) return "code_usage_chart";
@@ -3380,6 +3576,7 @@
     window.addEventListener("resize", () => { refreshOpenAccordions(); draw(); layoutRightRail(); });
     fillModelControls();
     fillSessionControls();
+    defaultReadableState = fullReadableState();
     applyUrlState();
     decorateHelpIcons();
     updateMovementControls();
