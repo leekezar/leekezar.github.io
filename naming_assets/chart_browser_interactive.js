@@ -12,6 +12,10 @@
   const TAIL_SNAP_VALUES = [0,5,10,15,20,25,30,35,40,45,50,60,70,80,90,100];
   function $(id) { return document.getElementById(id); }
   function fmt(v, n = 2) { return Number.isFinite(Number(v)) ? Number(v).toFixed(n) : "n/a"; }
+  function pctLabel(frac) {
+    const pct = clamp((Number(frac) || 0) * 100, 0, 100);
+    return pct > 0 && pct < 1 ? "<1%" : `${Math.round(pct)}%`;
+  }
   function key(...parts) { return parts.join("|"); }
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
   function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -2400,7 +2404,7 @@
         ctx.fillStyle = "#333";
         ctx.font = "10.5px Segoe UI, Arial";
         ctx.textAlign = "center";
-        if (mean >= 0.06) ctx.fillText(fmt(mean, 2), cx, Math.max(top + 11, bottom - barH - 6));
+        if (mean >= 0.06) ctx.fillText(pctLabel(mean), cx, Math.max(top + 11, bottom - barH - 6));
         const label = cleanBehaviorName(data.channels[idx]).slice(0, 22);
         ctx.save();
         ctx.translate(cx, bottom + 12);
@@ -2416,7 +2420,7 @@
       ctx.textAlign = "center";
       ctx.fillStyle = "#333";
       ctx.font = "700 11px Segoe UI, Arial";
-      ctx.fillText("activation", 0, 0);
+      ctx.fillText("activation %", 0, 0);
       ctx.restore();
       ctx.restore();
     }
@@ -2442,7 +2446,7 @@
       ctx.fillText("Code Usage", rect.x, rect.y + 24);
       ctx.font = "13px Segoe UI, Arial";
       ctx.fillStyle = "#555";
-      ctx.fillText(`${data.scaleLabels[f.scale]} | counted windows: ${allPts.length} | session-level aggregate under current filters`, rect.x, rect.y + 45);
+      ctx.fillText(`${data.scaleLabels[f.scale]} | code-use percentages under current filters`, rect.x, rect.y + 45);
       if (!allPts.length) {
         ctx.fillStyle = "#666";
         ctx.font = "14px Segoe UI, Arial";
@@ -2490,7 +2494,7 @@
       ctx.fillText(`${data.components[compIdx]} codebook`, x + 14, y + 25);
       ctx.font = "12px Segoe UI, Arial";
       ctx.fillStyle = "#555";
-      ctx.fillText(`${total} filtered windows`, x + 14, y + 43);
+      ctx.fillText("percentage of filtered windows", x + 14, y + 43);
       if (!items.length || total <= 0) {
         ctx.fillStyle = "#777";
         ctx.fillText("No assigned windows for this codebook under the current filters.", x + 14, y + 75);
@@ -2516,7 +2520,7 @@
       ctx.textAlign = "center";
       ctx.fillStyle = "#333";
       ctx.font = "700 11px Segoe UI, Arial";
-      ctx.fillText("count", 0, 0);
+      ctx.fillText("% of windows", 0, 0);
       ctx.restore();
       ctx.textAlign = "center";
       ctx.fillStyle = "#333";
@@ -2525,8 +2529,8 @@
       ctx.textAlign = "right";
       ctx.font = "10.5px Segoe UI, Arial";
       ctx.fillStyle = "#555";
-      ctx.fillText(String(maxCount), left - 7, top + 4);
-      ctx.fillText("0", left - 7, bottom + 3);
+      ctx.fillText("100%", left - 7, top + 4);
+      ctx.fillText("0%", left - 7, bottom + 3);
       items.forEach((c, j) => {
         const code = c[C.code];
         const count = counts.get(code) || 0;
@@ -2546,6 +2550,7 @@
             const v = byStack.get(meta.key) || 0;
             if (!v) return;
             const segH = chartH * v / maxCount;
+            const segShare = v / Math.max(1, total);
             yCursor -= segH;
             ctx.fillStyle = meta.color;
             ctx.globalAlpha = 0.90;
@@ -2556,7 +2561,7 @@
               ctx.font = "800 9.5px Segoe UI, Arial";
               ctx.textAlign = "center";
               ctx.textBaseline = "middle";
-              ctx.fillText(String(v), cx, yCursor + segH / 2);
+              ctx.fillText(pctLabel(segShare), cx, yCursor + segH / 2);
               ctx.textBaseline = "alphabetic";
             }
           });
@@ -3115,7 +3120,7 @@
       return `<div class="legendLayerRow">${items.map(([title, body]) => `<div class="legendLayerItem"><b>${esc(title)}:</b>${body}</div>`).join("")}</div>`;
     }
     function topologyLegendHtml(f) {
-      if (f.mapMode === "code_usage_chart") return `<div class="legendColor"><b>Code usage:</b><em>Bars count filtered windows assigned to each code.</em></div>`;
+      if (f.mapMode === "code_usage_chart") return `<div class="legendColor"><b>Code usage:</b><em>Bars show percent of filtered windows assigned to each code.</em></div>`;
       if (f.mapMode === "heatmap_chart") {
         const sw = (color, label) => `<span><i style="background:${color};border-radius:2px"></i>${esc(label)}</span>`;
         return `<div class="legendColor"><b>Heatmap:</b>${sw("#fff","low")}${sw("#f46d43","higher co-occurrence")}</div>`;
@@ -3961,7 +3966,7 @@
         currentCanvasMeta = filterSummary(f);
         renderLegend(f, cb, histogramWindows, 0);
         layoutRightRail();
-        status.textContent = "Code usage view: histograms count filtered windows assigned to each selected codebook.";
+        status.textContent = "Code usage view: histograms show the percent of filtered windows assigned to each selected codebook.";
         sessionList.innerHTML = `<b>Displayed participants at selected time</b><span class="muted">Code usage view hides session movement. Turn on dots, topology, transitions, or the background layer to return to the embedding view.</span>`;
         return;
       }
