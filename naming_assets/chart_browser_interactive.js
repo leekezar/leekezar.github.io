@@ -35,6 +35,7 @@
       codeUsageContext: $("embedCodeUsageContext"),
       codeUsageContextReadout: $("embedCodeUsageContextReadout"),
       codeUsageStack: $("embedCodeUsageStack"),
+      dimSelection: $("embedDimSelection"),
       transitionMode: $("embedTransitionMode"),
       transitionContext: $("embedTransitionContext"),
       transitionContextReadout: $("embedTransitionContextReadout"),
@@ -107,6 +108,7 @@
     let relatedMode = "similar";
     let bootingUrlState = true;
     let defaultReadableState = null;
+    const pairPcaCache = new Map();
     let pendingUrlSync = null;
     let lastUrlSyncMs = 0;
 
@@ -362,6 +364,7 @@
         window: optionCode(controls.scale, data.scales),
         x: optionCode(controls.xComp, data.components),
         y: optionCode(controls.yComp, data.components),
+        dims: controls.dimSelection ? controls.dimSelection.value : "grid",
         at: progressToUrlValue(controls.progress.value),
         layers: layerState(),
         color: controls.color.value,
@@ -390,7 +393,7 @@
       };
     }
     const READABLE_URL_KEYS = [
-      "model", "window", "x", "y", "at", "layers", "color", "speed", "tail",
+      "model", "window", "x", "y", "dims", "at", "layers", "color", "speed", "tail",
       "codeContext", "stack", "topologyMode", "topologyContext", "transitionMode", "transitionContext",
       "selected", "lang", "aud", "session", "naming", "near", "phase", "attention", "filter", "highlight",
       "topoA_lang", "topoA_aud", "topoA_session", "topoA_naming", "topoA_near", "topoA_phase", "topoA_attention",
@@ -479,6 +482,7 @@
       if (setByCode(controls.scale, st.window, data.scales)) fillAxisControls();
       setByCode(controls.xComp, st.x, data.components);
       setByCode(controls.yComp, st.y, data.components);
+      setIfOption(controls.dimSelection, st.dims);
       if (st.at !== undefined) controls.progress.value = progressFromUrlValue(st.at);
       applyLayerState(st.layers);
       setIfOption(controls.color, st.color);
@@ -713,6 +717,7 @@
         scale: Number(controls.scale.value || 0),
         xComp: Number(controls.xComp.value || 0),
         yComp: Number(controls.yComp.value || 0),
+        dimSelection: controls.dimSelection ? controls.dimSelection.value : "grid",
         topologyMode: controls.topologyMode.value,
         topologyContext: contextFractionFromSlider(controls.topologyContext, controls.topologyContextReadout),
         codeUsageContext: contextFractionFromSlider(controls.codeUsageContext, controls.codeUsageContextReadout),
@@ -806,7 +811,9 @@
     }
     function updateArrangementControls() {
       const codeUsage = controls.latentPositions && !controls.latentPositions.checked;
+      const crossDims = String(controls.xComp?.value || "") !== String(controls.yComp?.value || "");
       document.querySelectorAll(".codeUsageOnly").forEach(node => { node.style.display = codeUsage ? "" : "none"; });
+      document.querySelectorAll(".dimSelectionOnly").forEach(node => { node.style.display = (!codeUsage && crossDims) ? "" : "none"; });
       refreshOpenAccordions();
     }
     function setVisualizationSpeed(v) {
@@ -830,19 +837,113 @@
       if (f.mutualAttention.size && !f.mutualAttention.has(data.mutualAttentionLevels[w[W.mutual]])) return false;
       return sessionPass(sessionByKey.get(key(w[W.model], w[W.sid])), f);
     }
+    function pairFeature(px, py) {
+      return [px[P.z1], px[P.z2], py[P.z1], py[P.z2]];
+    }
+    function dotVec(a, b) {
+      let s = 0;
+      for (let i = 0; i < a.length; i++) s += a[i] * b[i];
+      return s;
+    }
+    function normVec(v) {
+      return Math.sqrt(Math.max(0, dotVec(v, v)));
+    }
+    function normalizeVec(v, fallback) {
+      const n = normVec(v);
+      return n > 1e-10 ? v.map(x => x / n) : fallback.slice();
+    }
+    function matVec4(m, v) {
+      return [
+        m[0][0] * v[0] + m[0][1] * v[1] + m[0][2] * v[2] + m[0][3] * v[3],
+        m[1][0] * v[0] + m[1][1] * v[1] + m[1][2] * v[2] + m[1][3] * v[3],
+        m[2][0] * v[0] + m[2][1] * v[1] + m[2][2] * v[2] + m[2][3] * v[3],
+        m[3][0] * v[0] + m[3][1] * v[1] + m[3][2] * v[2] + m[3][3] * v[3],
+      ];
+    }
+    function orientVec(v) {
+      let idx = 0;
+      for (let i = 1; i < v.length; i++) if (Math.abs(v[i]) > Math.abs(v[idx])) idx = i;
+      return v[idx] < 0 ? v.map(x => -x) : v;
+    }
+    function powerComponent(cov, seed, orthogonalTo = null) {
+      let v = normalizeVec(seed.slice(), [1, 0, 0, 0]);
+      for (let iter = 0; iter < 36; iter++) {
+        let next = matVec4(cov, v);
+        if (orthogonalTo) {
+          const d = dotVec(next, orthogonalTo);
+          next = next.map((x, i) => x - d * orthogonalTo[i]);
+        }
+        v = normalizeVec(next, v);
+      }
+      return orientVec(v);
+    }
+    function pcaProjectionFor(f) {
+      const cacheKey = key(f.model, f.scale, f.xComp, f.yComp);
+      if (pairPcaCache.has(cacheKey)) return pairPcaCache.get(cacheKey);
+      const xPts = pointsByMSC.get(key(f.model, f.scale, f.xComp)) || [];
+      const sum = [0, 0, 0, 0];
+      const cross = Array.from({length:4}, () => [0, 0, 0, 0]);
+      let n = 0;
+      for (const px of xPts) {
+        const py = pointByExact.get(key(px[P.model], px[P.sid], px[P.scale], f.yComp, px[P.token]));
+        if (!py) continue;
+        const v = pairFeature(px, py);
+        n += 1;
+        for (let i = 0; i < 4; i++) {
+          sum[i] += v[i];
+          for (let j = 0; j < 4; j++) cross[i][j] += v[i] * v[j];
+        }
+      }
+      const mean = n ? sum.map(x => x / n) : [0, 0, 0, 0];
+      const cov = Array.from({length:4}, (_, i) => Array.from({length:4}, (_, j) => n ? cross[i][j] / n - mean[i] * mean[j] : 0));
+      const pc1 = powerComponent(cov, [0.5, 0, 0.5, 0]);
+      let pc2 = powerComponent(cov, [0, 0.5, 0, 0.5], pc1);
+      if (normVec(pc2) < 0.5) {
+        const candidates = [[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]];
+        pc2 = candidates
+          .map(v => {
+            const d = dotVec(v, pc1);
+            return v.map((x, i) => x - d * pc1[i]);
+          })
+          .sort((a, b) => normVec(b) - normVec(a))[0];
+        pc2 = orientVec(normalizeVec(pc2, [0, 1, 0, 0]));
+      }
+      function project(v) {
+        const centered = v.map((x, i) => x - mean[i]);
+        return { x:dotVec(centered, pc1), y:dotVec(centered, pc2) };
+      }
+      const xItems = codebooksByMSC.get(key(f.model, f.scale, f.xComp)) || [];
+      const yItems = codebooksByMSC.get(key(f.model, f.scale, f.yComp)) || [];
+      const pairs = [];
+      for (const xc of xItems) for (const yc of yItems) {
+        const pos = project([xc[C.z1], xc[C.z2], yc[C.z1], yc[C.z2]]);
+        pairs.push({
+          ...pos,
+          key:`${xc[C.code]},${yc[C.code]}`,
+          xCode:xc[C.code],
+          yCode:yc[C.code],
+          label:`${xc[C.code]}/${yc[C.code]}`,
+        });
+      }
+      const out = { mean, pc1, pc2, project, pairs, n };
+      pairPcaCache.set(cacheKey, out);
+      return out;
+    }
     function makeSeriesForSession(s, f) {
       const xPts = (pointsByMSC.get(key(f.model, f.scale, f.xComp)) || []).filter(p => p[P.sid] === s.sid);
       const rows = [];
+      const pca = f.mapMode === "latent" && f.xComp !== f.yComp && f.dimSelection === "pca" ? pcaProjectionFor(f) : null;
       for (const px of xPts) {
         const py = f.xComp === f.yComp ? px : pointByExact.get(key(px[P.model], px[P.sid], px[P.scale], f.yComp, px[P.token]));
         const w = windowsByExact.get(key(px[P.model], px[P.sid], px[P.scale], px[P.token]));
         if (!py || !windowPass(w, f)) continue;
         const same = f.xComp === f.yComp;
+        const projected = same ? {x:px[P.z1], y:px[P.z2]} : pca ? pca.project(pairFeature(px, py)) : {x:px[P.pooled], y:py[P.pooled]};
         rows.push({
           model: px[P.model], sid: px[P.sid], scale: px[P.scale], token: px[P.token],
           progress: w[W.progress], anchor: w[W.anchor], window: w,
-          x: same ? px[P.z1] : px[P.pooled],
-          y: same ? px[P.z2] : py[P.pooled],
+          x: projected.x,
+          y: projected.y,
           code: same ? px[P.code] : ((px[P.code] * 17 + py[P.code] * 7) % palette.length),
           comp: same ? f.xComp : -1,
           xCode: px[P.code], yCode: py[P.code],
@@ -943,6 +1044,16 @@
     function baseExtent(seriesRows, f, codebook) {
       const xs = [], ys = [];
       for (const r of seriesRows) for (const p of r.series) { xs.push(p.x); ys.push(p.y); }
+      if (codebook) {
+        if (codebook.same) {
+          for (const c of codebook.items) { xs.push(c[C.z1]); ys.push(c[C.z2]); }
+        } else if (codebook.dimMode === "pca") {
+          for (const c of codebook.pairs || []) { xs.push(c.x); ys.push(c.y); }
+        } else {
+          for (const c of codebook.xItems || []) xs.push(c[C.pooled]);
+          for (const c of codebook.yItems || []) ys.push(c[C.pooled]);
+        }
+      }
       if (!xs.length || !ys.length) return { xmin:-1, xmax:1, ymin:-1, ymax:1 };
       let xmin = Math.min(...xs), xmax = Math.max(...xs), ymin = Math.min(...ys), ymax = Math.max(...ys);
       const dx = Math.max(0.05, (xmax - xmin) * 0.08), dy = Math.max(0.05, (ymax - ymin) * 0.08);
@@ -950,11 +1061,14 @@
     }
     function codebookFor(f) {
       if (f.xComp === f.yComp) return { same:true, items: codebooksByMSC.get(key(f.model, f.scale, f.xComp)) || [] };
-      return {
+      const out = {
         same:false,
         xItems: codebooksByMSC.get(key(f.model, f.scale, f.xComp)) || [],
         yItems: codebooksByMSC.get(key(f.model, f.scale, f.yComp)) || [],
+        dimMode:f.mapMode === "latent" && f.dimSelection === "pca" ? "pca" : "grid",
       };
+      if (out.dimMode === "pca") out.pairs = pcaProjectionFor(f).pairs;
+      return out;
     }
     function codeRingLayout(seriesRows, f, cb) {
       const states = new Map();
@@ -1011,11 +1125,11 @@
       return { xmin:-1.28, xmax:1.28, ymin:-1.28, ymax:1.28 };
     }
     function resetView(f, ex) {
-      viewKey = key(f.model, f.scale, f.xComp, f.yComp, f.mapMode);
+      viewKey = key(f.model, f.scale, f.xComp, f.yComp, f.mapMode, f.dimSelection);
       viewEx = {...ex};
     }
     function ensureView(f, ex) {
-      const k = key(f.model, f.scale, f.xComp, f.yComp, f.mapMode);
+      const k = key(f.model, f.scale, f.xComp, f.yComp, f.mapMode, f.dimSelection);
       if (k !== viewKey || !viewEx) resetView(f, ex);
       return viewEx;
     }
@@ -1059,7 +1173,7 @@
     }
     function colorForPoint(p, f) {
       const s = sessionByKey.get(key(p.model, p.sid));
-      if (f.color === "code") return palette[p.code % palette.length];
+      if (f.color === "code") return p.pair ? bgColorForCodes(p.xCode, p.yCode).replace(/0\.\d+\)$/, "0.88)") : palette[p.code % palette.length];
       if (f.color === "language") return s.language === "NGT" ? "#b2182b" : s.language === "NL" ? "#2166ac" : "#777";
       if (f.color === "aud") return s.hearing === "Deaf" ? "#d73027" : s.hearing === "Hearing" ? "#1a9850" : s.hearing === "Comparison" ? "#984ea3" : "#777";
       if (f.color === "naming_binary") return s.namingGroup === "high" ? "#111" : "#bdbdbd";
@@ -1152,8 +1266,9 @@
       }
       ctx.fillStyle = "#222"; ctx.font = "15px Segoe UI, Arial";
       const same = f.xComp === f.yComp;
-      const xLabel = same ? `${data.components[f.xComp]} latent x` : `${data.components[f.xComp]} pooled score`;
-      const yLabel = same ? `${data.components[f.yComp]} latent y` : `${data.components[f.yComp]} pooled score`;
+      const pca = !same && f.dimSelection === "pca";
+      const xLabel = same ? `${data.components[f.xComp]} latent x` : pca ? `PCA 1: ${data.components[f.xComp]} + ${data.components[f.yComp]}` : `${data.components[f.xComp]} pooled score`;
+      const yLabel = same ? `${data.components[f.yComp]} latent y` : pca ? `PCA 2: ${data.components[f.xComp]} + ${data.components[f.yComp]}` : `${data.components[f.yComp]} pooled score`;
       ctx.fillText(xLabel, rect.x + rect.w / 2 - ctx.measureText(xLabel).width / 2, rect.y + rect.h + 34);
       ctx.save(); ctx.translate(rect.x - 50, rect.y + rect.h / 2 + ctx.measureText(yLabel).width / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(yLabel, 0, 0); ctx.restore();
     }
@@ -1184,6 +1299,21 @@
           ctx.fillRect(px, py, step + 1, step + 1);
         }
       } else {
+        if (cb.dimMode === "pca") {
+          const pairs = cb.pairs || [];
+          if (!pairs.length) return;
+          for (let px = rect.x; px < rect.x + rect.w; px += step) for (let py = rect.y; py < rect.y + rect.h; py += step) {
+            const d = unmap(px, py, ex, rect);
+            let best = pairs[0], bd = Infinity;
+            for (const c of pairs) {
+              const dist = (d.x - c.x) ** 2 + (d.y - c.y) ** 2;
+              if (dist < bd) { bd = dist; best = c; }
+            }
+            ctx.fillStyle = bgColorForCodes(best.xCode, best.yCode);
+            ctx.fillRect(px, py, step + 1, step + 1);
+          }
+          return;
+        }
         if (!cb.xItems.length || !cb.yItems.length) return;
         for (let px = rect.x; px < rect.x + rect.w; px += step) for (let py = rect.y; py < rect.y + rect.h; py += step) {
           const d = unmap(px, py, ex, rect);
@@ -1281,6 +1411,20 @@
           drawCodeLabel(String(c[C.code]), m.x + 13, m.y, "left");
         }
       } else {
+        if (cb.dimMode === "pca") {
+          for (const c of cb.pairs || []) {
+            const m = mapPt(c, ex, rect);
+            if (m.x < rect.x - 12 || m.x > rect.x + rect.w + 12 || m.y < rect.y - 12 || m.y > rect.y + rect.h + 12) continue;
+            drawDiamond(m.x, m.y, 9.6, bgColorForCodes(c.xCode, c.yCode).replace(/0\.\d+\)$/, "0.88)"), "#111", 1.4);
+            currentCodeMarks.push({
+              x:m.x, y:m.y, r:17, model:f.model, scale:f.scale,
+              comp:-1, pair:true, xComp:f.xComp, yComp:f.yComp,
+              xCode:c.xCode, yCode:c.yCode, label:`${data.components[f.xComp]} C${c.xCode} / ${data.components[f.yComp]} C${c.yCode}`,
+            });
+            drawCodeLabel(`${c.xCode}/${c.yCode}`, m.x + 13, m.y, "left");
+          }
+          return;
+        }
         for (const c of cb.xItems) {
           const x = rect.x + (c[C.pooled] - ex.xmin) / Math.max(1e-9, ex.xmax - ex.xmin) * rect.w;
           if (x < rect.x || x > rect.x + rect.w) continue;
@@ -1906,6 +2050,7 @@
         `scale: ${data.scaleLabels[f.scale]}`,
         `x: ${data.components[f.xComp]}`,
         `y: ${data.components[f.yComp]}`,
+        `dim selection: ${f.xComp === f.yComp ? "native" : f.dimSelection}`,
         `map: ${f.mapMode}`,
         `background: ${f.bgMode}`,
         `latent positions: ${f.latentPositions ? "on" : "off"}`,
@@ -2027,6 +2172,16 @@
           });
         }
       } else {
+        if (cb.dimMode === "pca") {
+          for (const c of cb.pairs || []) {
+            centers.set(`${c.xCode},${c.yCode}`, {
+              x:c.x, y:c.y,
+              color:bgColorForCodes(c.xCode, c.yCode).replace(/0\.\d+\)$/, "0.88)"),
+              label:`${c.xCode}/${c.yCode}`,
+            });
+          }
+          return centers;
+        }
         const xs = new Map(cb.xItems.map(c => [c[C.code], c[C.pooled]]));
         const ys = new Map(cb.yItems.map(c => [c[C.code], c[C.pooled]]));
         for (const [xc, xv] of xs.entries()) {
@@ -2180,8 +2335,24 @@
       const label = prefix ? `${prefix}${c[C.code]}` : `C${c[C.code]}`;
       return `<span class="codeChip" data-model="${c[C.model]}" data-scale="${c[C.scale]}" data-comp="${compIdx}" data-code="${c[C.code]}"><i style="background:${palette[c[C.code] % palette.length]}"></i>${esc(label)}</span>`;
     }
+    function pairLegendChip(c, f) {
+      return `<span class="codeChip" data-pair="1" data-model="${f.model}" data-scale="${f.scale}" data-xcomp="${f.xComp}" data-ycomp="${f.yComp}" data-xcode="${c.xCode}" data-ycode="${c.yCode}"><i style="background:${bgColorForCodes(c.xCode, c.yCode)}"></i>${esc(c.label)}</span>`;
+    }
     function markFromCodeChip(chip) {
       if (!chip) return null;
+      if (chip.dataset.pair === "1") {
+        return {
+          model:Number(chip.dataset.model),
+          scale:Number(chip.dataset.scale),
+          comp:-1,
+          pair:true,
+          xComp:Number(chip.dataset.xcomp),
+          yComp:Number(chip.dataset.ycomp),
+          xCode:Number(chip.dataset.xcode),
+          yCode:Number(chip.dataset.ycode),
+          label:chip.textContent.trim(),
+        };
+      }
       return {
         model:Number(chip.dataset.model),
         scale:Number(chip.dataset.scale),
@@ -2327,6 +2498,9 @@
       if (cb.same) {
         const chips = cb.items.slice().sort((a,b) => a[C.code] - b[C.code]).map(c => legendChip(c, f.xComp)).join("");
         codeGroups.push(`<div class="legendCodeGroup"><b>${esc(data.components[f.xComp])}</b><div class="legendCodes">${chips}</div></div>`);
+      } else if (cb.dimMode === "pca") {
+        const chips = (cb.pairs || []).slice().sort((a,b) => (a.xCode - b.xCode) || (a.yCode - b.yCode)).map(c => pairLegendChip(c, f)).join("");
+        codeGroups.push(`<div class="legendCodeGroup"><b>${esc(data.components[f.xComp])} / ${esc(data.components[f.yComp])} pairs</b><div class="legendCodes axisCodes">${chips}</div></div>`);
       } else {
         const xCodes = cb.xItems.slice().sort((a,b) => a[C.code] - b[C.code]).map(c => legendChip(c, f.xComp, "x")).join("");
         const yCodes = cb.yItems.slice().sort((a,b) => a[C.code] - b[C.code]).map(c => legendChip(c, f.yComp, "y")).join("");
@@ -2668,6 +2842,7 @@
       }
       openLayer("topology");
       refreshSessionPickers();
+      updateArrangementControls();
       updateMovementControls();
       syncCompareAccordions();
       viewEx = null; viewKey = "";
@@ -3458,6 +3633,7 @@
       "code arrangement": "Controls whether codes use their learned latent geometry or a code-usage summary view.",
       "background + codes": "Colored code regions and code markers. Turn this off with other layers off to show code-usage histograms.",
       "latent positions": "Use learned 2D codebook/latent coordinates instead of arranging codes in a simple layout.",
+      "dim. selection": "For cross-component axes, choose the current pooled X/Y grid or a PCA projection of the selected components' exported latent dimensions.",
       "context size": "When latent positions are off, this controls how much of each session contributes to the code-usage histogram.",
       "stacking": "Subdivide each code-usage bar by a selected categorical variable.",
       "dots": "Animated session points at the selected normalized session time.",
@@ -3553,8 +3729,8 @@
       if (preset) applyHighLowPreset(preset);
     });
     controls.scale.addEventListener("change", () => { fillAxisControls(); refreshSessionPickers(); viewEx = null; viewKey = ""; });
-    controls.xComp.addEventListener("change", () => { viewEx = null; viewKey = ""; draw(); });
-    controls.yComp.addEventListener("change", () => { viewEx = null; viewKey = ""; draw(); });
+    controls.xComp.addEventListener("change", () => { updateArrangementControls(); viewEx = null; viewKey = ""; draw(); });
+    controls.yComp.addEventListener("change", () => { updateArrangementControls(); viewEx = null; viewKey = ""; draw(); });
     controls.latentPositions?.addEventListener("change", updateArrangementControls);
     function clearChartModes() {
       if (controls.showHeatmap) controls.showHeatmap.checked = false;
@@ -3568,7 +3744,7 @@
     controls.showHeatmap?.addEventListener("change", () => { if (controls.showHeatmap.checked && controls.showBarChart) controls.showBarChart.checked = false; });
     controls.showBarChart?.addEventListener("change", () => { if (controls.showBarChart.checked && controls.showHeatmap) controls.showHeatmap.checked = false; });
     controls.showCodes.addEventListener("change", draw);
-    for (const node of [controls.color, controls.latentPositions, controls.showBg, controls.showHeatmap, controls.showBarChart, controls.showTransitions, controls.showTopology, controls.selectedSessionsActive, controls.showNamingStars, controls.showTrails, controls.tailLength, controls.topologyContext, controls.codeUsageContext, controls.codeUsageStack, controls.transitionContext, controls.filterSessions, controls.highlightSessions, controls.progress].filter(Boolean)) {
+    for (const node of [controls.color, controls.dimSelection, controls.latentPositions, controls.showBg, controls.showHeatmap, controls.showBarChart, controls.showTransitions, controls.showTopology, controls.selectedSessionsActive, controls.showNamingStars, controls.showTrails, controls.tailLength, controls.topologyContext, controls.codeUsageContext, controls.codeUsageStack, controls.transitionContext, controls.filterSessions, controls.highlightSessions, controls.progress].filter(Boolean)) {
       node.addEventListener("input", draw);
       node.addEventListener("change", draw);
     }
