@@ -198,6 +198,7 @@
       };
     }
     function inferMapMode(f) {
+      if (f.showCodeUsage) return "code_usage_chart";
       if (f.showHeatmap) return "heatmap_chart";
       if (f.showBarChart) return "code_decomp";
       if (!f.latentPositions) {
@@ -207,7 +208,7 @@
       return "latent";
     }
     function inferBgMode(f) {
-      if (f.mapMode === "code_decomp" || f.mapMode === "code_layout" || f.mapMode === "heatmap_chart") return "none";
+      if (f.mapMode === "code_decomp" || f.mapMode === "code_layout" || f.mapMode === "heatmap_chart" || f.mapMode === "code_usage_chart") return "none";
       return f.showBg ? "code" : "none";
     }
     function tailFractionFromSlider() {
@@ -348,7 +349,7 @@
       const spatialLayerActive = controls.showTransitions.checked || controls.showKeypoints.checked || controls.showTrails.checked || controls.showTopology.checked || controls.showNamingStars.checked;
       const latentOn = controls.latentPositions ? controls.latentPositions.checked : true;
       const bgOn = controls.showBg ? controls.showBg.checked : true;
-      const inferredHeatmap = !spatialLayerActive && latentOn && !bgOn;
+      const inferredCodeUsage = !spatialLayerActive && latentOn && !bgOn;
       const inferredBarChart = !spatialLayerActive && !latentOn;
       const out = {
         model: Number(controls.model.value || 0),
@@ -363,7 +364,8 @@
         showBg: bgOn,
         showCodes: true,
         latentPositions: latentOn,
-        showHeatmap: inferredHeatmap,
+        showHeatmap: false,
+        showCodeUsage: inferredCodeUsage,
         showBarChart: inferredBarChart,
         showTransitions: controls.showTransitions.checked,
         showTopology: controls.showTopology.checked,
@@ -1184,16 +1186,19 @@
       const denom = Math.max(1, windows.length);
       for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) mat[i][j] /= denom;
       const maxV = Math.max(0.001, ...mat.flat());
-      const margin = { left: 210, right: 34, top: 88, bottom: 150 };
-      const size = Math.min(canvas.width - margin.left - margin.right, canvas.height - margin.top - margin.bottom);
-      const x0 = margin.left, y0 = margin.top;
+      const rect = plotRect(f);
+      const labelPad = Math.min(210, Math.max(150, rect.w * 0.24));
+      const bottomPad = Math.min(150, Math.max(96, rect.h * 0.24));
+      const size = Math.max(220, Math.min(rect.w - labelPad - 58, rect.h - 102 - bottomPad));
+      const x0 = rect.x + labelPad;
+      const y0 = rect.y + 82;
       const cell = size / Math.max(1, n);
       ctx.fillStyle = "#191919";
       ctx.font = "700 20px Segoe UI, Arial";
-      ctx.fillText("Behavior Co-occurrence Heatmap", 34, 34);
+      ctx.fillText("Behavior Co-occurrence Heatmap", rect.x, rect.y + 24);
       ctx.font = "13px Segoe UI, Arial";
       ctx.fillStyle = "#555";
-      ctx.fillText(`${data.scaleLabels[f.scale]} | visible windows: ${windows.length}`, 34, 55);
+      ctx.fillText(`${data.scaleLabels[f.scale]} | visible windows: ${windows.length}`, rect.x, rect.y + 45);
       for (let i = 0; i < n; i++) {
         for (let j = 0; j < n; j++) {
           ctx.fillStyle = heatmapColor(mat[i][j] / maxV);
@@ -1229,6 +1234,104 @@
       ctx.fillText(fmt(maxV, 2), lx + 22, ly + 8);
       ctx.fillText("0", lx + 22, ly + lh);
       return windows.length;
+    }
+    function drawCodeUsageHistogramView(f, seriesRows, cb) {
+      currentCodeMarks = [];
+      currentDrawn = [];
+      currentTailHits = [];
+      currentTransitionHits = [];
+      ctx.fillStyle = "#faf8f2";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const rect = plotRect(f);
+      const comps = f.xComp === f.yComp ? [f.xComp] : [f.xComp, f.yComp];
+      const allPts = [];
+      for (const row of seriesRows) for (const p of row.series) allPts.push(p);
+      ctx.fillStyle = "#191919";
+      ctx.font = "700 20px Segoe UI, Arial";
+      ctx.fillText("Code Usage", rect.x, rect.y + 24);
+      ctx.font = "13px Segoe UI, Arial";
+      ctx.fillStyle = "#555";
+      ctx.fillText(`${data.scaleLabels[f.scale]} | visible windows: ${allPts.length} | filters shown in legend`, rect.x, rect.y + 45);
+      if (!allPts.length) {
+        ctx.fillStyle = "#666";
+        ctx.font = "14px Segoe UI, Arial";
+        ctx.fillText("No windows match the current filters.", rect.x, rect.y + 82);
+        return 0;
+      }
+      const gap = 24;
+      const panelH = (rect.h - 82 - gap * (comps.length - 1)) / comps.length;
+      comps.forEach((compIdx, i) => {
+        const y = rect.y + 70 + i * (panelH + gap);
+        drawCodeUsageBlock(rect.x, y, rect.w, panelH, compIdx, allPts, cb, f);
+      });
+      return allPts.length;
+    }
+    function drawCodeUsageBlock(x, y, w, h, compIdx, pts, cb, f) {
+      const items = itemsForComponent(cb, f, compIdx).slice().sort((a,b) => a[C.code] - b[C.code]);
+      const counts = new Map(items.map(c => [c[C.code], 0]));
+      for (const p of pts) {
+        const code = compIdx === f.yComp && f.xComp !== f.yComp ? p.yCode : p.xCode;
+        counts.set(code, (counts.get(code) || 0) + 1);
+      }
+      const total = [...counts.values()].reduce((a,b) => a + b, 0);
+      ctx.save();
+      ctx.fillStyle = "rgba(255,255,255,.78)";
+      ctx.strokeStyle = "rgba(0,0,0,.14)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x, y, w, h, 8);
+      else ctx.rect(x, y, w, h);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#191919";
+      ctx.font = "800 15px Segoe UI, Arial";
+      ctx.fillText(`${data.components[compIdx]} codebook`, x + 14, y + 25);
+      ctx.font = "12px Segoe UI, Arial";
+      ctx.fillStyle = "#555";
+      ctx.fillText(`${total} filtered windows`, x + 14, y + 44);
+      if (!items.length || total <= 0) {
+        ctx.fillStyle = "#777";
+        ctx.fillText("No assigned windows for this codebook under the current filters.", x + 14, y + 75);
+        ctx.restore();
+        return;
+      }
+      const left = x + 54, right = x + w - 24, top = y + 66, bottom = y + h - 38;
+      const chartW = Math.max(100, right - left);
+      const chartH = Math.max(60, bottom - top);
+      const maxCount = Math.max(1, ...items.map(c => counts.get(c[C.code]) || 0));
+      const slotW = chartW / Math.max(1, items.length);
+      ctx.strokeStyle = "rgba(0,0,0,.18)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(left, bottom);
+      ctx.lineTo(right, bottom);
+      ctx.stroke();
+      items.forEach((c, j) => {
+        const code = c[C.code];
+        const count = counts.get(code) || 0;
+        const share = count / Math.max(1, total);
+        const barH = chartH * count / maxCount;
+        const cx = left + j * slotW + slotW / 2;
+        const bw = Math.max(12, slotW * 0.58);
+        ctx.fillStyle = palette[code % palette.length];
+        ctx.globalAlpha = count ? 0.88 : 0.20;
+        ctx.fillRect(cx - bw / 2, bottom - barH, bw, barH);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = "rgba(0,0,0,.25)";
+        ctx.strokeRect(cx - bw / 2, bottom - barH, bw, barH);
+        drawDiamond(cx, bottom + 18, 6.8, palette[code % palette.length], "#111", 1.1);
+        currentCodeMarks.push({x:cx, y:bottom + 18, r:13, model:f.model, scale:f.scale, comp:compIdx, code, label:`${data.components[compIdx]} code ${code}`});
+        ctx.fillStyle = "#191919";
+        ctx.font = "700 11px Segoe UI, Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(String(code), cx, bottom + 38);
+        if (share >= 0.08) {
+          ctx.fillStyle = "#333";
+          ctx.font = "11px Segoe UI, Arial";
+          ctx.fillText(`${Math.round(share * 100)}%`, cx, Math.max(top + 12, bottom - barH - 7));
+        }
+      });
+      ctx.textAlign = "start";
+      ctx.restore();
     }
     function scaleSeconds(scaleIdx) {
       const raw = data.scales[scaleIdx] || data.scaleLabels[scaleIdx] || "";
@@ -1317,6 +1420,7 @@
         `map: ${f.mapMode}`,
         `background: ${f.bgMode}`,
         `latent positions: ${f.latentPositions ? "on" : "off"}`,
+        `code usage: ${f.showCodeUsage ? "on" : "off"}`,
         `heatmap: ${f.showHeatmap ? "on" : "off"}`,
         `bar chart: ${f.showBarChart ? "on" : "off"}`,
         `topology mode: ${f.topologyMode}`,
@@ -1669,6 +1773,7 @@
       return "";
     }
     function topologyLegendBody(f) {
+      if (f.mapMode === "code_usage_chart") return "";
       if (f.mapMode === "heatmap_chart") return `${legendSwatch("#fff","low")}${legendSwatch("#f46d43","higher co-occurrence")}`;
       if (!f.showTopology && !f.showHeatmap) return "";
       if (f.topologyMode === "compare") {
@@ -1698,6 +1803,7 @@
       return `<div class="legendLayerRow">${items.map(([title, body]) => `<div class="legendLayerItem"><b>${esc(title)}:</b>${body}</div>`).join("")}</div>`;
     }
     function topologyLegendHtml(f) {
+      if (f.mapMode === "code_usage_chart") return `<div class="legendColor"><b>Code usage:</b><em>Bars count filtered windows assigned to each code.</em></div>`;
       if (f.mapMode === "heatmap_chart") {
         const sw = (color, label) => `<span><i style="background:${color};border-radius:2px"></i>${esc(label)}</span>`;
         return `<div class="legendColor"><b>Heatmap:</b>${sw("#fff","low")}${sw("#f46d43","higher co-occurrence")}</div>`;
@@ -2126,7 +2232,7 @@
       const active = [
         scale,
         x === y ? x : `${x} x ${y}`,
-        f.mapMode === "heatmap_chart" ? "heatmap" : f.mapMode === "code_decomp" ? "code profiles" : f.mapMode === "code_layout" ? "code positions" : "latent",
+        f.mapMode === "code_usage_chart" ? "code usage" : f.mapMode === "heatmap_chart" ? "heatmap" : f.mapMode === "code_decomp" ? "code profiles" : f.mapMode === "code_layout" ? "code positions" : "latent",
         f.bgMode === "none" ? "no bg" : "code bg",
         f.showHeatmap ? "heatmap" : null,
         f.showTopology ? `topology: ${f.topologyMode}` : null,
@@ -2478,6 +2584,16 @@
       const cb = codebookFor(f);
       const ring = codeRingLayout(rawSeriesRows, f, cb);
       const seriesRows = projectSeriesRows(rawSeriesRows, f, ring);
+      if (f.mapMode === "code_usage_chart") {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        const histogramWindows = drawCodeUsageHistogramView(f, rawSeriesRows, cb) || 0;
+        currentCanvasMeta = filterSummary(f);
+        renderLegend(f, cb, histogramWindows, 0);
+        layoutRightRail();
+        status.textContent = "Code usage view: histograms count filtered windows assigned to each selected codebook.";
+        sessionList.innerHTML = `<b>Displayed participants at selected time</b><span class="muted">Code usage view hides session movement. Turn on dots, topology, transitions, or the background layer to return to the embedding view.</span>`;
+        return;
+      }
       if (f.mapMode === "heatmap_chart") {
         ctx.clearRect(0,0,canvas.width,canvas.height);
         const heatmapWindows = drawBehaviorHeatmapView(f, rawSeriesRows) || 0;
@@ -2825,6 +2941,111 @@
       });
       setActive(target ? target.value === activeValue : false);
     });
+    const HELP_TEXT = {
+      "global selectors": "These filters decide which sessions and windows are visible across the live view.",
+      "preset": "Jump to a saved axis/filter configuration that was useful for high-vs-low naming contrasts.",
+      "window": "Temporal scale of each encoded window: shorter windows track local behavior; longer windows summarize broader interaction state.",
+      "x axis": "Codebook/latent source plotted horizontally.",
+      "y axis": "Codebook/latent source plotted vertically. Match X for the native 2D latent space; choose another source for a cross-modality view.",
+      "language": "Session language modality: NGT signing or NL spoken Dutch.",
+      "aud. status": "Child audiological status group.",
+      "aud.": "Child audiological status group.",
+      "session": "Recording session number.",
+      "naming frequency": "Within-language low/high naming-frequency group.",
+      "naming": "Within-language low/high naming-frequency group.",
+      "proximity to naming event": "Whether a window is far from, before, during, or after a naming event.",
+      "near": "Temporal proximity to naming events.",
+      "session phase": "Early, middle, or late third of the session.",
+      "phase": "Early, middle, or late third of the session.",
+      "mutual attention": "none: no shared alignment; object-aligned: both oriented to object; person-aligned: dyad oriented to each other; coordinated JA: object/person coordination; naming-aligned JA: coordinated attention during naming.",
+      "mutual": "Mutual attention category for the selected windows.",
+      "background + codes": "Colored code regions and code markers. Turn this off with other layers off to show code-usage histograms.",
+      "latent positions": "Use learned 2D codebook/latent coordinates instead of arranging codes in a simple layout.",
+      "dots": "Animated session points at the selected normalized session time.",
+      "color": "Variable used to color moving session points.",
+      "session trails": "Show recent path history behind each moving point.",
+      "naming event stars": "Mark recent naming-event windows near the moving point.",
+      "trail length": "How much recent path history is shown for each session point.",
+      "selected sessions": "Manually filter or highlight specific sessions after applying the global filters.",
+      "filter sessions": "Only selected sessions remain visible.",
+      "highlight sessions": "Selected sessions stay visible but are emphasized.",
+      "topology": "Density contours over the currently selected windows. In comparison mode, show the difference between A and B.",
+      "context": "How much of each session contributes to topology or transition summaries: current frame through full session.",
+      "transitions": "Directed transitions between codes over the selected windows. In comparison mode, arrows show A/B differences."
+    };
+    function helpLabelText(node) {
+      const clone = node.cloneNode(true);
+      clone.querySelectorAll("input, select, button, .helpIcon").forEach(x => x.remove());
+      return clone.textContent.replace(/\s+/g, " ").trim().toLowerCase();
+    }
+    function helpForLabel(text) {
+      if (HELP_TEXT[text]) return HELP_TEXT[text];
+      if (text.includes("language")) return HELP_TEXT["language"];
+      if (text.includes("aud")) return HELP_TEXT["aud. status"];
+      if (text.includes("naming frequency")) return HELP_TEXT["naming frequency"];
+      if (text === "naming") return HELP_TEXT["naming"];
+      if (text.includes("proximity")) return HELP_TEXT["proximity to naming event"];
+      if (text.includes("session phase")) return HELP_TEXT["session phase"];
+      if (text.includes("mutual")) return HELP_TEXT["mutual attention"];
+      if (text.includes("context")) return HELP_TEXT["context"];
+      return "";
+    }
+    let controlHelpTooltip = null;
+    function ensureControlHelpTooltip() {
+      if (controlHelpTooltip) return controlHelpTooltip;
+      controlHelpTooltip = document.createElement("div");
+      controlHelpTooltip.className = "controlHelpTooltip";
+      document.body.appendChild(controlHelpTooltip);
+      return controlHelpTooltip;
+    }
+    function showControlHelp(icon) {
+      const tip = ensureControlHelpTooltip();
+      tip.textContent = icon.dataset.help || "";
+      tip.style.display = "block";
+      tip.style.opacity = "0";
+      const r = icon.getBoundingClientRect();
+      const tr = tip.getBoundingClientRect();
+      let left = r.left + 14;
+      let top = r.top - tr.height - 8;
+      if (left + tr.width > window.innerWidth - 10) left = window.innerWidth - tr.width - 10;
+      if (top < 10) top = r.bottom + 8;
+      tip.style.left = `${Math.max(10, left)}px`;
+      tip.style.top = `${Math.max(10, top)}px`;
+      tip.style.opacity = "1";
+    }
+    function hideControlHelp() {
+      if (controlHelpTooltip) controlHelpTooltip.style.opacity = "0";
+    }
+    function decorateHelpIcons() {
+      const selector = [
+        ".explorerControls h3",
+        ".explorerControls .control > label",
+        ".explorerControls .globalSelectors > label",
+        ".explorerControls .globalSelectors .controlRow > div > label",
+        ".explorerControls .layerHeader > label",
+        ".explorerControls .layerInner > label",
+        ".explorerControls .abCompareGrid > label",
+        ".explorerControls .inlineChecks > label"
+      ].join(",");
+      document.querySelectorAll(selector).forEach(node => {
+        if (node.querySelector(".helpIcon")) return;
+        const text = helpLabelText(node);
+        const help = helpForLabel(text);
+        if (!help) return;
+        const icon = document.createElement("span");
+        icon.className = "helpIcon";
+        icon.tabIndex = 0;
+        icon.setAttribute("role", "button");
+        icon.setAttribute("aria-label", help);
+        icon.dataset.help = help;
+        icon.addEventListener("click", ev => { ev.preventDefault(); ev.stopPropagation(); });
+        icon.addEventListener("mouseenter", () => showControlHelp(icon));
+        icon.addEventListener("mouseleave", hideControlHelp);
+        icon.addEventListener("focus", () => showControlHelp(icon));
+        icon.addEventListener("blur", hideControlHelp);
+        node.appendChild(icon);
+      });
+    }
     controls.model.addEventListener("change", () => { fillScaleControls(); refreshSessionPickers(); viewEx = null; viewKey = ""; });
     controls.preset?.addEventListener("change", () => {
       const rank = controls.preset.value;
@@ -2855,6 +3076,7 @@
     window.addEventListener("resize", () => { refreshOpenAccordions(); draw(); layoutRightRail(); });
     fillModelControls();
     fillSessionControls();
+    decorateHelpIcons();
     updateMovementControls();
     setVisualizationSpeed(Number(controls.windowsPerSecond.value || 1));
     syncCompareAccordions();
