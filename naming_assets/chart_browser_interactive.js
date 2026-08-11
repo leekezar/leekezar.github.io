@@ -1173,8 +1173,6 @@
       currentDrawn = [];
       currentTailHits = [];
       currentTransitionHits = [];
-      ctx.fillStyle = "#faf8f2";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
       const n = data.channels.length;
       const mat = Array.from({length:n}, () => Array(n).fill(0));
       for (const w of windows) {
@@ -1187,6 +1185,11 @@
       for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) mat[i][j] /= denom;
       const maxV = Math.max(0.001, ...mat.flat());
       const rect = plotRect(f);
+      ctx.fillStyle = "#faf8f2";
+      ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+      ctx.strokeStyle = "rgba(0,0,0,.10)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
       const labelPad = Math.min(210, Math.max(150, rect.w * 0.24));
       const bottomPad = Math.min(150, Math.max(96, rect.h * 0.24));
       const size = Math.max(220, Math.min(rect.w - labelPad - 58, rect.h - 102 - bottomPad));
@@ -1240,12 +1243,16 @@
       currentDrawn = [];
       currentTailHits = [];
       currentTransitionHits = [];
-      ctx.fillStyle = "#faf8f2";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
       const rect = plotRect(f);
       const comps = f.xComp === f.yComp ? [f.xComp] : [f.xComp, f.yComp];
       const allPts = [];
       for (const row of seriesRows) for (const p of row.series) allPts.push(p);
+      ctx.save();
+      ctx.fillStyle = "#faf8f2";
+      ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+      ctx.strokeStyle = "rgba(0,0,0,.10)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
       ctx.fillStyle = "#191919";
       ctx.font = "700 20px Segoe UI, Arial";
       ctx.fillText("Code Usage", rect.x, rect.y + 24);
@@ -1256,14 +1263,17 @@
         ctx.fillStyle = "#666";
         ctx.font = "14px Segoe UI, Arial";
         ctx.fillText("No windows match the current filters.", rect.x, rect.y + 82);
+        ctx.restore();
         return 0;
       }
-      const gap = 24;
-      const panelH = (rect.h - 82 - gap * (comps.length - 1)) / comps.length;
+      const gap = comps.length > 1 ? 30 : 0;
+      const availableH = Math.max(120, rect.h - 94 - gap * (comps.length - 1));
+      const panelH = availableH / comps.length;
       comps.forEach((compIdx, i) => {
-        const y = rect.y + 70 + i * (panelH + gap);
+        const y = rect.y + 74 + i * (panelH + gap);
         drawCodeUsageBlock(rect.x, y, rect.w, panelH, compIdx, allPts, cb, f);
       });
+      ctx.restore();
       return allPts.length;
     }
     function drawCodeUsageBlock(x, y, w, h, compIdx, pts, cb, f) {
@@ -1275,55 +1285,67 @@
       }
       const total = [...counts.values()].reduce((a,b) => a + b, 0);
       ctx.save();
-      ctx.fillStyle = "rgba(255,255,255,.78)";
-      ctx.strokeStyle = "rgba(0,0,0,.14)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(x, y, w, h, 8);
-      else ctx.rect(x, y, w, h);
-      ctx.fill(); ctx.stroke();
+      ctx.textAlign = "start";
       ctx.fillStyle = "#191919";
       ctx.font = "800 15px Segoe UI, Arial";
       ctx.fillText(`${data.components[compIdx]} codebook`, x + 14, y + 25);
       ctx.font = "12px Segoe UI, Arial";
       ctx.fillStyle = "#555";
-      ctx.fillText(`${total} filtered windows`, x + 14, y + 44);
+      ctx.fillText(`${total} filtered windows`, x + 14, y + 43);
       if (!items.length || total <= 0) {
         ctx.fillStyle = "#777";
         ctx.fillText("No assigned windows for this codebook under the current filters.", x + 14, y + 75);
         ctx.restore();
         return;
       }
-      const left = x + 54, right = x + w - 24, top = y + 66, bottom = y + h - 38;
+      const left = x + 62, right = x + w - 24, top = y + 62, bottom = y + h - 48;
       const chartW = Math.max(100, right - left);
       const chartH = Math.max(60, bottom - top);
       const maxCount = Math.max(1, ...items.map(c => counts.get(c[C.code]) || 0));
       const slotW = chartW / Math.max(1, items.length);
-      ctx.strokeStyle = "rgba(0,0,0,.18)";
+      ctx.strokeStyle = "rgba(0,0,0,.34)";
       ctx.lineWidth = 1;
       ctx.beginPath();
+      ctx.moveTo(left, top);
+      ctx.lineTo(left, bottom);
       ctx.moveTo(left, bottom);
       ctx.lineTo(right, bottom);
       ctx.stroke();
+      ctx.save();
+      ctx.translate(x + 16, top + chartH / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#333";
+      ctx.font = "700 11px Segoe UI, Arial";
+      ctx.fillText("count", 0, 0);
+      ctx.restore();
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#333";
+      ctx.font = "700 11px Segoe UI, Arial";
+      ctx.fillText("code usage", left + chartW / 2, y + h - 8);
+      ctx.textAlign = "right";
+      ctx.font = "10.5px Segoe UI, Arial";
+      ctx.fillStyle = "#555";
+      ctx.fillText(String(maxCount), left - 7, top + 4);
+      ctx.fillText("0", left - 7, bottom + 3);
       items.forEach((c, j) => {
         const code = c[C.code];
         const count = counts.get(code) || 0;
         const share = count / Math.max(1, total);
         const barH = chartH * count / maxCount;
         const cx = left + j * slotW + slotW / 2;
-        const bw = Math.max(12, slotW * 0.58);
+        const bw = Math.max(10, Math.min(48, slotW * 0.62));
         ctx.fillStyle = palette[code % palette.length];
         ctx.globalAlpha = count ? 0.88 : 0.20;
         ctx.fillRect(cx - bw / 2, bottom - barH, bw, barH);
         ctx.globalAlpha = 1;
         ctx.strokeStyle = "rgba(0,0,0,.25)";
         ctx.strokeRect(cx - bw / 2, bottom - barH, bw, barH);
-        drawDiamond(cx, bottom + 18, 6.8, palette[code % palette.length], "#111", 1.1);
-        currentCodeMarks.push({x:cx, y:bottom + 18, r:13, model:f.model, scale:f.scale, comp:compIdx, code, label:`${data.components[compIdx]} code ${code}`});
+        currentCodeMarks.push({x:cx, y:bottom - Math.max(6, barH) / 2, r:Math.max(11, bw / 2), model:f.model, scale:f.scale, comp:compIdx, code, label:`${data.components[compIdx]} code ${code}`});
         ctx.fillStyle = "#191919";
         ctx.font = "700 11px Segoe UI, Arial";
         ctx.textAlign = "center";
-        ctx.fillText(String(code), cx, bottom + 38);
+        ctx.fillText(String(code), cx, bottom + 16);
         if (share >= 0.08) {
           ctx.fillStyle = "#333";
           ctx.font = "11px Segoe UI, Arial";
@@ -2559,12 +2581,12 @@
         const x1 = Math.min(canvas.width - 42, Math.round((rightRail?.left || canvas.width) - 36));
         const y0 = 34;
         const y1 = Math.min(canvas.height - 70, Math.round((timeline?.top || canvas.height - 86) - 26));
-        base = { x:x0, y:y0, w:Math.max(360, x1 - x0), h:Math.max(360, y1 - y0) };
+        base = { x:x0, y:y0, w:Math.max(180, x1 - x0), h:Math.max(220, y1 - y0) };
       } else {
         base = { x: 70, y: 34, w: canvas.width - 112, h: canvas.height - 88 };
       }
       if (!f || f.mapMode !== "code_layout") return base;
-      const size = Math.max(360, Math.min(base.w, base.h));
+      const size = Math.max(180, Math.min(base.w, base.h));
       return { x: base.x + (base.w - size) / 2, y: base.y + (base.h - size) / 2, w: size, h: size };
     }
     function zoomView(factor) {
