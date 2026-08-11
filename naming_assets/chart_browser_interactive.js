@@ -32,6 +32,9 @@
       topologyMode: $("embedTopologyMode"),
       topologyContext: $("embedTopologyContext"),
       topologyContextReadout: $("embedTopologyContextReadout"),
+      codeUsageContext: $("embedCodeUsageContext"),
+      codeUsageContextReadout: $("embedCodeUsageContextReadout"),
+      codeUsageStack: $("embedCodeUsageStack"),
       transitionMode: $("embedTransitionMode"),
       transitionContext: $("embedTransitionContext"),
       transitionContextReadout: $("embedTransitionContextReadout"),
@@ -358,6 +361,8 @@
         yComp: Number(controls.yComp.value || 0),
         topologyMode: controls.topologyMode.value,
         topologyContext: contextFractionFromSlider(controls.topologyContext, controls.topologyContextReadout),
+        codeUsageContext: contextFractionFromSlider(controls.codeUsageContext, controls.codeUsageContextReadout),
+        codeUsageStack: controls.codeUsageStack ? controls.codeUsageStack.value : "none",
         transitionMode: controls.transitionMode.value,
         transitionContext: contextFractionFromSlider(controls.transitionContext, controls.transitionContextReadout),
         color: controls.color.value,
@@ -444,6 +449,11 @@
       controls.play.innerHTML = playing ? "&#10074;&#10074;" : "&#9658;";
       controls.play.setAttribute("aria-label", playing ? "Pause" : "Play");
       if (!controls.showKeypoints.checked) hoveredSessionKey = null;
+    }
+    function updateArrangementControls() {
+      const codeUsage = controls.latentPositions && !controls.latentPositions.checked;
+      document.querySelectorAll(".codeUsageOnly").forEach(node => { node.style.display = codeUsage ? "" : "none"; });
+      refreshOpenAccordions();
     }
     function setVisualizationSpeed(v) {
       controls.windowsPerSecond.value = String(v);
@@ -556,6 +566,22 @@
       const end = Math.min(1, progress + half);
       const pts = pathSlice(series, start, end);
       return pts.length ? pts : [interp(series, progress)].filter(Boolean);
+    }
+    function codeUsageContextPoints(series, progress, frac) {
+      if (!series.length) return [];
+      if (frac >= 0.999) return series;
+      const step = 1 / Math.max(1, series.length - 1);
+      const half = frac <= 0.001 ? step : frac / 2;
+      const start = Math.max(0, progress - half);
+      const end = Math.min(1, progress + half);
+      const pts = series.filter(p => p.progress >= start && p.progress <= end);
+      if (pts.length) return pts;
+      let best = series[0], bestD = Math.abs(series[0].progress - progress);
+      for (const p of series.slice(1)) {
+        const d = Math.abs(p.progress - progress);
+        if (d < bestD) { best = p; bestD = d; }
+      }
+      return [best];
     }
     function currentPoints(seriesRows, f) {
       return seriesRows.map(r => interp(r.series, f.progress)).filter(Boolean);
@@ -696,6 +722,58 @@
         return p.window ? colors[p.window[W.mutual] % colors.length] : "#777";
       }
       return "#222";
+    }
+    function stackOptionsForMode(mode) {
+      if (mode === "language") return [
+        {key:"NGT", label:"NGT", color:"#b2182b"},
+        {key:"NL", label:"NL", color:"#2166ac"},
+        {key:"other", label:"other", color:"#777"},
+      ];
+      if (mode === "aud") return [
+        {key:"Deaf", label:"Deaf", color:"#d73027"},
+        {key:"Hearing", label:"Hearing", color:"#1a9850"},
+        {key:"Comparison", label:"Comparison", color:"#984ea3"},
+        {key:"Unknown", label:"Unknown", color:"#777"},
+      ];
+      if (mode === "naming_binary") return [
+        {key:"low", label:"low naming", color:"#bdbdbd"},
+        {key:"high", label:"high naming", color:"#111111"},
+      ];
+      if (mode === "naming_tertile") return [
+        {key:"low", label:"low", color:"#2166ac"},
+        {key:"mid", label:"mid", color:"#fdd863"},
+        {key:"high", label:"high", color:"#b2182b"},
+      ];
+      if (mode === "session") return [
+        {key:"S1", label:"S1", color:"#e41a1c"},
+        {key:"S2", label:"S2", color:"#377eb8"},
+        {key:"S3", label:"S3", color:"#4daf4a"},
+      ];
+      if (mode === "phase") return data.phases.map((p,i) => ({key:p, label:p, color:palette[i % palette.length]}));
+      if (mode === "session_phase") return [
+        {key:"early", label:"early", color:"#8dd3c7"},
+        {key:"middle", label:"middle", color:"#fdb462"},
+        {key:"late", label:"late", color:"#bebada"},
+      ];
+      if (mode === "mutual_attention") {
+        const labels = data.mutualAttentionLevels || [];
+        const colors = ["#bdbdbd", "#80b1d3", "#fb8072", "#b3de69", "#fdb462"];
+        return labels.map((x,i) => ({key:x, label:x === "coordinated joint attention" ? "coordinated JA" : x === "naming-aligned joint attention" ? "naming JA" : x, color:colors[i % colors.length]}));
+      }
+      return [];
+    }
+    function stackInfoForPoint(p, mode) {
+      const s = sessionByKey.get(key(p.model, p.sid));
+      if (!s) return null;
+      if (mode === "language") return stackOptionsForMode(mode).find(x => x.key === (s.language || "other")) || stackOptionsForMode(mode).find(x => x.key === "other");
+      if (mode === "aud") return stackOptionsForMode(mode).find(x => x.key === (s.hearing || "Unknown")) || stackOptionsForMode(mode).find(x => x.key === "Unknown");
+      if (mode === "naming_binary") return stackOptionsForMode(mode).find(x => x.key === s.namingGroup) || null;
+      if (mode === "naming_tertile") return stackOptionsForMode(mode).find(x => x.key === namingTertile(s)) || null;
+      if (mode === "session") return stackOptionsForMode(mode).find(x => x.key === s.session) || null;
+      if (mode === "phase" && p.window) return stackOptionsForMode(mode).find(x => x.key === data.phases[p.window[W.phase]]) || null;
+      if (mode === "session_phase" && p.window) return stackOptionsForMode(mode).find(x => x.key === data.sessionPhases[p.window[W.sessionPhase]]) || null;
+      if (mode === "mutual_attention" && p.window) return stackOptionsForMode(mode).find(x => x.key === data.mutualAttentionLevels[p.window[W.mutual]]) || null;
+      return null;
     }
     function drawAxes(rect, ex, f) {
       ctx.strokeStyle = "#222"; ctx.lineWidth = 1; ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
@@ -1246,7 +1324,10 @@
       const rect = plotRect(f);
       const comps = f.xComp === f.yComp ? [f.xComp] : [f.xComp, f.yComp];
       const allPts = [];
-      for (const row of seriesRows) for (const p of row.series) allPts.push(p);
+      for (const row of seriesRows) {
+        const pts = codeUsageContextPoints(row.series, f.progress, f.codeUsageContext);
+        for (const p of pts) allPts.push(p);
+      }
       ctx.save();
       ctx.fillStyle = "#faf8f2";
       ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
@@ -1258,7 +1339,8 @@
       ctx.fillText("Code Usage", rect.x, rect.y + 24);
       ctx.font = "13px Segoe UI, Arial";
       ctx.fillStyle = "#555";
-      ctx.fillText(`${data.scaleLabels[f.scale]} | visible windows: ${allPts.length} | filters shown in legend`, rect.x, rect.y + 45);
+      const contextText = f.codeUsageContext >= 0.999 ? "full session" : f.codeUsageContext <= 0.001 ? "current frame" : `${fmt(f.codeUsageContext * 100, 1)}% session`;
+      ctx.fillText(`${data.scaleLabels[f.scale]} | counted windows: ${allPts.length} | context: ${contextText}`, rect.x, rect.y + 45);
       if (!allPts.length) {
         ctx.fillStyle = "#666";
         ctx.font = "14px Segoe UI, Arial";
@@ -1279,9 +1361,24 @@
     function drawCodeUsageBlock(x, y, w, h, compIdx, pts, cb, f) {
       const items = itemsForComponent(cb, f, compIdx).slice().sort((a,b) => a[C.code] - b[C.code]);
       const counts = new Map(items.map(c => [c[C.code], 0]));
+      const stackMode = f.codeUsageStack || "none";
+      let stackMetas = stackMode === "none" ? [] : stackOptionsForMode(stackMode);
+      const stackMetaByKey = new Map(stackMetas.map(m => [m.key, m]));
+      const stacks = new Map(items.map(c => [c[C.code], new Map()]));
       for (const p of pts) {
         const code = compIdx === f.yComp && f.xComp !== f.yComp ? p.yCode : p.xCode;
         counts.set(code, (counts.get(code) || 0) + 1);
+        if (stackMode !== "none") {
+          let info = stackInfoForPoint(p, stackMode);
+          if (!info) info = {key:"other", label:"other", color:"#999999"};
+          if (!stackMetaByKey.has(info.key)) {
+            stackMetaByKey.set(info.key, info);
+            stackMetas.push(info);
+          }
+          const byStack = stacks.get(code) || new Map();
+          byStack.set(info.key, (byStack.get(info.key) || 0) + 1);
+          stacks.set(code, byStack);
+        }
       }
       const total = [...counts.values()].reduce((a,b) => a + b, 0);
       ctx.save();
@@ -1335,12 +1432,28 @@
         const barH = chartH * count / maxCount;
         const cx = left + j * slotW + slotW / 2;
         const bw = Math.max(10, Math.min(48, slotW * 0.62));
-        ctx.fillStyle = palette[code % palette.length];
-        ctx.globalAlpha = count ? 0.88 : 0.20;
-        ctx.fillRect(cx - bw / 2, bottom - barH, bw, barH);
-        ctx.globalAlpha = 1;
+        if (stackMode === "none") {
+          ctx.fillStyle = palette[code % palette.length];
+          ctx.globalAlpha = count ? 0.88 : 0.20;
+          ctx.fillRect(cx - bw / 2, bottom - barH, bw, barH);
+          ctx.globalAlpha = 1;
+        } else {
+          let yCursor = bottom;
+          const byStack = stacks.get(code) || new Map();
+          stackMetas.forEach(meta => {
+            const v = byStack.get(meta.key) || 0;
+            if (!v) return;
+            const segH = chartH * v / maxCount;
+            yCursor -= segH;
+            ctx.fillStyle = meta.color;
+            ctx.globalAlpha = 0.90;
+            ctx.fillRect(cx - bw / 2, yCursor, bw, segH);
+          });
+          ctx.globalAlpha = count ? 1 : 0.18;
+        }
         ctx.strokeStyle = "rgba(0,0,0,.25)";
         ctx.strokeRect(cx - bw / 2, bottom - barH, bw, barH);
+        ctx.globalAlpha = 1;
         currentCodeMarks.push({x:cx, y:bottom - Math.max(6, barH) / 2, r:Math.max(11, bw / 2), model:f.model, scale:f.scale, comp:compIdx, code, label:`${data.components[compIdx]} code ${code}`});
         ctx.fillStyle = "#191919";
         ctx.font = "700 11px Segoe UI, Arial";
@@ -1815,8 +1928,14 @@
       }
       return legendSwatch("#333", "observed probability", true);
     }
+    function codeUsageLegendBody(f) {
+      if (f.mapMode !== "code_usage_chart") return "";
+      if (!f.codeUsageStack || f.codeUsageStack === "none") return `<em>bars use code colors</em>`;
+      return stackOptionsForMode(f.codeUsageStack).map(x => legendSwatch(x.color, x.label)).join("");
+    }
     function legendLayerRowHtml(f) {
       const items = [
+        ["Code usage", codeUsageLegendBody(f)],
         ["Point color", pointLegendBody(f)],
         [f.showHeatmap && f.showTopology ? "Topology + heatmap" : f.showHeatmap ? "Heatmap" : "Topology", topologyLegendBody(f)],
         ["Transitions", transitionLegendBody(f)],
@@ -2981,8 +3100,11 @@
       "phase": "Early, middle, or late third of the session.",
       "mutual attention": "none: no shared alignment; object-aligned: both oriented to object; person-aligned: dyad oriented to each other; coordinated JA: object/person coordination; naming-aligned JA: coordinated attention during naming.",
       "mutual": "Mutual attention category for the selected windows.",
+      "code arrangement": "Controls whether codes use their learned latent geometry or a code-usage summary view.",
       "background + codes": "Colored code regions and code markers. Turn this off with other layers off to show code-usage histograms.",
       "latent positions": "Use learned 2D codebook/latent coordinates instead of arranging codes in a simple layout.",
+      "context size": "When latent positions are off, this controls how much of each session contributes to the code-usage histogram.",
+      "stacking": "Subdivide each code-usage bar by a selected categorical variable.",
       "dots": "Animated session points at the selected normalized session time.",
       "color": "Variable used to color moving session points.",
       "session trails": "Show recent path history behind each moving point.",
@@ -3078,6 +3200,7 @@
     controls.scale.addEventListener("change", () => { fillAxisControls(); refreshSessionPickers(); viewEx = null; viewKey = ""; });
     controls.xComp.addEventListener("change", () => { viewEx = null; viewKey = ""; draw(); });
     controls.yComp.addEventListener("change", () => { viewEx = null; viewKey = ""; draw(); });
+    controls.latentPositions?.addEventListener("change", updateArrangementControls);
     function clearChartModes() {
       if (controls.showHeatmap) controls.showHeatmap.checked = false;
       if (controls.showBarChart) controls.showBarChart.checked = false;
@@ -3090,7 +3213,7 @@
     controls.showHeatmap?.addEventListener("change", () => { if (controls.showHeatmap.checked && controls.showBarChart) controls.showBarChart.checked = false; });
     controls.showBarChart?.addEventListener("change", () => { if (controls.showBarChart.checked && controls.showHeatmap) controls.showHeatmap.checked = false; });
     controls.showCodes.addEventListener("change", draw);
-    for (const node of [controls.color, controls.latentPositions, controls.showBg, controls.showHeatmap, controls.showBarChart, controls.showTransitions, controls.showTopology, controls.selectedSessionsActive, controls.showNamingStars, controls.showTrails, controls.tailLength, controls.topologyContext, controls.transitionContext, controls.filterSessions, controls.highlightSessions, controls.progress].filter(Boolean)) {
+    for (const node of [controls.color, controls.latentPositions, controls.showBg, controls.showHeatmap, controls.showBarChart, controls.showTransitions, controls.showTopology, controls.selectedSessionsActive, controls.showNamingStars, controls.showTrails, controls.tailLength, controls.topologyContext, controls.codeUsageContext, controls.codeUsageStack, controls.transitionContext, controls.filterSessions, controls.highlightSessions, controls.progress].filter(Boolean)) {
       node.addEventListener("input", draw);
       node.addEventListener("change", draw);
     }
@@ -3100,6 +3223,7 @@
     fillSessionControls();
     decorateHelpIcons();
     updateMovementControls();
+    updateArrangementControls();
     setVisualizationSpeed(Number(controls.windowsPerSecond.value || 1));
     syncCompareAccordions();
     renderWindowDetail(null);
