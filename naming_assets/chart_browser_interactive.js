@@ -349,8 +349,8 @@
       const spatialLayerActive = controls.showTransitions.checked || controls.showKeypoints.checked || controls.showTrails.checked || controls.showTopology.checked || controls.showNamingStars.checked;
       const latentOn = controls.latentPositions ? controls.latentPositions.checked : true;
       const bgOn = controls.showBg ? controls.showBg.checked : true;
-      const inferredCodeUsage = !spatialLayerActive && latentOn && !bgOn;
-      const inferredBarChart = !spatialLayerActive && !latentOn;
+      const inferredCodeUsage = !spatialLayerActive && bgOn && !latentOn;
+      const inferredBarChart = !spatialLayerActive && !bgOn && !latentOn;
       const out = {
         model: Number(controls.model.value || 0),
         scale: Number(controls.scale.value || 0),
@@ -3107,5 +3107,6 @@
     setHoverInspector(null);
     draw();
   }
-  document.addEventListener("DOMContentLoaded", init);
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
 })();
