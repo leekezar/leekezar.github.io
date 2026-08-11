@@ -8,6 +8,8 @@
     const IMPORTANT_RANK_MIN_Z = 1e-6;
   const palette = ["#d73027","#fdae61","#fee08b","#1a9850","#4575b4","#984ea3","#ff7f00","#4daf4a","#377eb8","#e41a1c","#a65628","#f781bf","#999999","#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854","#ffd92f","#e5c494"];
   const modColors = ["#d73027","#fdae61","#fee08b","#1a9850","#4575b4","#984ea3"];
+  const CONTEXT_SNAP_VALUES = [0,100,200,300,400,500,600,700,800,900,1000];
+  const TAIL_SNAP_VALUES = [0,5,10,15,20,25,30,35,40,45,50,60,70,80,90,100];
   function $(id) { return document.getElementById(id); }
   function fmt(v, n = 2) { return Number.isFinite(Number(v)) ? Number(v).toFixed(n) : "n/a"; }
   function key(...parts) { return parts.join("|"); }
@@ -304,6 +306,32 @@
       if (raw === "" || raw === "none") return [];
       return String(raw).split(",").map(x => x.trim()).filter(Boolean);
     }
+    function nearestSnapValue(value, snaps) {
+      const v = Number(value || 0);
+      let best = snaps[0], bd = Math.abs(v - best);
+      for (const s of snaps) {
+        const d = Math.abs(v - s);
+        if (d < bd) { best = s; bd = d; }
+      }
+      return best;
+    }
+    function snapControlValue(control, snaps) {
+      if (!control) return snaps[snaps.length - 1];
+      const snapped = nearestSnapValue(control.value, snaps);
+      if (String(control.value) !== String(snapped)) control.value = String(snapped);
+      return snapped;
+    }
+    function normalizeTailSliderValue(value) {
+      let raw = Number(value || 0);
+      if (!Number.isFinite(raw)) raw = 0;
+      if (raw > 100) {
+        const oldRaw = clamp(raw, 0, 1000);
+        raw = oldRaw <= 800
+          ? oldRaw / 800 * 10
+          : 10 + ((oldRaw - 800) / 200) ** 2 * 40;
+      }
+      return nearestSnapValue(clamp(raw, 0, 100), TAIL_SNAP_VALUES);
+    }
     function sliderToUrlValue(value) {
       const n = clamp(Number(value || 0), 0, 1000);
       if (n <= 0) return "current";
@@ -372,7 +400,6 @@
         x: optionCode(controls.xComp, data.components),
         y: optionCode(controls.yComp, data.components),
         dims: controls.dimSelection ? controls.dimSelection.value : "grid",
-        at: progressToUrlValue(controls.progress.value),
         layers: layerState(),
         color: controls.color.value,
         speed: controls.windowsPerSecond.value,
@@ -401,7 +428,7 @@
       };
     }
     const READABLE_URL_KEYS = [
-      "model", "window", "x", "y", "dims", "at", "layers", "color", "speed", "tail",
+      "model", "window", "x", "y", "dims", "layers", "color", "speed", "tail",
       "codeContext", "stack", "topologyMode", "topologyContext", "topologyStep", "transitionMode", "transitionContext",
       "selected", "lang", "aud", "session", "naming", "near", "phase", "attention", "filter", "highlight",
       "topoA_lang", "topoA_aud", "topoA_session", "topoA_naming", "topoA_near", "topoA_phase", "topoA_attention",
@@ -443,6 +470,10 @@
         const raw = params.get(k);
         st[k] = READABLE_ARRAY_KEYS.has(k) ? parseList(raw) : raw;
       }
+      if (params.has("at")) {
+        found = true;
+        st.at = params.get("at");
+      }
       return found ? st : null;
     }
     function applyLegacyUrlState(st) {
@@ -460,7 +491,7 @@
       if (st.topo !== undefined) controls.showTopology.checked = !!Number(st.topo);
       if (st.trans !== undefined) controls.showTransitions.checked = !!Number(st.trans);
       setIfOption(controls.color, st.color);
-      if (st.tail !== undefined) controls.tailLength.value = String(st.tail);
+      if (st.tail !== undefined) controls.tailLength.value = String(normalizeTailSliderValue(st.tail));
       if (controls.codeUsageContext && st.cuCtx !== undefined) controls.codeUsageContext.value = String(st.cuCtx);
       setIfOption(controls.codeUsageStack, st.cuStack);
       if (st.topCtx !== undefined) controls.topologyContext.value = String(st.topCtx);
@@ -495,7 +526,7 @@
       applyLayerState(st.layers);
       setIfOption(controls.color, st.color);
       if (st.speed !== undefined) controls.windowsPerSecond.value = String(st.speed);
-      if (st.tail !== undefined) controls.tailLength.value = String(st.tail);
+      if (st.tail !== undefined) controls.tailLength.value = String(normalizeTailSliderValue(st.tail));
       if (controls.codeUsageContext && st.codeContext !== undefined) controls.codeUsageContext.value = sliderFromUrlValue(st.codeContext);
       setIfOption(controls.codeUsageStack, st.stack);
       setIfOption(controls.topologyMode, st.topologyMode);
@@ -572,8 +603,10 @@
       if (f.showHeatmap) return "heatmap_chart";
       if (f.showBarChart) return "code_decomp";
       if (!f.showBg) return f.showKeypoints ? "session_behavior_chart" : "aggregate_behavior_chart";
+      if (f.showTopology) return "latent";
+      if (f.showTransitions && !f.showKeypoints && !f.showTrails && !f.showNamingStars) return "code_layout";
       if (!f.latentPositions) {
-        if (!f.showTransitions && !f.showKeypoints && !f.showTrails && !f.showTopology && !f.showNamingStars) return "code_decomp";
+        if (!f.showTransitions && !f.showKeypoints && !f.showTrails && !f.showTopology && !f.showNamingStars) return "code_usage_chart";
         return "code_layout";
       }
       return "latent";
@@ -583,12 +616,12 @@
       return f.showBg ? "code" : "none";
     }
     function tailFractionFromSlider() {
-      const raw = clamp(Number(controls.tailLength.value || 0), 0, 1000);
-      if (raw <= 800) return raw / 800 * 0.10;
-      return 0.10 + ((raw - 800) / 200) ** 2 * 0.40;
+      const raw = normalizeTailSliderValue(controls.tailLength.value);
+      controls.tailLength.value = String(raw);
+      return raw / 100;
     }
     function contextFractionFromSlider(control, readout) {
-      const raw = clamp(Number(control?.value || 0), 0, 1000);
+      const raw = snapControlValue(control, CONTEXT_SNAP_VALUES);
       const frac = raw / 1000;
       if (readout) {
         if (frac <= 0.001) readout.textContent = "current frame";
@@ -724,7 +757,12 @@
       if (controls.tailReadout) controls.tailReadout.textContent = `${fmt(tail * 100, 2)}% session`;
       const latentOn = controls.latentPositions ? controls.latentPositions.checked : true;
       const bgOn = controls.showBg ? controls.showBg.checked : true;
-      const inferredCodeUsage = bgOn && !controls.showKeypoints.checked;
+      const keypointsOn = controls.showKeypoints.checked;
+      const trailsOn = controls.showTrails.checked;
+      const starsOn = controls.showNamingStars.checked;
+      const topologyOn = controls.showTopology.checked;
+      const transitionsOn = bgOn && controls.showTransitions.checked;
+      const inferredCodeUsage = bgOn && !latentOn && !keypointsOn && !trailsOn && !starsOn && !topologyOn && !transitionsOn;
       const inferredBarChart = false;
       const out = {
         model: Number(controls.model.value || 0),
@@ -746,11 +784,11 @@
         showHeatmap: false,
         showCodeUsage: inferredCodeUsage,
         showBarChart: inferredBarChart,
-        showTransitions: bgOn && controls.showTransitions.checked,
-        showTopology: controls.showTopology.checked,
-        showNamingStars: controls.showNamingStars.checked,
-        showKeypoints: controls.showKeypoints.checked,
-        showTrails: controls.showTrails.checked,
+        showTransitions: transitionsOn,
+        showTopology: topologyOn,
+        showNamingStars: starsOn,
+        showKeypoints: keypointsOn,
+        showTrails: trailsOn,
         tail,
         windowsPerSecond: Math.max(0.1, Number(controls.windowsPerSecond.value || 1)),
         progress: playing && playProgress !== null ? clamp(playProgress, 0, 1) : Number(controls.progress.value || 0) / 10000,
@@ -832,7 +870,13 @@
         const label = controls.latentPositions.closest("label");
         if (label) label.classList.toggle("disabledControl", !codeDisplay);
       }
-      const codeUsage = codeDisplay && controls.showKeypoints && !controls.showKeypoints.checked;
+      const codeUsage = codeDisplay
+        && controls.latentPositions && !controls.latentPositions.checked
+        && controls.showKeypoints && !controls.showKeypoints.checked
+        && controls.showTrails && !controls.showTrails.checked
+        && controls.showNamingStars && !controls.showNamingStars.checked
+        && controls.showTopology && !controls.showTopology.checked
+        && controls.showTransitions && !controls.showTransitions.checked;
       const crossDims = String(controls.xComp?.value || "") !== String(controls.yComp?.value || "");
       document.querySelectorAll(".codeUsageOnly").forEach(node => { node.style.display = codeUsage ? "" : "none"; });
       document.querySelectorAll(".dimSelectionOnly").forEach(node => { node.style.display = (codeDisplay && !codeUsage && crossDims) ? "" : "none"; });
@@ -3723,7 +3767,8 @@
         const bSrc = src.filter(p => comparePointPass(p, f.topologyB));
         drawSignedDifferenceHeatmap(aSrc, bSrc, f, ex, rect);
       } else {
-        drawObservedHeatmap(src, ex, rect);
+        const observed = src.filter(p => comparePointPass(p, f.topologyA));
+        drawObservedHeatmap(observed, ex, rect);
       }
     }
     function drawThresholdGrid(grid, threshold, ex, rect, stroke, width) {
@@ -3799,7 +3844,9 @@
         const bSrc = src.filter(p => comparePointPass(p, f.topologyB));
         drawSignedDifferenceContours(aSrc, bSrc, f, ex, rect);
       } else {
-        const groups = topologyGroupsForColor(src, f);
+        const observed = src.filter(p => comparePointPass(p, f.topologyA));
+        if (observed.length < 4) return;
+        const groups = topologyGroupsForColor(observed, f);
         const thresholdFracs = contourThresholdFractions(f);
         if (groups.length) {
           groups.forEach(g => drawContourSet(
@@ -3811,7 +3858,7 @@
             thresholdFracs
           ));
         } else {
-          drawContourSet(src, ex, rect, thresholdFracs.map((_, i) => `rgba(0,0,0,${0.20 + 0.42 * (i + 1) / thresholdFracs.length})`), null, thresholdFracs);
+          drawContourSet(observed, ex, rect, thresholdFracs.map((_, i) => `rgba(0,0,0,${0.20 + 0.42 * (i + 1) / thresholdFracs.length})`), null, thresholdFracs);
         }
       }
     }
