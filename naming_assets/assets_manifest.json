@@ -31,7 +31,7 @@
     "differential": false,
     "separability": 0.0,
     "size": 107925,
-    "mtime": 1786473541.5844555,
+    "mtime": 1786474245.2478452,
     "description": "Prediction/separability summary for whether code usage explains naming-event frequency or high/low naming status.",
     "storyOrder": 70
   },
@@ -70,7 +70,7 @@
     "differential": false,
     "separability": 0.2408,
     "size": 45048,
-    "mtime": 1786473526.6091998,
+    "mtime": 1786474230.410509,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -109,7 +109,7 @@
     "differential": false,
     "separability": 0.2153,
     "size": 46657,
-    "mtime": 1786473530.53608,
+    "mtime": 1786474234.3168473,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -148,7 +148,7 @@
     "differential": false,
     "separability": 0.4682,
     "size": 45334,
-    "mtime": 1786473534.3571615,
+    "mtime": 1786474238.111078,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -187,7 +187,7 @@
     "differential": false,
     "separability": 0.2457,
     "size": 47188,
-    "mtime": 1786473522.3109581,
+    "mtime": 1786474226.1288478,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -226,7 +226,7 @@
     "differential": false,
     "separability": 1.8143,
     "size": 45383,
-    "mtime": 1786473538.065763,
+    "mtime": 1786474241.7537835,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -263,7 +263,7 @@
     "differential": true,
     "separability": 0.2408,
     "size": 402033,
-    "mtime": 1786473524.6719122,
+    "mtime": 1786474228.489386,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -300,7 +300,7 @@
     "differential": true,
     "separability": 0.2408,
     "size": 385584,
-    "mtime": 1786473525.6198099,
+    "mtime": 1786474229.4423587,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -337,7 +337,7 @@
     "differential": true,
     "separability": 0.2408,
     "size": 406472,
-    "mtime": 1786473526.4810376,
+    "mtime": 1786474230.3026216,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -374,7 +374,7 @@
     "differential": true,
     "separability": 0.2153,
     "size": 390793,
-    "mtime": 1786473528.5940514,
+    "mtime": 1786474232.403753,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -411,7 +411,7 @@
     "differential": true,
     "separability": 0.2153,
     "size": 329560,
-    "mtime": 1786473529.4440694,
+    "mtime": 1786474233.2246926,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -448,7 +448,7 @@
     "differential": true,
     "separability": 0.2153,
     "size": 403860,
-    "mtime": 1786473530.386905,
+    "mtime": 1786474234.1909578,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -485,7 +485,7 @@
     "differential": true,
     "separability": 0.4682,
     "size": 379827,
-    "mtime": 1786473532.4791732,
+    "mtime": 1786474236.2495122,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -522,7 +522,7 @@
     "differential": true,
     "separability": 0.4682,
     "size": 342710,
-    "mtime": 1786473533.4265215,
+    "mtime": 1786474237.1805234,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -559,7 +559,7 @@
     "differential": true,
     "separability": 0.4682,
     "size": 343597,
-    "mtime": 1786473534.2403471,
+    "mtime": 1786474237.9904761,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -596,7 +596,7 @@
     "differential": true,
     "separability": 0.2457,
     "size": 663865,
-    "mtime": 1786473520.2004201,
+    "mtime": 1786474223.9929397,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -633,7 +633,7 @@
     "differential": true,
     "separability": 0.2457,
     "size": 701703,
-    "mtime": 1786473521.195599,
+    "mtime": 1786474225.0237622,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -670,7 +670,7 @@
     "differential": true,
     "separability": 0.2457,
     "size": 631261,
-    "mtime": 1786473522.1521544,
+    "mtime": 1786474225.9596944,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -707,7 +707,7 @@
     "differential": true,
     "separability": 1.8143,
     "size": 363139,
-    "mtime": 1786473536.1787982,
+    "mtime": 1786474239.9079292,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -744,7 +744,7 @@
     "differential": true,
     "separability": 1.8143,
     "size": 346648,
-    "mtime": 1786473537.1322634,
+    "mtime": 1786474240.844326,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -781,7 +781,7 @@
     "differential": true,
     "separability": 1.8143,
     "size": 290085,
-    "mtime": 1786473537.9463744,
+    "mtime": 1786474241.6285808,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -818,7 +818,7 @@
     "differential": true,
     "separability": 0.2408,
     "size": 48757,
-    "mtime": 1786473526.716611,
+    "mtime": 1786474230.5343533,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -855,7 +855,7 @@
     "differential": true,
     "separability": 0.2153,
     "size": 114275,
-    "mtime": 1786473530.6791494,
+    "mtime": 1786474234.458822,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -892,7 +892,7 @@
     "differential": true,
     "separability": 0.4682,
     "size": 48994,
-    "mtime": 1786473534.4591746,
+    "mtime": 1786474238.207986,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -929,7 +929,7 @@
     "differential": true,
     "separability": 0.2457,
     "size": 159533,
-    "mtime": 1786473522.488501,
+    "mtime": 1786474226.300195,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -966,7 +966,7 @@
     "differential": true,
     "separability": 1.8143,
     "size": 49497,
-    "mtime": 1786473538.1685476,
+    "mtime": 1786474241.8475847,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -1003,7 +1003,7 @@
     "differential": false,
     "separability": 0.0,
     "size": 405,
-    "mtime": 1786473519.2909677,
+    "mtime": 1786474223.0721397,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -1040,7 +1040,7 @@
     "differential": false,
     "separability": 0.0,
     "size": 54713,
-    "mtime": 1786473519.27558,
+    "mtime": 1786474223.0721397,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -1077,7 +1077,7 @@
     "differential": false,
     "separability": 0.0,
     "size": 14671,
-    "mtime": 1786473519.1706786,
+    "mtime": 1786474222.9416962,
     "description": "Session 1 versus Session 2 comparison: topology, code occupancy, transition, or naming-rate support for session effects.",
     "storyOrder": 110
   },
@@ -1117,7 +1117,7 @@
     "differential": false,
     "separability": 0.2408,
     "size": 36659,
-    "mtime": 1786473526.9811854,
+    "mtime": 1786474230.8046894,
     "description": "Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.",
     "storyOrder": 120
   },
@@ -1157,7 +1157,7 @@
     "differential": false,
     "separability": 0.2153,
     "size": 38187,
-    "mtime": 1786473530.9610033,
+    "mtime": 1786474234.7383585,
     "description": "Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.",
     "storyOrder": 120
   },
@@ -1197,7 +1197,7 @@
     "differential": false,
     "separability": 0.4682,
     "size": 37036,
-    "mtime": 1786473534.7282948,
+    "mtime": 1786474238.4899242,
     "description": "Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.",
     "storyOrder": 120
   },
@@ -1237,7 +1237,7 @@
     "differential": false,
     "separability": 0.2457,
     "size": 38905,
-    "mtime": 1786473522.777428,
+    "mtime": 1786474226.616478,
     "description": "Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.",
     "storyOrder": 120
   },
@@ -1277,7 +1277,7 @@
     "differential": false,
     "separability": 1.8143,
     "size": 37085,
-    "mtime": 1786473538.4356256,
+    "mtime": 1786474242.130056,
     "description": "Child hearing-status comparison: topology or code-occupancy summaries for hearing, deaf, and comparison sessions.",
     "storyOrder": 120
   },
@@ -1692,7 +1692,7 @@
     "differential": false,
     "separability": 0.2408,
     "size": 40578,
-    "mtime": 1786473527.9279704,
+    "mtime": 1786474231.7415936,
     "description": "Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.",
     "storyOrder": 130
   },
@@ -1732,7 +1732,7 @@
     "differential": false,
     "separability": 0.2153,
     "size": 42135,
-    "mtime": 1786473531.8532434,
+    "mtime": 1786474235.6264315,
     "description": "Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.",
     "storyOrder": 130
   },
@@ -1772,7 +1772,7 @@
     "differential": false,
     "separability": 0.4682,
     "size": 40837,
-    "mtime": 1786473535.5742764,
+    "mtime": 1786474239.3098607,
     "description": "Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.",
     "storyOrder": 130
   },
@@ -1812,7 +1812,7 @@
     "differential": false,
     "separability": 0.2457,
     "size": 42374,
-    "mtime": 1786473523.940092,
+    "mtime": 1786474227.753022,
     "description": "Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.",
     "storyOrder": 130
   },
@@ -1852,7 +1852,7 @@
     "differential": false,
     "separability": 1.8143,
     "size": 39735,
-    "mtime": 1786473539.2169693,
+    "mtime": 1786474242.8983598,
     "description": "Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.",
     "storyOrder": 130
   },
@@ -1891,7 +1891,7 @@
     "differential": false,
     "separability": 0.2408,
     "size": 572527,
-    "mtime": 1786473527.8102753,
+    "mtime": 1786474231.6309936,
     "description": "Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.",
     "storyOrder": 130
   },
@@ -1930,7 +1930,7 @@
     "differential": false,
     "separability": 0.2153,
     "size": 495092,
-    "mtime": 1786473531.7177505,
+    "mtime": 1786474235.4899368,
     "description": "Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.",
     "storyOrder": 130
   },
@@ -1969,7 +1969,7 @@
     "differential": false,
     "separability": 0.4682,
     "size": 460872,
-    "mtime": 1786473535.4597752,
+    "mtime": 1786474239.1961648,
     "description": "Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.",
     "storyOrder": 130
   },
@@ -2008,7 +2008,7 @@
     "differential": false,
     "separability": 0.2457,
     "size": 957165,
-    "mtime": 1786473523.7990549,
+    "mtime": 1786474227.616169,
     "description": "Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.",
     "storyOrder": 130
   },
@@ -2047,7 +2047,7 @@
     "differential": false,
     "separability": 1.8143,
     "size": 327307,
-    "mtime": 1786473539.1045623,
+    "mtime": 1786474242.787437,
     "description": "Topology or code occupancy split by temporal proximity to naming events: far, before, during, and after.",
     "storyOrder": 130
   },
@@ -2083,7 +2083,7 @@
     "differential": false,
     "separability": 0.0,
     "size": 1682,
-    "mtime": 1786473498.014261,
+    "mtime": 1786474201.832657,
     "description": "Narrative report for the analysis package.",
     "storyOrder": 950
   },
@@ -2119,7 +2119,7 @@
     "differential": false,
     "separability": 0.0,
     "size": 3332,
-    "mtime": 1786473541.475634,
+    "mtime": 1786474245.1325326,
     "description": "CSV table supporting the figures and filters in this browser.",
     "storyOrder": 900
   }

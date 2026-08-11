@@ -57,6 +57,8 @@
       tailReadout: $("embedTailReadout"),
       selectedSessionsActive: $("embedSelectedSessionsActive"),
       resetSelectedSessions: $("embedResetSelectedSessions"),
+      filterSessionsAll: $("embedFilterSessionsAll"),
+      filterSessionsNone: $("embedFilterSessionsNone"),
       filterSessions: $("embedFilterSessions"),
       highlightSessions: $("embedHighlightSessions"),
       progress: $("embedProgress"),
@@ -562,6 +564,7 @@
       if (f.showCodeUsage) return "code_usage_chart";
       if (f.showHeatmap) return "heatmap_chart";
       if (f.showBarChart) return "code_decomp";
+      if (!f.showBg && !f.showKeypoints && !f.showTrails && !f.showTopology && !f.showNamingStars && !f.showTransitions) return "participant_behavior_chart";
       if (!f.latentPositions) {
         if (!f.showTransitions && !f.showKeypoints && !f.showTrails && !f.showTopology && !f.showNamingStars) return "code_decomp";
         return "code_layout";
@@ -711,7 +714,7 @@
       const latentOn = controls.latentPositions ? controls.latentPositions.checked : true;
       const bgOn = controls.showBg ? controls.showBg.checked : true;
       const inferredCodeUsage = !spatialLayerActive && bgOn && !latentOn;
-      const inferredBarChart = !spatialLayerActive && !bgOn && !latentOn;
+      const inferredBarChart = false;
       const out = {
         model: Number(controls.model.value || 0),
         scale: Number(controls.scale.value || 0),
@@ -726,12 +729,12 @@
         transitionContext: contextFractionFromSlider(controls.transitionContext, controls.transitionContextReadout),
         color: controls.color.value,
         showBg: bgOn,
-        showCodes: true,
+        showCodes: bgOn,
         latentPositions: latentOn,
         showHeatmap: false,
         showCodeUsage: inferredCodeUsage,
         showBarChart: inferredBarChart,
-        showTransitions: controls.showTransitions.checked,
+        showTransitions: bgOn && controls.showTransitions.checked,
         showTopology: controls.showTopology.checked,
         showNamingStars: controls.showNamingStars.checked,
         showKeypoints: controls.showKeypoints.checked,
@@ -1742,20 +1745,24 @@
       const denoms = channelNormDenoms(model, scale, comp);
       return raw.map((v, i) => (Number(v) || 0) / Math.max(0.20, denoms[i] || 1));
     }
+    function croppedBehaviorIndices(zVals, indices, mode = "tip") {
+      const rows = (indices || zVals.map((_, i) => i))
+        .map(i => ({ idx:i, abs:Math.abs(Number(zVals[i]) || 0) }))
+        .sort((a, b) => b.abs - a.abs);
+      const minRows = mode === "main" ? 5 : 4;
+      const maxRows = mode === "main" ? 9 : 6;
+      return rows
+        .filter((r, pos) => pos < minRows || r.abs >= 0.35)
+        .slice(0, maxRows)
+        .map(r => r.idx);
+    }
     function zBarRows(zVals, limit, mode = "tip", indices = null, rawVals = null) {
-      const idxs = (indices || zVals.map((_, i) => i)).slice(0, limit);
+      const idxs = (indices || zVals.map((_, i) => i))
+        .slice(0, limit)
+        .sort((a, b) => Math.abs(Number(zVals[b]) || 0) - Math.abs(Number(zVals[a]) || 0));
       const rows = idxs.map(i => [i, data.channels[i], Number(zVals[i]) || 0]);
       const maxAbs = Math.max(1.5, ...rows.map(x => Math.abs(x[2])));
-      const rankLimit = rows.length > 8 ? 3 : Math.min(2, rows.length);
-      const rankImportant = new Set(
-        rows
-          .map((r, pos) => ({ pos, abs: Math.abs(r[2]) }))
-          .filter(r => r.abs >= IMPORTANT_RANK_MIN_Z)
-          .sort((a, b) => b.abs - a.abs)
-          .slice(0, rankLimit)
-          .map(r => r.pos)
-      );
-      return rows.map((row, pos) => {
+      return rows.map(row => {
         const [, ch, z] = row;
         const pct = Math.min(50, Math.abs(z) / maxAbs * 50);
         const cls = z >= 0 ? "pos" : "neg";
@@ -1766,10 +1773,8 @@
           : `${z >= 0 ? "+" : ""}${fmt(z, 2)}z`;
         const title = rawVals ? ` title="raw z: ${raw >= 0 ? "+" : ""}${fmt(raw, 2)}"` : "";
         const thresholdHit = Math.abs(z) >= IMPORTANT_Z;
-        const isImportant = thresholdHit || rankImportant.has(pos);
-        const rowCls = `${mode === "main" ? "behaviorRow zRow" : "tipBar zTipBar"}${isImportant ? " sig" : ""}${isImportant ? (thresholdHit ? " thresholdSig" : " rankSig") : ""}`;
-        const badge = isImportant ? `<small>${thresholdHit ? ">=1z" : "top"}</small>` : "";
-        return `<div class="${rowCls}"${title}><span>${esc(ch)}</span><i><b class="${cls}" style="left:${left}%;width:${pct}%"></b></i><em>${label}${badge}</em></div>`;
+        const rowCls = `${mode === "main" ? "behaviorRow zRow" : "tipBar zTipBar"}${thresholdHit ? " sig thresholdSig" : ""}`;
+        return `<div class="${rowCls}"${title}><span>${esc(ch)}</span><i><b class="${cls}" style="left:${left}%;width:${pct}%"></b></i><em>${label}</em></div>`;
       }).join("");
     }
     function profilePieParts(mark, prof, behaviorIdxs) {
@@ -1798,8 +1803,9 @@
       const behaviorIdxs = sourceBehaviorIndices(mark.comp);
       const rawZ = prof[R.zMeans] || prof[R.means];
       const displayZ = normalizedBehaviorZ(prof, mark.model, exact ? mark.scale : null, mark.comp);
-      const barsHtml = zBarRows(displayZ, behaviorIdxs.length, "main", behaviorIdxs, rawZ);
-      const pie = profilePieParts(mark, prof, behaviorIdxs);
+      const shownIdxs = croppedBehaviorIndices(displayZ, behaviorIdxs, "main");
+      const barsHtml = zBarRows(displayZ, shownIdxs.length, "main", shownIdxs, rawZ);
+      const pie = profilePieParts(mark, prof, shownIdxs);
       codeProfile.innerHTML = `<b>${esc(mark.label)} - Which behaviors are present when this code is used?</b><br><span class="muted">Bars: z relative to this codebook; 0 = typical, + = more present, - = less present. Pie: absolute share of this code's deviation profile.</span><div class="profileGrid">${pieSvg(pie.vals, pie.colors)}<div>${barsHtml}</div></div><div class="pieLegend">${pie.legend}</div>`;
     }
     function codeProfileTooltip(mark, titleOverride = null) {
@@ -1809,8 +1815,9 @@
       const behaviorIdxs = sourceBehaviorIndices(mark.comp);
       const rawZ = prof[R.zMeans] || prof[R.means];
       const displayZ = normalizedBehaviorZ(prof, mark.model, exact ? mark.scale : null, mark.comp);
-      const barsHtml = zBarRows(displayZ, behaviorIdxs.length, "tip", behaviorIdxs, rawZ);
-      const pie = profilePieParts(mark, prof, behaviorIdxs);
+      const shownIdxs = croppedBehaviorIndices(displayZ, behaviorIdxs, "tip");
+      const barsHtml = zBarRows(displayZ, shownIdxs.length, "tip", shownIdxs, rawZ);
+      const pie = profilePieParts(mark, prof, shownIdxs);
       const title = titleOverride || `${mark.label} - Which behaviors are present when this code is used?`;
       return `<b>${esc(title)}</b><span class="tipMuted">Bars: z vs this codebook. Pie: absolute share of the deviation profile.</span><div class="tipProfile"><div class="tipPiePane">${pieSvg(pie.vals, pie.colors)}<div class="tipLegend">${pie.legend}</div></div><div class="tipZPane">${barsHtml}</div></div>`;
     }
@@ -2011,6 +2018,91 @@
       ctx.fillText(fmt(maxV, 2), lx + 22, ly + 8);
       ctx.fillText("0", lx + 22, ly + lh);
       return windows.length;
+    }
+    function drawParticipantBehaviorHeatmapView(f, seriesRows) {
+      currentCodeMarks = [];
+      currentDrawn = [];
+      currentTailHits = [];
+      currentTransitionHits = [];
+      const rows = [];
+      for (const row of seriesRows) {
+        const pt = interp(row.series, f.progress);
+        if (!pt || !pt.window) continue;
+        rows.push({ session:row.session, pt, vals:pt.window[W.behaviors].map(v => clamp(Number(v) || 0, 0, 1)) });
+      }
+      rows.sort((a,b) => `${a.session.participant} ${a.session.session}`.localeCompare(`${b.session.participant} ${b.session.session}`));
+      const rect = plotRect(f);
+      ctx.save();
+      ctx.fillStyle = "#faf8f2";
+      ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+      ctx.strokeStyle = "rgba(0,0,0,.10)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+      ctx.fillStyle = "#191919";
+      ctx.font = "700 20px Segoe UI, Arial";
+      ctx.fillText("Behavior by Participant", rect.x, rect.y + 24);
+      ctx.font = "13px Segoe UI, Arial";
+      ctx.fillStyle = "#555";
+      ctx.fillText(`${data.scaleLabels[f.scale]} | selected time: ${fmt(f.progress * 100, 1)}% | participants: ${rows.length}`, rect.x, rect.y + 45);
+      if (!rows.length) {
+        ctx.fillStyle = "#666";
+        ctx.font = "14px Segoe UI, Arial";
+        ctx.fillText("No participants match the current filters.", rect.x, rect.y + 82);
+        ctx.restore();
+        return 0;
+      }
+      const nC = data.channels.length;
+      const labelPad = Math.min(190, Math.max(125, rect.w * 0.20));
+      const bottomPad = Math.min(170, Math.max(112, rect.h * 0.25));
+      const x0 = rect.x + labelPad;
+      const y0 = rect.y + 72;
+      const gridW = Math.max(180, rect.w - labelPad - 34);
+      const gridH = Math.max(160, rect.h - 90 - bottomPad);
+      const cellW = gridW / Math.max(1, nC);
+      const cellH = Math.min(20, gridH / Math.max(1, rows.length));
+      const actualH = cellH * rows.length;
+      for (let r = 0; r < rows.length; r++) {
+        for (let c = 0; c < nC; c++) {
+          ctx.fillStyle = heatmapColor(rows[r].vals[c]);
+          ctx.fillRect(x0 + c * cellW, y0 + r * cellH, Math.ceil(cellW) + 0.5, Math.ceil(cellH) + 0.5);
+        }
+      }
+      ctx.strokeStyle = "rgba(0,0,0,.18)";
+      ctx.strokeRect(x0, y0, gridW, actualH);
+      ctx.font = rows.length > 34 ? "9px Segoe UI, Arial" : "10.5px Segoe UI, Arial";
+      ctx.fillStyle = "#222";
+      ctx.textAlign = "right";
+      const labelEvery = rows.length > 36 ? 2 : 1;
+      rows.forEach((row, i) => {
+        if (i % labelEvery) return;
+        const label = `${row.session.participant} ${row.session.session}`.slice(0, 22);
+        ctx.fillText(label, x0 - 8, y0 + i * cellH + cellH * 0.68);
+      });
+      ctx.font = "10.5px Segoe UI, Arial";
+      for (let c = 0; c < nC; c++) {
+        const label = cleanBehaviorName(data.channels[c]).slice(0, 25);
+        ctx.save();
+        ctx.translate(x0 + c * cellW + cellW * 0.55, y0 + actualH + 8);
+        ctx.rotate(-Math.PI / 4);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#222";
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+      }
+      ctx.textAlign = "start";
+      const lx = rect.x + rect.w - 28, ly = y0, lw = 14, lh = Math.min(160, actualH);
+      for (let i = 0; i < lh; i++) {
+        ctx.fillStyle = heatmapColor(1 - i / Math.max(1, lh - 1));
+        ctx.fillRect(lx, ly + i, lw, 1);
+      }
+      ctx.strokeStyle = "rgba(0,0,0,.25)";
+      ctx.strokeRect(lx, ly, lw, lh);
+      ctx.fillStyle = "#333";
+      ctx.font = "11px Segoe UI, Arial";
+      ctx.fillText("1", lx + 18, ly + 8);
+      ctx.fillText("0", lx + 18, ly + lh);
+      ctx.restore();
+      return rows.length;
     }
     function drawCodeUsageHistogramView(f, seriesRows, cb) {
       currentCodeMarks = [];
@@ -2736,14 +2828,17 @@
     function renderLegend(f, cb, windows, pointCount) {
       if (!legend) return;
       const codeGroups = [];
-      if (cb.same) {
-        const chips = cb.items.slice().sort((a,b) => a[C.code] - b[C.code]).map(c => legendChip(c, f.xComp)).join("");
-        codeGroups.push(`<div class="legendCodeGroup"><b>${esc(data.components[f.xComp])}</b><div class="legendCodes">${chips}</div></div>`);
-      } else {
-        const xCodes = cb.xItems.slice().sort((a,b) => a[C.code] - b[C.code]).map(c => legendChip(c, f.xComp, "x")).join("");
-        const yCodes = cb.yItems.slice().sort((a,b) => a[C.code] - b[C.code]).map(c => legendChip(c, f.yComp, "y")).join("");
-        codeGroups.push(`<div class="legendCodeGroup"><b>X: ${esc(data.components[f.xComp])}</b><div class="legendCodes axisCodes">${xCodes}</div></div>`);
-        codeGroups.push(`<div class="legendCodeGroup"><b>Y: ${esc(data.components[f.yComp])}</b><div class="legendCodes axisCodes">${yCodes}</div></div>`);
+      const showCodeLegend = f.showCodes || f.showCodeUsage || f.showBarChart || f.showTransitions || f.mapMode === "code_usage_chart" || f.mapMode === "code_decomp" || f.mapMode === "code_layout";
+      if (showCodeLegend) {
+        if (cb.same) {
+          const chips = cb.items.slice().sort((a,b) => a[C.code] - b[C.code]).map(c => legendChip(c, f.xComp)).join("");
+          codeGroups.push(`<div class="legendCodeGroup"><b>${esc(data.components[f.xComp])}</b><div class="legendCodes">${chips}</div></div>`);
+        } else {
+          const xCodes = cb.xItems.slice().sort((a,b) => a[C.code] - b[C.code]).map(c => legendChip(c, f.xComp, "x")).join("");
+          const yCodes = cb.yItems.slice().sort((a,b) => a[C.code] - b[C.code]).map(c => legendChip(c, f.yComp, "y")).join("");
+          codeGroups.push(`<div class="legendCodeGroup"><b>X: ${esc(data.components[f.xComp])}</b><div class="legendCodes axisCodes">${xCodes}</div></div>`);
+          codeGroups.push(`<div class="legendCodeGroup"><b>Y: ${esc(data.components[f.yComp])}</b><div class="legendCodes axisCodes">${yCodes}</div></div>`);
+        }
       }
       const countLine = `${pointCount} sessions at frame; ${windows} windows visible`;
       legend.innerHTML = `
@@ -3519,6 +3614,16 @@
         sessionList.innerHTML = `<b>Displayed participants at selected time</b><span class="muted">Heatmap view hides session movement. Turn off Heatmap to return to the embedding view.</span>`;
         return;
       }
+      if (f.mapMode === "participant_behavior_chart") {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        const participantCount = drawParticipantBehaviorHeatmapView(f, rawSeriesRows) || 0;
+        currentCanvasMeta = filterSummary(f);
+        renderLegend(f, cb, participantCount, participantCount);
+        layoutRightRail();
+        status.textContent = "Behavior view: rows are participants and columns are raw behavior channels at the selected time.";
+        sessionList.innerHTML = `<b>Displayed participants at selected time</b><span class="muted">Code arrangement is off, so this view summarizes raw behavior channels without code overlays.</span>`;
+        return;
+      }
       if (f.mapMode === "code_decomp") {
         ctx.clearRect(0,0,canvas.width,canvas.height);
         currentDrawn = [];
@@ -3572,7 +3677,9 @@
       layoutRightRail();
       status.textContent = f.showKeypoints
         ? `${source}: ${pts.length} sessions shown, ${windows} windows available; speed ${visualizationSpeedLabel(f.windowsPerSecond)}. Drag to pan; use buttons to zoom.`
-        : `${source}: session points hidden; ${windows} windows used for code regions and transition arrows. Drag to pan; use buttons to zoom.`;
+        : f.showBg
+          ? `${source}: session points hidden; ${windows} windows used for code regions and transition arrows. Drag to pan; use buttons to zoom.`
+          : `${source}: session points hidden; ${windows} windows available; code arrangement is off. Drag to pan; use buttons to zoom.`;
       if (f.showKeypoints) renderSessionList(pts, f);
       else sessionList.innerHTML = `<b>Displayed participants at selected time</b><span class="muted">Moving session points are hidden. Turn them on to inspect per-session behavior at a selected time.</span>`;
     }
@@ -3781,6 +3888,19 @@
       draw();
     });
     controls.resetSelectedSessions?.addEventListener("click", resetSelectedSessionsToGlobal);
+    function setSessionChecks(id, checked) {
+      document.querySelectorAll(`#${id} input[type=checkbox]`).forEach(node => { node.checked = checked; });
+    }
+    controls.filterSessionsAll?.addEventListener("click", () => {
+      setSessionChecks("embedFilterSessions", true);
+      if (controls.selectedSessionsActive) controls.selectedSessionsActive.checked = true;
+      draw();
+    });
+    controls.filterSessionsNone?.addEventListener("click", () => {
+      setSessionChecks("embedFilterSessions", false);
+      if (controls.selectedSessionsActive) controls.selectedSessionsActive.checked = true;
+      draw();
+    });
     function setLayerOpen(group, open) {
       const body = group.querySelector(".layerBody");
       const header = group.querySelector(".layerHeader");
@@ -3885,6 +4005,8 @@
       "session trails": "Show recent path history behind each moving point.",
       "naming event stars": "Mark recent naming-event windows near the moving point.",
       "trail length": "How much recent path history is shown for each session point.",
+      "session points": "Show moving session points, their trails, naming-event stars, and optional manual session filtering.",
+      "filter selected sessions": "Use the manual session checklist. When off, only the global filters determine which sessions are visible.",
       "selected sessions": "Manually filter or highlight specific sessions after applying the global filters.",
       "filter sessions": "Only selected sessions remain visible.",
       "highlight sessions": "Selected sessions stay visible but are emphasized.",
