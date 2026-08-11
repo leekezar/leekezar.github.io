@@ -107,6 +107,7 @@
     let currentTransitionHits = [];
     let currentCanvasMeta = "";
     let hoveredSessionKey = null;
+    let suppressCodeHoverUntil = 0;
     let viewKey = "";
     let viewEx = null;
     let preparedKey = "";
@@ -197,7 +198,7 @@
     function fillChecks(id, values, labelMap = {}) {
       const node = $(id);
       node.innerHTML = values.map(v => `<label><input type="checkbox" value="${esc(v)}" checked> ${esc(labelMap[v] || v)}</label>`).join("");
-      node.querySelectorAll("input").forEach(x => x.addEventListener("change", () => { refreshSessionPickers(); draw(); }));
+      node.querySelectorAll("input").forEach(x => x.addEventListener("change", () => { resetCodeDecompositionView(); refreshSessionPickers(); draw(); }));
     }
     function fillCompareChecks(id, values, labelMap = {}, selected = null) {
       const node = $(id);
@@ -207,7 +208,7 @@
         const checked = wanted ? wanted.has(v) : true;
         return `<label><input type="checkbox" value="${esc(v)}" ${checked ? "checked" : ""}> ${esc(labelMap[v] || v)}</label>`;
       }).join("");
-      node.querySelectorAll("input").forEach(x => x.addEventListener("change", draw));
+      node.querySelectorAll("input").forEach(x => x.addEventListener("change", () => { resetCodeDecompositionView(); draw(); }));
     }
     function fillSessionChecks(id, rows, defaultChecked = true) {
       const node = $(id);
@@ -221,7 +222,7 @@
         const label = `${s.participant} ${s.session} ${s.language} ${s.namingGroup}`;
         return `<label><input type="checkbox" value="${esc(v)}" ${checked ? "checked" : ""}> ${esc(label)}</label>`;
       }).join("");
-      node.querySelectorAll("input").forEach(x => x.addEventListener("change", draw));
+      node.querySelectorAll("input").forEach(x => x.addEventListener("change", () => { resetCodeDecompositionView(); draw(); }));
     }
     function compareFilters(prefix) {
       return {
@@ -607,11 +608,8 @@
       if (f.showHeatmap) return "heatmap_chart";
       if (f.showBarChart) return "code_decomp";
       if (!f.showBg) return f.showKeypoints ? "session_behavior_chart" : "aggregate_behavior_chart";
-      if (f.showTopology) return "latent";
-      if (f.showTransitions && !f.showKeypoints && !f.showTrails && !f.showNamingStars) return "code_layout";
       if (!f.latentPositions) {
-        if (!f.showTransitions && !f.showKeypoints && !f.showTrails && !f.showTopology && !f.showNamingStars) return "code_usage_chart";
-        return "code_layout";
+        return (f.showKeypoints || f.showTopology || f.showTransitions) ? "code_layout" : "code_usage_chart";
       }
       return "latent";
     }
@@ -3024,6 +3022,7 @@
       };
     }
     function showCodeChipProfile(chip) {
+      if (Date.now() < suppressCodeHoverUntil) return;
       const mark = markFromCodeChip(chip);
       if (!mark) return;
       renderCodeProfile(mark);
@@ -4066,6 +4065,12 @@
       hoverPanel.innerHTML = html || `<b>Code breakdown</b><span class="tipMuted">Hover a code diamond or code chip to inspect behavior composition. Hover a session point or path to inspect that window.</span>`;
       layoutRightRail();
     }
+    function resetCodeDecompositionView() {
+      hoveredSessionKey = null;
+      suppressCodeHoverUntil = Date.now() + 350;
+      renderCodeProfile(null);
+      setHoverInspector(null);
+    }
     function layoutRightRail() {
       if (!hoverPanel || !legend) return;
       const gap = 12;
@@ -4096,6 +4101,7 @@
         if (d < bdCode) { bdCode = d; bestCode = c; }
       }
       if (bestCode && bdCode < bestCode.r ** 2) {
+        if (Date.now() < suppressCodeHoverUntil) return;
         setHoveredSession(null);
         if (!bestCode.pair) renderCodeProfile(bestCode);
         setHoverInspector(codeMarkTooltip(bestCode), "profile");
@@ -4480,10 +4486,10 @@
     controls.showTransitions.addEventListener("change", () => { if (controls.showTransitions.checked) clearChartModes(); });
     controls.showHeatmap?.addEventListener("change", () => { if (controls.showHeatmap.checked && controls.showBarChart) controls.showBarChart.checked = false; });
     controls.showBarChart?.addEventListener("change", () => { if (controls.showBarChart.checked && controls.showHeatmap) controls.showHeatmap.checked = false; });
-    controls.showCodes.addEventListener("change", draw);
+    controls.showCodes.addEventListener("change", () => { resetCodeDecompositionView(); draw(); });
     for (const node of [controls.color, controls.dimSelection, controls.latentPositions, controls.showBg, controls.showHeatmap, controls.showBarChart, controls.showTransitions, controls.showTopology, controls.selectedSessionsActive, controls.showNamingStars, controls.tailLength, controls.topologyContext, controls.topologyStep, controls.codeUsageContext, controls.codeUsageStack, controls.transitionContext, controls.filterSessions, controls.highlightSessions, controls.progress].filter(Boolean)) {
-      node.addEventListener("input", draw);
-      node.addEventListener("change", draw);
+      node.addEventListener("input", () => { resetCodeDecompositionView(); draw(); });
+      node.addEventListener("change", () => { resetCodeDecompositionView(); draw(); });
     }
     controls.progress.addEventListener("input", () => { playProgress = Number(controls.progress.value || 0) / 10000; });
     window.addEventListener("resize", () => { refreshOpenAccordions(); draw(); layoutRightRail(); });
