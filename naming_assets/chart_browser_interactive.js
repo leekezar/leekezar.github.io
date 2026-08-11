@@ -564,7 +564,7 @@
       if (f.showCodeUsage) return "code_usage_chart";
       if (f.showHeatmap) return "heatmap_chart";
       if (f.showBarChart) return "code_decomp";
-      if (!f.showBg && !f.showKeypoints && !f.showTrails && !f.showTopology && !f.showNamingStars && !f.showTransitions) return "participant_behavior_chart";
+      if (!f.showBg) return f.showKeypoints ? "session_behavior_chart" : "aggregate_behavior_chart";
       if (!f.latentPositions) {
         if (!f.showTransitions && !f.showKeypoints && !f.showTrails && !f.showTopology && !f.showNamingStars) return "code_decomp";
         return "code_layout";
@@ -713,7 +713,7 @@
       const spatialLayerActive = controls.showTransitions.checked || controls.showKeypoints.checked || controls.showTrails.checked || controls.showTopology.checked || controls.showNamingStars.checked;
       const latentOn = controls.latentPositions ? controls.latentPositions.checked : true;
       const bgOn = controls.showBg ? controls.showBg.checked : true;
-      const inferredCodeUsage = !spatialLayerActive && bgOn && !latentOn;
+      const inferredCodeUsage = bgOn && !controls.showKeypoints.checked && !controls.showTopology.checked && !controls.showTransitions.checked && !controls.showTrails.checked && !controls.showNamingStars.checked;
       const inferredBarChart = false;
       const out = {
         model: Number(controls.model.value || 0),
@@ -741,7 +741,7 @@
         showTrails: controls.showTrails.checked,
         tail,
         windowsPerSecond: Math.max(0.1, Number(controls.windowsPerSecond.value || 1)),
-        progress: Number(controls.progress.value || 0) / 10000,
+        progress: playing && playProgress !== null ? clamp(playProgress, 0, 1) : Number(controls.progress.value || 0) / 10000,
         selectedSessionsActive: controls.selectedSessionsActive ? controls.selectedSessionsActive.checked : false,
         filterSessions: checkboxValues("embedFilterSessions"),
         filterSessionUniverse: checkboxAllValues("embedFilterSessions"),
@@ -813,10 +813,16 @@
       if (!controls.showKeypoints.checked) hoveredSessionKey = null;
     }
     function updateArrangementControls() {
-      const codeUsage = controls.latentPositions && !controls.latentPositions.checked;
+      const codeDisplay = controls.showBg ? controls.showBg.checked : true;
+      if (controls.latentPositions) {
+        controls.latentPositions.disabled = !codeDisplay;
+        const label = controls.latentPositions.closest("label");
+        if (label) label.classList.toggle("disabledControl", !codeDisplay);
+      }
+      const codeUsage = codeDisplay && controls.latentPositions && !controls.latentPositions.checked;
       const crossDims = String(controls.xComp?.value || "") !== String(controls.yComp?.value || "");
       document.querySelectorAll(".codeUsageOnly").forEach(node => { node.style.display = codeUsage ? "" : "none"; });
-      document.querySelectorAll(".dimSelectionOnly").forEach(node => { node.style.display = (!codeUsage && crossDims) ? "" : "none"; });
+      document.querySelectorAll(".dimSelectionOnly").forEach(node => { node.style.display = (codeDisplay && !codeUsage && crossDims) ? "" : "none"; });
       refreshOpenAccordions();
     }
     function setVisualizationSpeed(v) {
@@ -1388,6 +1394,86 @@
         return p.window ? colors[p.window[W.mutual] % colors.length] : "#777";
       }
       return "#222";
+    }
+    function cssColorAlpha(color, alpha) {
+      const a = clamp(alpha, 0, 1);
+      const raw = String(color || "#222").trim();
+      if (raw.startsWith("#")) {
+        const [r, g, b] = hexToRgb(raw);
+        return `rgba(${r},${g},${b},${a})`;
+      }
+      const m = raw.match(/rgba?\(([^)]+)\)/i);
+      if (m) {
+        const parts = m[1].split(",").map(x => Number(String(x).trim())).slice(0, 3);
+        if (parts.length >= 3 && parts.every(Number.isFinite)) return `rgba(${parts[0]},${parts[1]},${parts[2]},${a})`;
+      }
+      return raw;
+    }
+    function contrastTextColor(color) {
+      const raw = String(color || "#222").trim();
+      let rgb = null;
+      if (raw.startsWith("#")) rgb = hexToRgb(raw);
+      else {
+        const m = raw.match(/rgba?\(([^)]+)\)/i);
+        if (m) rgb = m[1].split(",").map(x => Number(String(x).trim())).slice(0, 3);
+      }
+      if (!rgb || rgb.length < 3 || !rgb.every(Number.isFinite)) return "#111";
+      const lum = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
+      return lum > 0.58 ? "#111" : "#fff";
+    }
+    function pointColorLabel(p, f) {
+      const s = sessionByKey.get(key(p.model, p.sid));
+      if (!s) return "";
+      if (f.color === "code") return p.pair ? `C${p.xCode}/${p.yCode}` : `C${p.code}`;
+      if (f.color === "language") return s.language || "other";
+      if (f.color === "aud") return s.hearing || "Unknown";
+      if (f.color === "naming_binary") return s.namingGroup === "high" ? "high naming" : "low naming";
+      if (f.color === "naming_tertile") return namingTertile(s);
+      if (f.color === "session") return s.session || "session";
+      if (f.color === "phase" && p.window) return data.phases[p.window[W.phase]];
+      if (f.color === "session_phase" && p.window) return data.sessionPhases[p.window[W.sessionPhase]];
+      if (f.color === "mutual_attention" && p.window) {
+        const v = data.mutualAttentionLevels[p.window[W.mutual]];
+        return v === "coordinated joint attention" ? "coordinated JA" : v === "naming-aligned joint attention" ? "naming JA" : v;
+      }
+      return "";
+    }
+    function colorLegendBody(f, line = false) {
+      if (f.color === "language") return `${legendSwatch("#b2182b","NGT", line)}${legendSwatch("#2166ac","NL", line)}`;
+      if (f.color === "aud") return `${legendSwatch("#d73027","Deaf", line)}${legendSwatch("#1a9850","Hearing", line)}${legendSwatch("#984ea3","Comparison", line)}`;
+      if (f.color === "naming_binary") return `${legendSwatch("#bdbdbd","low naming", line)}${legendSwatch("#111111","high naming", line)}`;
+      if (f.color === "naming_tertile") return `${legendSwatch("#2166ac","low", line)}${legendSwatch("#fdd863","mid", line)}${legendSwatch("#b2182b","high", line)}`;
+      if (f.color === "naming_rate") return `<span class="gradientChip"></span><em>naming events/min: low to high</em>`;
+      if (f.color === "session") return `${legendSwatch("#e41a1c","S1", line)}${legendSwatch("#377eb8","S2", line)}${legendSwatch("#4daf4a","S3", line)}`;
+      if (f.color === "phase") return data.phases.map((p,i) => legendSwatch(palette[i % palette.length], p, line)).join("");
+      if (f.color === "session_phase") return `${legendSwatch("#8dd3c7","early", line)}${legendSwatch("#fdb462","middle", line)}${legendSwatch("#bebada","late", line)}`;
+      if (f.color === "mutual_attention") return `${legendSwatch("#bdbdbd","none", line)}${legendSwatch("#80b1d3","object", line)}${legendSwatch("#fb8072","person", line)}${legendSwatch("#b3de69","coordinated JA", line)}${legendSwatch("#fdb462","naming JA", line)}`;
+      if (f.color === "code") return `<em>same code colors as below</em>`;
+      return "";
+    }
+    function colorFromStack(mode, keyValue, fallback) {
+      const hit = stackOptionsForMode(mode).find(x => String(x.key) === String(keyValue));
+      return hit ? hit.color : fallback;
+    }
+    function compareSideColor(cmp, f, fallback) {
+      if (f.color === "language" && cmp.languages.size === 1) return colorFromStack("language", [...cmp.languages][0], fallback);
+      if (f.color === "aud" && cmp.hearings.size === 1) return colorFromStack("aud", [...cmp.hearings][0], fallback);
+      if (f.color === "naming_binary" && cmp.naming.size === 1) return colorFromStack("naming_binary", [...cmp.naming][0], fallback);
+      if (f.color === "naming_tertile" && cmp.naming.size === 1) {
+        const v = [...cmp.naming][0];
+        return v === "high" ? "#b2182b" : v === "low" ? "#2166ac" : fallback;
+      }
+      if (f.color === "session" && cmp.sessions.size === 1) return colorFromStack("session", [...cmp.sessions][0], fallback);
+      if (f.color === "phase" && cmp.phases.size === 1) return colorFromStack("phase", [...cmp.phases][0], fallback);
+      if (f.color === "session_phase" && cmp.sessionPhases.size === 1) return colorFromStack("session_phase", [...cmp.sessionPhases][0], fallback);
+      if (f.color === "mutual_attention" && cmp.mutualAttention.size === 1) return colorFromStack("mutual_attention", [...cmp.mutualAttention][0], fallback);
+      return fallback;
+    }
+    function topologyCompareColors(f) {
+      return {
+        a: compareSideColor(f.topologyA, f, "#2166ac"),
+        b: compareSideColor(f.topologyB, f, "#b2182b"),
+      };
     }
     function stackOptionsForMode(mode) {
       if (mode === "language") return [
@@ -2104,6 +2190,152 @@
       ctx.restore();
       return rows.length;
     }
+    function behaviorColorForChannel(idx) {
+      for (let mi = 0; mi < data.modalities.length; mi++) {
+        const mod = data.modalities[mi];
+        if ((data.modalityChannels[mod] || []).includes(idx)) return modColors[mi % modColors.length];
+      }
+      return "#555";
+    }
+    function hashString(text) {
+      let h = 2166136261;
+      for (let i = 0; i < String(text).length; i++) {
+        h ^= String(text).charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h >>> 0;
+    }
+    function behaviorChartPoints(f, seriesRows, sessionLevel) {
+      const pts = [];
+      if (sessionLevel) {
+        for (const row of seriesRows) {
+          const pt = interp(row.series, f.progress);
+          if (pt && pt.window) pts.push(pt);
+        }
+      } else {
+        for (const row of seriesRows) for (const p of row.series) if (p && p.window) pts.push(p);
+      }
+      return pts;
+    }
+    function drawBehaviorActivationChartView(f, seriesRows, sessionLevel) {
+      currentCodeMarks = [];
+      currentDrawn = [];
+      currentTailHits = [];
+      currentTransitionHits = [];
+      const rect = plotRect(f);
+      const comps = f.xComp === f.yComp ? [f.xComp] : [f.xComp, f.yComp];
+      const pts = behaviorChartPoints(f, seriesRows, sessionLevel);
+      ctx.save();
+      ctx.fillStyle = "#faf8f2";
+      ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+      ctx.strokeStyle = "rgba(0,0,0,.10)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+      ctx.fillStyle = "#191919";
+      ctx.font = "700 20px Segoe UI, Arial";
+      ctx.fillText(sessionLevel ? "Session-Level Behavior Activation" : "Aggregate Behavior Activation", rect.x, rect.y + 24);
+      ctx.font = "13px Segoe UI, Arial";
+      ctx.fillStyle = "#555";
+      ctx.fillText(`${data.scaleLabels[f.scale]} | ${sessionLevel ? `${pts.length} sessions at selected time` : `${pts.length} visible windows`} | y-axis fixed at 0-1 activation`, rect.x, rect.y + 45);
+      if (!pts.length) {
+        ctx.fillStyle = "#666";
+        ctx.font = "14px Segoe UI, Arial";
+        ctx.fillText("No windows match the current filters.", rect.x, rect.y + 82);
+        ctx.restore();
+        return 0;
+      }
+      const gap = comps.length > 1 ? 30 : 0;
+      const availableH = Math.max(120, rect.h - 94 - gap * (comps.length - 1));
+      const panelH = availableH / comps.length;
+      comps.forEach((compIdx, i) => {
+        const y = rect.y + 74 + i * (panelH + gap);
+        drawBehaviorActivationBlock(rect.x, y, rect.w, panelH, compIdx, pts, f, sessionLevel);
+      });
+      ctx.restore();
+      return pts.length;
+    }
+    function drawBehaviorActivationBlock(x, y, w, h, compIdx, pts, f, sessionLevel) {
+      const idxs = sourceBehaviorIndices(compIdx);
+      const means = idxs.map(idx => pts.reduce((a, p) => a + (Number(p.window[W.behaviors][idx]) || 0), 0) / Math.max(1, pts.length));
+      const left = x + 62, right = x + w - 24, top = y + 52, bottom = y + h - 64;
+      const chartW = Math.max(100, right - left);
+      const chartH = Math.max(60, bottom - top);
+      const slotW = chartW / Math.max(1, idxs.length);
+      ctx.save();
+      ctx.textAlign = "start";
+      ctx.fillStyle = "#191919";
+      ctx.font = "800 15px Segoe UI, Arial";
+      ctx.fillText(`${data.components[compIdx]} behaviors`, x + 14, y + 22);
+      ctx.font = "12px Segoe UI, Arial";
+      ctx.fillStyle = "#555";
+      ctx.fillText(sessionLevel ? "bars are mean activation; dots are sessions" : "bars are mean activation across visible windows", x + 14, y + 40);
+      ctx.strokeStyle = "rgba(0,0,0,.34)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(left, top);
+      ctx.lineTo(left, bottom);
+      ctx.moveTo(left, bottom);
+      ctx.lineTo(right, bottom);
+      ctx.stroke();
+      ctx.textAlign = "right";
+      ctx.font = "10.5px Segoe UI, Arial";
+      ctx.fillStyle = "#555";
+      ctx.fillText("1", left - 7, top + 4);
+      ctx.fillText("0.5", left - 7, top + chartH / 2 + 4);
+      ctx.fillText("0", left - 7, bottom + 3);
+      ctx.strokeStyle = "rgba(0,0,0,.10)";
+      ctx.beginPath();
+      ctx.moveTo(left, top + chartH / 2);
+      ctx.lineTo(right, top + chartH / 2);
+      ctx.stroke();
+      idxs.forEach((idx, j) => {
+        const mean = clamp(means[j], 0, 1);
+        const cx = left + j * slotW + slotW / 2;
+        const bw = Math.max(8, Math.min(36, slotW * 0.56));
+        const barH = chartH * mean;
+        ctx.fillStyle = behaviorColorForChannel(idx);
+        ctx.globalAlpha = 0.72;
+        ctx.fillRect(cx - bw / 2, bottom - barH, bw, barH);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = "rgba(0,0,0,.25)";
+        ctx.strokeRect(cx - bw / 2, bottom - barH, bw, barH);
+        if (sessionLevel) {
+          for (const p of pts) {
+            const s = sessionByKey.get(key(p.model, p.sid));
+            const v = clamp(Number(p.window[W.behaviors][idx]) || 0, 0, 1);
+            const jitter = ((hashString(`${sessionBaseKey(s)}|${idx}`) % 1000) / 1000 - 0.5) * Math.min(slotW * 0.58, 18);
+            const yy = bottom - chartH * v;
+            ctx.fillStyle = colorForPoint(p, f);
+            ctx.globalAlpha = 0.42;
+            ctx.beginPath();
+            ctx.arc(cx + jitter, yy, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+        }
+        ctx.fillStyle = "#333";
+        ctx.font = "10.5px Segoe UI, Arial";
+        ctx.textAlign = "center";
+        if (mean >= 0.06) ctx.fillText(fmt(mean, 2), cx, Math.max(top + 11, bottom - barH - 6));
+        const label = cleanBehaviorName(data.channels[idx]).slice(0, 22);
+        ctx.save();
+        ctx.translate(cx, bottom + 12);
+        ctx.rotate(-Math.PI / 4);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#222";
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+      });
+      ctx.save();
+      ctx.translate(x + 16, top + chartH / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#333";
+      ctx.font = "700 11px Segoe UI, Arial";
+      ctx.fillText("activation", 0, 0);
+      ctx.restore();
+      ctx.restore();
+    }
     function drawCodeUsageHistogramView(f, seriesRows, cb) {
       currentCodeMarks = [];
       currentDrawn = [];
@@ -2186,7 +2418,7 @@
       const left = x + 62, right = x + w - 24, top = y + 62, bottom = y + h - 48;
       const chartW = Math.max(100, right - left);
       const chartH = Math.max(60, bottom - top);
-      const maxCount = Math.max(1, ...items.map(c => counts.get(c[C.code]) || 0));
+      const maxCount = Math.max(1, total);
       const slotW = chartW / Math.max(1, items.length);
       ctx.strokeStyle = "rgba(0,0,0,.34)";
       ctx.lineWidth = 1;
@@ -2236,6 +2468,16 @@
             ctx.fillStyle = meta.color;
             ctx.globalAlpha = 0.90;
             ctx.fillRect(cx - bw / 2, yCursor, bw, segH);
+            if (segH >= 15 && bw >= 18) {
+              ctx.globalAlpha = 1;
+              ctx.fillStyle = contrastTextColor(meta.color);
+              ctx.font = "800 9.5px Segoe UI, Arial";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              const label = String(meta.label || meta.key).replace(" naming", "").slice(0, Math.max(3, Math.floor(bw / 5)));
+              ctx.fillText(label, cx, yCursor + segH / 2);
+              ctx.textBaseline = "alphabetic";
+            }
           });
           ctx.globalAlpha = count ? 1 : 0.18;
         }
@@ -2251,7 +2493,7 @@
         ctx.textBaseline = "middle";
         ctx.fillText(String(code), cx, markerY + 0.3);
         ctx.textBaseline = "alphabetic";
-        if (share >= 0.08) {
+        if (stackMode === "none" && share >= 0.08) {
           ctx.fillStyle = "#333";
           ctx.font = "11px Segoe UI, Arial";
           ctx.fillText(`${Math.round(share * 100)}%`, cx, Math.max(top + 12, bottom - barH - 7));
@@ -2753,17 +2995,7 @@
     }
     function pointLegendBody(f) {
       if (!f.showKeypoints && !f.showTrails && !f.showNamingStars) return "";
-      if (f.color === "language") return `${legendSwatch("#b2182b","NGT")}${legendSwatch("#2166ac","NL")}`;
-      if (f.color === "aud") return `${legendSwatch("#d73027","Deaf")}${legendSwatch("#1a9850","Hearing")}${legendSwatch("#984ea3","Comparison")}`;
-      if (f.color === "naming_binary") return `${legendSwatch("#bdbdbd","low naming")}${legendSwatch("#111111","high naming")}`;
-      if (f.color === "naming_tertile") return `${legendSwatch("#2166ac","low")}${legendSwatch("#fdd863","mid")}${legendSwatch("#b2182b","high")}`;
-      if (f.color === "naming_rate") return `<span class="gradientChip"></span><em>naming events/min: low to high</em>`;
-      if (f.color === "session") return `${legendSwatch("#e41a1c","S1")}${legendSwatch("#377eb8","S2")}${legendSwatch("#4daf4a","S3")}`;
-      if (f.color === "phase") return data.phases.map((p,i) => legendSwatch(palette[i % palette.length], p)).join("");
-      if (f.color === "session_phase") return `${legendSwatch("#8dd3c7","early")}${legendSwatch("#fdb462","middle")}${legendSwatch("#bebada","late")}`;
-      if (f.color === "mutual_attention") return `${legendSwatch("#bdbdbd","none")}${legendSwatch("#80b1d3","object")}${legendSwatch("#fb8072","person")}${legendSwatch("#b3de69","coordinated JA")}${legendSwatch("#fdb462","naming JA")}`;
-      if (f.color === "code") return `<em>same code colors as below</em>`;
-      return "";
+      return colorLegendBody(f, false);
     }
     function topologyLegendBody(f) {
       if (f.mapMode === "code_usage_chart") return "";
@@ -2771,12 +3003,10 @@
       if (!f.showTopology && !f.showHeatmap) return "";
       if (f.topologyMode === "compare") {
         const cmp = compareDescriptor(f.topologyA, f.topologyB);
-        if (f.bgMode === "code" && f.mapMode === "latent") {
-          return `${legendSwatch("#111", `${cmp.name}: ${cmp.a}`, true)}${legendSwatch("#fff", `${cmp.name}: ${cmp.b}`, true)}`;
-        }
-        return `${legendSwatch("#2166ac", `${cmp.name}: ${cmp.a}`, true)}${legendSwatch("#b2182b", `${cmp.name}: ${cmp.b}`, true)}`;
+        const colors = topologyCompareColors(f);
+        return `${legendSwatch(colors.a, `${cmp.name}: ${cmp.a}`, true)}${legendSwatch(colors.b, `${cmp.name}: ${cmp.b}`, true)}`;
       }
-      return legendSwatch("#111", "density", true);
+      return colorLegendBody(f, true) || legendSwatch("#111", "density", true);
     }
     function transitionLegendBody(f) {
       if (!f.showTransitions) return "";
@@ -2810,12 +3040,10 @@
       if (!f.showTopology && !f.showHeatmap) return "";
       const sw = (color, label) => `<span><i style="background:${color};border-radius:2px;height:3px"></i>${esc(label)}</span>`;
       if (f.topologyMode === "compare") {
-        if (f.bgMode === "code" && f.mapMode === "latent") {
-          return `<div class="legendColor"><b>${f.showHeatmap && f.showTopology ? "Topology + heatmap" : f.showHeatmap ? "Heatmap" : "Topology"}:</b>${sw("#111","A > B")}${sw("#fff","B > A")}</div>`;
-        }
-        return `<div class="legendColor"><b>${f.showHeatmap && f.showTopology ? "Topology + heatmap" : f.showHeatmap ? "Heatmap" : "Topology"}:</b>${sw("#2166ac","A > B")}${sw("#b2182b","B > A")}</div>`;
+        const colors = topologyCompareColors(f);
+        return `<div class="legendColor"><b>${f.showHeatmap && f.showTopology ? "Topology + heatmap" : f.showHeatmap ? "Heatmap" : "Topology"}:</b>${sw(colors.a,"A > B")}${sw(colors.b,"B > A")}</div>`;
       }
-      return `<div class="legendColor"><b>${f.showHeatmap && f.showTopology ? "Topology + heatmap" : f.showHeatmap ? "Heatmap" : "Topology"}:</b>${sw("#111","density")}</div>`;
+      return `<div class="legendColor"><b>${f.showHeatmap && f.showTopology ? "Topology + heatmap" : f.showHeatmap ? "Heatmap" : "Topology"}:</b>${colorLegendBody(f, true) || sw("#111","density")}</div>`;
     }
     function transitionLegendHtml(f) {
       if (!f.showTransitions) return "";
@@ -3413,15 +3641,28 @@
       const grid = densityGrid(src, ex, rect, 72, 72);
       drawGridHeatmap(grid, rect, v => `rgba(0,0,0,${0.04 + clamp(v, 0, 1) * 0.32})`);
     }
+    function topologyGroupsForColor(src, f) {
+      if (f.color === "naming_rate") return [];
+      const groups = new Map();
+      for (const p of src) {
+        const label = pointColorLabel(p, f);
+        if (!label) continue;
+        const color = colorForPoint(p, f);
+        const k = `${label}|${color}`;
+        if (!groups.has(k)) groups.set(k, { label, color, pts:[] });
+        groups.get(k).pts.push(p);
+      }
+      const out = [...groups.values()].filter(g => g.pts.length >= 4).sort((a,b) => a.label.localeCompare(b.label));
+      return out.length > 1 && out.length <= 10 ? out : [];
+    }
     function drawSignedDifferenceHeatmap(aSrc, bSrc, f, ex, rect) {
       if (aSrc.length < 4 || bSrc.length < 4) return;
       const ga = densityGrid(aSrc, ex, rect, 72, 72), gb = densityGrid(bSrc, ex, rect, 72, 72);
       const diff = ga.map((row, y) => row.map((v, x) => v - gb[y][x]));
-      const codeBg = f.bgMode === "code" && f.mapMode === "latent";
+      const colors = topologyCompareColors(f);
       drawGridHeatmap(diff, rect, v => {
         const a = 0.06 + Math.abs(v) * 0.38;
-        if (codeBg) return v >= 0 ? `rgba(0,0,0,${a})` : `rgba(255,255,255,${Math.min(0.82, a + 0.12)})`;
-        return v >= 0 ? `rgba(33,102,172,${a})` : `rgba(178,24,43,${a})`;
+        return v >= 0 ? cssColorAlpha(colors.a, a) : cssColorAlpha(colors.b, a);
       });
     }
     function drawTopologyHeatmap(seriesRows, pts, f, ex, rect) {
@@ -3481,12 +3722,12 @@
       for (const row of diffA) for (const v of row) maxAbs = Math.max(maxAbs, Math.abs(v));
       if (maxAbs <= 0) return;
       const levels = [0.22, 0.42, 0.62].map(v => v * maxAbs);
-      const codeBg = f.bgMode === "code" && f.mapMode === "latent";
-      const aColor = codeBg ? ["rgba(0,0,0,.42)","rgba(0,0,0,.66)","rgba(0,0,0,.9)"] : ["rgba(33,102,172,.42)","rgba(33,102,172,.66)","rgba(33,102,172,.9)"];
-      const bColor = codeBg ? ["rgba(255,255,255,.55)","rgba(255,255,255,.78)","rgba(255,255,255,.98)"] : ["rgba(178,24,43,.42)","rgba(178,24,43,.66)","rgba(178,24,43,.9)"];
+      const colors = topologyCompareColors(f);
+      const aColor = [cssColorAlpha(colors.a, .42), cssColorAlpha(colors.a, .66), cssColorAlpha(colors.a, .9)];
+      const bColor = [cssColorAlpha(colors.b, .42), cssColorAlpha(colors.b, .66), cssColorAlpha(colors.b, .9)];
       levels.forEach((t, i) => drawThresholdGrid(diffA, t, ex, rect, aColor[i], i === 0 ? 1.1 : i === 1 ? 1.5 : 2.0));
       levels.forEach((t, i) => {
-        if (codeBg) drawThresholdGrid(diffB, t, ex, rect, "rgba(0,0,0,.32)", i === 0 ? 3.3 : i === 1 ? 3.8 : 4.4);
+        drawThresholdGrid(diffB, t, ex, rect, "rgba(255,255,255,.58)", i === 0 ? 3.3 : i === 1 ? 3.8 : 4.4);
         drawThresholdGrid(diffB, t, ex, rect, bColor[i], i === 0 ? 1.1 : i === 1 ? 1.5 : 2.0);
       });
     }
@@ -3499,7 +3740,18 @@
         const bSrc = src.filter(p => comparePointPass(p, f.topologyB));
         drawSignedDifferenceContours(aSrc, bSrc, f, ex, rect);
       } else {
-        drawContourSet(src, ex, rect, ["rgba(0,0,0,.26)","rgba(0,0,0,.38)","rgba(0,0,0,.52)"]);
+        const groups = topologyGroupsForColor(src, f);
+        if (groups.length) {
+          groups.forEach(g => drawContourSet(
+            g.pts,
+            ex,
+            rect,
+            [cssColorAlpha(g.color, .34), cssColorAlpha(g.color, .56), cssColorAlpha(g.color, .82)],
+            "rgba(255,255,255,.42)"
+          ));
+        } else {
+          drawContourSet(src, ex, rect, ["rgba(0,0,0,.26)","rgba(0,0,0,.38)","rgba(0,0,0,.52)"]);
+        }
       }
     }
     function drawStar(cx, cy, r, fill) {
@@ -3614,14 +3866,17 @@
         sessionList.innerHTML = `<b>Displayed participants at selected time</b><span class="muted">Heatmap view hides session movement. Turn off Heatmap to return to the embedding view.</span>`;
         return;
       }
-      if (f.mapMode === "participant_behavior_chart") {
+      if (f.mapMode === "session_behavior_chart" || f.mapMode === "aggregate_behavior_chart") {
         ctx.clearRect(0,0,canvas.width,canvas.height);
-        const participantCount = drawParticipantBehaviorHeatmapView(f, rawSeriesRows) || 0;
+        const sessionLevel = f.mapMode === "session_behavior_chart";
+        const visibleCount = drawBehaviorActivationChartView(f, rawSeriesRows, sessionLevel) || 0;
         currentCanvasMeta = filterSummary(f);
-        renderLegend(f, cb, participantCount, participantCount);
+        renderLegend(f, cb, visibleCount, sessionLevel ? visibleCount : 0);
         layoutRightRail();
-        status.textContent = "Behavior view: rows are participants and columns are raw behavior channels at the selected time.";
-        sessionList.innerHTML = `<b>Displayed participants at selected time</b><span class="muted">Code arrangement is off, so this view summarizes raw behavior channels without code overlays.</span>`;
+        status.textContent = sessionLevel
+          ? "Behavior view: bars summarize session-level raw behavior activation at the selected time."
+          : "Behavior view: bars summarize average raw behavior activation across all visible windows.";
+        sessionList.innerHTML = `<b>Behavior summary</b><span class="muted">Code display is off, so this view summarizes raw behavior channels without code overlays.</span>`;
         return;
       }
       if (f.mapMode === "code_decomp") {
@@ -3679,7 +3934,7 @@
         ? `${source}: ${pts.length} sessions shown, ${windows} windows available; speed ${visualizationSpeedLabel(f.windowsPerSecond)}. Drag to pan; use buttons to zoom.`
         : f.showBg
           ? `${source}: session points hidden; ${windows} windows used for code regions and transition arrows. Drag to pan; use buttons to zoom.`
-          : `${source}: session points hidden; ${windows} windows available; code arrangement is off. Drag to pan; use buttons to zoom.`;
+          : `${source}: session points hidden; ${windows} windows available; code display is off. Drag to pan; use buttons to zoom.`;
       if (f.showKeypoints) renderSessionList(pts, f);
       else sessionList.innerHTML = `<b>Displayed participants at selected time</b><span class="muted">Moving session points are hidden. Turn them on to inspect per-session behavior at a selected time.</span>`;
     }
@@ -3994,7 +4249,7 @@
       "phase": "Early, middle, or late third of the session.",
       "mutual attention": "none: no shared alignment; object-aligned: both oriented to object; person-aligned: dyad oriented to each other; coordinated JA: object/person coordination; naming-aligned JA: coordinated attention during naming.",
       "mutual": "Mutual attention category for the selected windows.",
-      "code arrangement": "Controls whether codes use their learned latent geometry or a code-usage summary view.",
+      "code display": "Controls whether codes appear at all. When off, the view switches to raw behavior summaries.",
       "background + codes": "Colored code regions and code markers. Turn this off with other layers off to show code-usage histograms.",
       "latent positions": "Use learned 2D codebook/latent coordinates instead of arranging codes in a simple layout.",
       "dim. selection": "For cross-component axes, choose the current pooled X/Y grid or a fixed projection of the selected components' exported latent dimensions.",
@@ -4098,6 +4353,7 @@
     controls.xComp.addEventListener("change", () => { updateArrangementControls(); viewEx = null; viewKey = ""; draw(); });
     controls.yComp.addEventListener("change", () => { updateArrangementControls(); viewEx = null; viewKey = ""; draw(); });
     controls.latentPositions?.addEventListener("change", updateArrangementControls);
+    controls.showBg?.addEventListener("change", updateArrangementControls);
     function clearChartModes() {
       if (controls.showHeatmap) controls.showHeatmap.checked = false;
       if (controls.showBarChart) controls.showBarChart.checked = false;
