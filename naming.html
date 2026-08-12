@@ -36,6 +36,7 @@
   (() => {
     const CONFIG_URL = 'naming_locked/config.json';
     const basePath = 'naming_locked/';
+    const SESSION_KEY = 'namingExplorerSessionPassphrase';
     const form = document.getElementById('gate');
     const passInput = document.getElementById('passphrase');
     const button = document.getElementById('unlock');
@@ -49,6 +50,18 @@
       bar.style.width = Math.max(0, Math.min(100, pct)) + '%';
       meta.textContent = text || '';
       meta.classList.toggle('error', !!isError);
+    }
+    function rememberedPassphrase() {
+      try { return sessionStorage.getItem(SESSION_KEY) || ''; }
+      catch (_) { return ''; }
+    }
+    function rememberPassphrase(passphrase) {
+      try { sessionStorage.setItem(SESSION_KEY, passphrase); }
+      catch (_) {}
+    }
+    function forgetPassphrase() {
+      try { sessionStorage.removeItem(SESSION_KEY); }
+      catch (_) {}
     }
     function b64ToBytes(s) {
       const raw = atob(s);
@@ -115,6 +128,7 @@
       } catch (_) {
         throw new Error('Incorrect password.');
       }
+      rememberPassphrase(passphrase);
       setProgress(14, 'Decrypting page');
       const html = decoder.decode(await decryptUrl(key, basePath + manifest.html.file));
       const assetUrlByPath = new Map();
@@ -144,12 +158,26 @@
       try {
         await unlock(passInput.value);
       } catch (err) {
+        forgetPassphrase();
         button.disabled = false;
         passInput.disabled = false;
         passInput.select();
         setProgress(0, err && err.message ? err.message : 'Unable to unlock.', true);
       }
     });
+    const saved = rememberedPassphrase();
+    if (saved) {
+      button.disabled = true;
+      passInput.disabled = true;
+      setProgress(1, 'Unlocking');
+      unlock(saved).catch(err => {
+        forgetPassphrase();
+        button.disabled = false;
+        passInput.disabled = false;
+        passInput.value = '';
+        setProgress(0, err && err.message ? err.message : 'Unable to unlock.', true);
+      });
+    }
   })();
   </script>
 </body>
