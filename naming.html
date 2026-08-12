@@ -36,7 +36,8 @@
   (() => {
     const CONFIG_URL = 'naming_locked/config.json';
     const basePath = 'naming_locked/';
-    const SESSION_KEY = 'namingExplorerSessionPassphrase';
+    const SESSION_KEY = 'namingExplorerSessionKeyV2';
+    const OLD_SESSION_KEY = 'namingExplorerSessionPassphrase';
     const form = document.getElementById('gate');
     const passInput = document.getElementById('passphrase');
     const button = document.getElementById('unlock');
@@ -51,16 +52,20 @@
       meta.textContent = text || '';
       meta.classList.toggle('error', !!isError);
     }
-    function rememberedPassphrase() {
-      try { return sessionStorage.getItem(SESSION_KEY) || ''; }
-      catch (_) { return ''; }
+    function bytesToB64(bytes) {
+      let s = '';
+      for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+      return btoa(s);
     }
-    function rememberPassphrase(passphrase) {
-      try { sessionStorage.setItem(SESSION_KEY, passphrase); }
-      catch (_) {}
+    function hasRememberedKey() {
+      try { return !!sessionStorage.getItem(SESSION_KEY); }
+      catch (_) { return false; }
     }
-    function forgetPassphrase() {
-      try { sessionStorage.removeItem(SESSION_KEY); }
+    function forgetSessionKey() {
+      try {
+        sessionStorage.removeItem(SESSION_KEY);
+        sessionStorage.removeItem(OLD_SESSION_KEY);
+      }
       catch (_) {}
     }
     function b64ToBytes(s) {
@@ -75,9 +80,30 @@
         { name:'PBKDF2', hash:'SHA-256', salt:b64ToBytes(config.salt), iterations:config.iterations },
         material,
         { name:'AES-GCM', length:256 },
-        false,
+        true,
         ['decrypt']
       );
+    }
+    async function rememberSessionKey(key, config) {
+      try {
+        const raw = new Uint8Array(await crypto.subtle.exportKey('raw', key));
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+          salt: config.salt,
+          iterations: config.iterations,
+          key: bytesToB64(raw)
+        }));
+        sessionStorage.removeItem(OLD_SESSION_KEY);
+      } catch (_) {}
+    }
+    async function rememberedSessionKey(config) {
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+        if (!saved || saved.salt !== config.salt || saved.iterations !== config.iterations || !saved.key) return null;
+        return crypto.subtle.importKey('raw', b64ToBytes(saved.key), { name:'AES-GCM' }, false, ['decrypt']);
+      } catch (_) {
+        forgetSessionKey();
+        return null;
+      }
     }
     async function decryptUrl(key, url, cacheMode='default') {
       const response = await fetch(url, { cache:cacheMode });
@@ -103,6 +129,14 @@
     async function decryptJson(key, url) {
       return JSON.parse(decoder.decode(await decryptUrl(key, url, 'no-store')));
     }
+    function parseInteractiveEmbeddings(text, asset) {
+      if (asset && asset.format === 'interactive_embeddings_json') return JSON.parse(text);
+      const prefix = 'window.INTERACTIVE_EMBEDDINGS=';
+      let start = text.startsWith(prefix) ? prefix.length : 0;
+      let end = text.length;
+      while (end > start && /\s|;/.test(text[end - 1])) end--;
+      return JSON.parse(text.slice(start, end));
+    }
     function escapeRegExp(text) {
       return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
@@ -126,7 +160,7 @@
       });
       return html;
     }
-    async function unlock(passphrase) {
+    async function unlock(passphrase, useSavedKey=false) {
       if (!window.crypto || !crypto.subtle) throw new Error('This browser does not support WebCrypto.');
       setProgress(4, 'Loading encrypted package');
       const config = await fetch(CONFIG_URL, { cache:'no-store' }).then(r => {
@@ -134,14 +168,19 @@
         return r.json();
       });
       setProgress(10, 'Checking password');
-      const key = await deriveKey(passphrase, config);
+      let key = useSavedKey ? await rememberedSessionKey(config) : null;
+      if (!key) {
+        if (!passphrase) throw new Error('Password required.');
+        key = await deriveKey(passphrase, config);
+      }
       let manifest;
       try {
         manifest = await decryptJson(key, basePath + config.manifest);
       } catch (_) {
+        if (useSavedKey) forgetSessionKey();
         throw new Error('Incorrect password.');
       }
-      rememberPassphrase(passphrase);
+      await rememberSessionKey(key, config);
       setProgress(14, 'Decrypting page');
       const html = decoder.decode(await decryptEntry(key, manifest.html, config.salt));
       const assetUrlByPath = new Map();
@@ -149,10 +188,17 @@
       let doneBytes = 0;
       for (let i = 0; i < manifest.assets.length; i++) {
         const asset = manifest.assets[i];
+        const startPct = 14 + Math.min(76, Math.round(doneBytes / totalBytes * 76));
+        setProgress(startPct, asset.path === 'interactive_embeddings.js' ? 'Decrypting app data' : 'Decrypting app code');
         const plain = await decryptEntry(key, asset, config.salt);
-        const blobUrl = URL.createObjectURL(new Blob([plain], { type:asset.mime || 'application/octet-stream' }));
-        blobUrls.push(blobUrl);
-        assetUrlByPath.set(asset.path, blobUrl);
+        if (asset.path === 'interactive_embeddings.js') {
+          setProgress(Math.max(startPct, 18), 'Parsing app data');
+          window.__NAMING_PRELOADED_INTERACTIVE_EMBEDDINGS = parseInteractiveEmbeddings(decoder.decode(plain), asset);
+        } else {
+          const blobUrl = URL.createObjectURL(new Blob([plain], { type:asset.mime || 'application/octet-stream' }));
+          blobUrls.push(blobUrl);
+          assetUrlByPath.set(asset.path, blobUrl);
+        }
         doneBytes += asset.storedSize || asset.size || 1;
         const pct = 14 + Math.min(76, Math.round(doneBytes / totalBytes * 76));
         setProgress(pct, 'Loading app data');
@@ -171,20 +217,19 @@
       try {
         await unlock(passInput.value);
       } catch (err) {
-        forgetPassphrase();
+        forgetSessionKey();
         button.disabled = false;
         passInput.disabled = false;
         passInput.select();
         setProgress(0, err && err.message ? err.message : 'Unable to unlock.', true);
       }
     });
-    const saved = rememberedPassphrase();
-    if (saved) {
+    if (hasRememberedKey()) {
       button.disabled = true;
       passInput.disabled = true;
       setProgress(1, 'Unlocking');
-      unlock(saved).catch(err => {
-        forgetPassphrase();
+      unlock('', true).catch(err => {
+        forgetSessionKey();
         button.disabled = false;
         passInput.disabled = false;
         passInput.value = '';
