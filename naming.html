@@ -79,16 +79,29 @@
         ['decrypt']
       );
     }
-    async function decryptUrl(key, url) {
-      const response = await fetch(url, { cache:'no-store' });
+    async function decryptUrl(key, url, cacheMode='default') {
+      const response = await fetch(url, { cache:cacheMode });
       if (!response.ok) throw new Error('Missing encrypted payload');
       const bytes = new Uint8Array(await response.arrayBuffer());
       const iv = bytes.slice(0, 12);
       const cipher = bytes.slice(12);
       return crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, cipher);
     }
+    async function inflateIfNeeded(buffer, encoding) {
+      if (encoding !== 'gzip') return buffer;
+      if (!('DecompressionStream' in window)) {
+        throw new Error('This browser cannot decompress the encrypted package.');
+      }
+      const stream = new Blob([buffer]).stream().pipeThrough(new DecompressionStream('gzip'));
+      return new Response(stream).arrayBuffer();
+    }
+    async function decryptEntry(key, entry, cacheTag='') {
+      const suffix = cacheTag ? '?v=' + encodeURIComponent(cacheTag) : '';
+      const plain = await decryptUrl(key, basePath + entry.file + suffix, 'default');
+      return inflateIfNeeded(plain, entry.encoding);
+    }
     async function decryptJson(key, url) {
-      return JSON.parse(decoder.decode(await decryptUrl(key, url)));
+      return JSON.parse(decoder.decode(await decryptUrl(key, url, 'no-store')));
     }
     function escapeRegExp(text) {
       return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -130,19 +143,19 @@
       }
       rememberPassphrase(passphrase);
       setProgress(14, 'Decrypting page');
-      const html = decoder.decode(await decryptUrl(key, basePath + manifest.html.file));
+      const html = decoder.decode(await decryptEntry(key, manifest.html, config.salt));
       const assetUrlByPath = new Map();
-      const totalBytes = manifest.assets.reduce((a, x) => a + (x.size || 0), 0) || manifest.assets.length;
+      const totalBytes = manifest.assets.reduce((a, x) => a + (x.storedSize || x.size || 0), 0) || manifest.assets.length;
       let doneBytes = 0;
       for (let i = 0; i < manifest.assets.length; i++) {
         const asset = manifest.assets[i];
-        const plain = await decryptUrl(key, basePath + asset.file);
+        const plain = await decryptEntry(key, asset, config.salt);
         const blobUrl = URL.createObjectURL(new Blob([plain], { type:asset.mime || 'application/octet-stream' }));
         blobUrls.push(blobUrl);
         assetUrlByPath.set(asset.path, blobUrl);
-        doneBytes += asset.size || 1;
+        doneBytes += asset.storedSize || asset.size || 1;
         const pct = 14 + Math.min(76, Math.round(doneBytes / totalBytes * 76));
-        setProgress(pct, 'Decrypting assets');
+        setProgress(pct, 'Loading app data');
       }
       setProgress(94, 'Starting explorer');
       const patched = patchHtml(html, assetUrlByPath);
